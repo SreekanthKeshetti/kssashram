@@ -4,7 +4,10 @@ const Scheme = require("../models/Scheme");
 // @route   GET /api/schemes
 const getSchemes = async (req, res) => {
   try {
-    const schemes = await Scheme.find({ isActive: true });
+    const schemes = await Scheme.find({ isActive: true }).populate(
+      "accountHead",
+      "code name"
+    );
     res.json(schemes);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -15,8 +18,8 @@ const getSchemes = async (req, res) => {
 // @route   POST /api/schemes
 const createScheme = async (req, res) => {
   try {
-    const { name, description } = req.body;
-    const scheme = await Scheme.create({ name, description });
+    const { name, description, accountHead } = req.body;
+    const scheme = await Scheme.create({ name, description, accountHead });
     res.status(201).json(scheme);
   } catch (error) {
     res.status(400).json({ message: error.message });

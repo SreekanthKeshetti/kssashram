@@ -149,8 +149,15 @@ const fs = require("fs"); // <--- Add this at the very top
 const path = require("path"); // <--- Ensure this is imported too
 const Donation = require("../models/Donation");
 const { buildReceipt } = require("../utils/generatePDF"); // Ensure this path is correct
+const Scheme = require("../models/Scheme"); // <--- Import Scheme
 const nodemailer = require("nodemailer");
 const { logAudit } = require("../utils/auditLogger"); // <--- Import
+
+// Helper to find Account Head ID based on Scheme Name
+const getAccountHeadForScheme = async (schemeName) => {
+  const schemeObj = await Scheme.findOne({ name: schemeName });
+  return schemeObj ? schemeObj.accountHead : null;
+};
 
 // @desc    Create new donation
 // @route   POST /api/donations
@@ -168,6 +175,8 @@ const createDonation = async (req, res) => {
       branch,
     } = req.body;
 
+    const accountHeadId = await getAccountHeadForScheme(scheme);
+
     const donation = await Donation.create({
       donorName,
       donorPhone,
@@ -175,6 +184,7 @@ const createDonation = async (req, res) => {
       donorPan,
       amount,
       scheme,
+      accountHead: accountHeadId,
       paymentMode,
       paymentReference,
       branch: branch || "Headquarters",
@@ -196,9 +206,33 @@ const createDonation = async (req, res) => {
 
 // @desc    Get all donations
 // @route   GET /api/donations
+// const getDonations = async (req, res) => {
+//   try {
+//     const donations = await Donation.find({}).sort({ createdAt: -1 });
+//     res.json(donations);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// @desc    Get all donations (Populated with Account Code)
+// @route   GET /api/donations
 const getDonations = async (req, res) => {
   try {
-    const donations = await Donation.find({}).sort({ createdAt: -1 });
+    const { from, to } = req.query;
+    let query = {};
+
+    if (from && to) {
+      query.createdAt = {
+        $gte: new Date(from),
+        $lte: new Date(new Date(to).setHours(23, 59, 59)),
+      };
+    }
+
+    const donations = await Donation.find(query)
+      .populate("accountHead", "code name") // <--- THIS IS CRITICAL
+      .sort({ createdAt: -1 });
+
     res.json(donations);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -306,6 +340,7 @@ const createPublicDonation = async (req, res) => {
     if (!donorName || !amount || !scheme || !paymentMode) {
       return res.status(400).json({ message: "Missing required fields" });
     }
+    const accountHeadId = await getAccountHeadForScheme(scheme);
 
     const donation = await Donation.create({
       donorName,
@@ -314,6 +349,7 @@ const createPublicDonation = async (req, res) => {
       donorPan,
       amount,
       scheme,
+      accountHead: accountHeadId, // <--- SAVE IT HERE
       paymentMode, // 'Online' or 'Bank Transfer'
       paymentReference,
       branch: "Headquarters", // Default for online

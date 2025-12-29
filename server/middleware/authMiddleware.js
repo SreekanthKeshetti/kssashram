@@ -124,5 +124,17 @@ const staff = (req, res, next) => {
       .json({ message: "Not authorized. Staff/Committee access required." });
   }
 };
+// 4. NEW: Committee Only (For Approvals)
+const committee = (req, res, next) => {
+  const allowedRoles = ["admin", "president", "secretary", "treasurer"];
 
-module.exports = { protect, admin, staff };
+  if (req.user && allowedRoles.includes(req.user.role)) {
+    next();
+  } else {
+    res
+      .status(401)
+      .json({ message: "Not authorized. Committee access required." });
+  }
+};
+
+module.exports = { protect, admin, staff, committee };

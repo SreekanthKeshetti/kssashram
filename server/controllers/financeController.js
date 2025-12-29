@@ -8,7 +8,7 @@ const createVoucher = async (req, res) => {
   try {
     const {
       voucherType,
-      ledgerName,
+      accountHead,
       amount,
       description,
       paymentMode,
@@ -21,12 +21,12 @@ const createVoucher = async (req, res) => {
     const voucher = await Voucher.create({
       voucherType,
       voucherNo,
-      ledgerName,
+      accountHead,
       amount,
       description,
       paymentMode,
       branch: branch || "Headquarters",
-      createdBy: req.user._id,
+      preparedBy: req.user._id, // The Warden/Employee logging in
       status: "Pending", // Always starts as Pending
     });
 
@@ -40,7 +40,11 @@ const createVoucher = async (req, res) => {
 // @route   GET /api/finance/vouchers
 const getVouchers = async (req, res) => {
   try {
-    const vouchers = await Voucher.find({}).sort({ createdAt: -1 });
+    const vouchers = await Voucher.find({})
+      .populate("accountHead", "code name") // Get Code & Name
+      .populate("preparedBy", "name") // Get Warden Name
+      .populate("approvedBy", "name") // Get Approver Name
+      .sort({ createdAt: -1 });
     res.json(vouchers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -49,27 +53,58 @@ const getVouchers = async (req, res) => {
 
 // @desc    Approve Voucher (Admin Only)
 // @route   PUT /api/finance/vouchers/:id/approve
+// @desc    Approve Voucher (Multi-Signature)
+// @route   PUT /api/finance/vouchers/:id/approve
 const approveVoucher = async (req, res) => {
   try {
     const voucher = await Voucher.findById(req.params.id);
 
-    if (voucher) {
-      voucher.status = "Approved";
-      voucher.approvedBy = req.user._id; // Track WHO approved it
-      await voucher.save();
-      res.json(voucher);
-    } else {
-      res.status(404).json({ message: "Voucher not found" });
+    if (!voucher) {
+      return res.status(404).json({ message: "Voucher not found" });
     }
+
+    // Check if this user already approved it
+    if (voucher.approvedBy.includes(req.user._id)) {
+      return res
+        .status(400)
+        .json({ message: "You have already approved this voucher" });
+    }
+
+    // Add current user to approval list
+    voucher.approvedBy.push(req.user._id);
+
+    // LOGIC: If 2 or more approvals, mark as Approved. Else, Partially Approved.
+    if (voucher.approvedBy.length >= 2) {
+      voucher.status = "Approved";
+    } else {
+      voucher.status = "Partially Approved";
+    }
+
+    await voucher.save();
+
+    // Return populated data so frontend updates immediately
+    const updatedVoucher = await Voucher.findById(req.params.id)
+      .populate("accountHead", "code name")
+      .populate("preparedBy", "name")
+      .populate("approvedBy", "name");
+
+    res.json(updatedVoucher);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 // @desc    Download Voucher PDF
 // @route   GET /api/finance/vouchers/:id/pdf
+// @desc    Download Voucher PDF
+// @route   GET /api/finance/vouchers/:id/pdf
 const downloadVoucherPDF = async (req, res) => {
   try {
-    const voucher = await Voucher.findById(req.params.id);
+    // FIX: Added .populate() calls to get the actual names/codes
+    const voucher = await Voucher.findById(req.params.id)
+      .populate("accountHead", "code name") // <--- CRITICAL FIX
+      .populate("preparedBy", "name")
+      .populate("approvedBy", "name");
+
     if (!voucher) return res.status(404).json({ message: "Voucher not found" });
 
     const filename = `${voucher.voucherNo}.pdf`;
@@ -82,6 +117,7 @@ const downloadVoucherPDF = async (req, res) => {
       () => res.end()
     );
   } catch (error) {
+    console.error("PDF Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -151,7 +187,7 @@ const reconcileCash = async (req, res) => {
     const adjustmentVoucher = await Voucher.create({
       voucherType: type, // or 'Journal' if you prefer strict accounting
       voucherNo,
-      ledgerName: "Cash Reconciliation Adjustment",
+      accountHead: "Cash Reconciliation Adjustment",
       amount,
       description: `System: ${systemBalance} | Physical: ${physicalBalance} | Reason: ${remark}`,
       paymentMode: "Cash",

@@ -44,6 +44,7 @@ const reportRoutes = require("./routes/reportRoutes"); // Import
 const memberRoutes = require("./routes/memberRoutes"); // Import
 const schemeRoutes = require("./routes/schemeRoutes"); // Import
 const auditRoutes = require("./routes/auditRoutes"); // Import
+const accountRoutes = require("./routes/accountRoutes"); // Import
 
 dotenv.config();
 connectDB();
@@ -66,6 +67,7 @@ app.use("/api/events", eventRoutes); // Add this
 app.use("/api/reports", reportRoutes); // <--- Add this
 app.use("/api/members", memberRoutes); // <--- Add this
 app.use("/api/audit", auditRoutes); // Add this
+app.use("/api/accounts", accountRoutes); // Add this
 app.get("/", (req, res) => {
   res.send("Karunasri Backend is Running...");
 });

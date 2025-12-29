@@ -18,6 +18,13 @@ const donationSchema = mongoose.Schema(
     // Donation Details
     amount: { type: Number, required: true },
     scheme: { type: String, required: true }, // e.g. Nitya Annadhana
+    // --- NEW FIELD: Account Head Link ---
+    accountHead: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AccountHead",
+      // Not required yet, to support legacy data, but highly recommended
+    },
+    // ------------------------------------
 
     // Payment Details (KSS_DON_1)
     paymentMode: {

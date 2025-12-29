@@ -10,7 +10,7 @@ const voucherSchema = mongoose.Schema(
     voucherNo: { type: String, required: true, unique: true },
     date: { type: Date, default: Date.now },
 
-    ledgerName: { type: String, required: true }, // e.g., "Vegetables", "Salary"
+    accountHead: { type: String, ref: "AccountHead", required: true }, // e.g., "Vegetables", "Salary"
     amount: { type: Number, required: true },
     description: { type: String },
 
@@ -23,14 +23,14 @@ const voucherSchema = mongoose.Schema(
     // Approval Workflow
     status: {
       type: String,
-      enum: ["Pending", "Approved", "Rejected"],
+      enum: ["Pending", "Partially Approved", "Approved", "Rejected"],
       default: "Pending",
     },
 
+    preparedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    // Committee members who approved it (Array allows multiple signatures)
+    approvedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     branch: { type: String, default: "Headquarters" },
-
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   {
     timestamps: true,

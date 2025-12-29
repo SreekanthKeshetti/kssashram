@@ -200,7 +200,80 @@ const DonationList = () => {
       alert("Error deleting file");
     }
   };
+  const handleExport = () => {
+    console.log("Export button clicked..."); // Debug Log 1
 
+    if (!donations || donations.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    try {
+      // 1. Define Headers
+      const headers = [
+        "Date",
+        "Account Code",
+        "Donor Name",
+        "Phone",
+        "Email",
+        "PAN",
+        "Scheme",
+        "Amount",
+        "Mode",
+        "Receipt Status",
+      ];
+
+      // 2. Map Data (With Safety Checks)
+      const rows = donations.map((d) => {
+        // Safe check for Account Code
+        // If populated: d.accountHead.code
+        // If not populated (just ID): 'N/A'
+        // If null: 'N/A'
+        let accCode = "N/A";
+        if (d.accountHead && typeof d.accountHead === "object") {
+          accCode = d.accountHead.code || "N/A";
+        }
+
+        return [
+          new Date(d.createdAt).toLocaleDateString(),
+          accCode,
+          `"${d.donorName || ""}"`, // Quote strings to handle commas
+          `"${d.donorPhone || ""}"`,
+          d.donorEmail || "-",
+          d.donorPan || "-",
+          `"${d.scheme || ""}"`,
+          d.amount || 0,
+          d.paymentMode || "-",
+          d.receiptStatus || "-",
+        ];
+      });
+
+      // 3. Create CSV Content
+      const csvContent =
+        headers.join(",") + "\n" + rows.map((e) => e.join(",")).join("\n");
+
+      // 4. Create Blob (Better than encodeURI)
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      // 5. Trigger Download
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `Donations_Export_${new Date().toISOString().split("T")[0]}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+
+      // 6. Cleanup
+      document.body.removeChild(link);
+      console.log("Export successful!"); // Debug Log 2
+    } catch (err) {
+      console.error("Export Error:", err);
+      alert("An error occurred while exporting. Check console for details.");
+    }
+  };
   return (
     <div>
       {/* --- Header --- */}
@@ -215,7 +288,7 @@ const DonationList = () => {
           <p className="text-muted">Track all incoming donations</p>
         </Col>
         <Col className="text-end">
-          <Button variant="success" className="me-2">
+          <Button variant="success" className="me-2" onClick={handleExport}>
             <FaFilePdf /> Export
           </Button>
           <Button

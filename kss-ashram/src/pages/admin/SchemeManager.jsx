@@ -1,25 +1,62 @@
 /* eslint-disable react-hooks/immutability */
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
-import { Table, Button, Form, Card, Row, Col, Alert } from "react-bootstrap";
+import {
+  Table,
+  Button,
+  Form,
+  Card,
+  Row,
+  Col,
+  Alert,
+  Badge,
+} from "react-bootstrap";
 import { FaTrash, FaPlus } from "react-icons/fa";
 import axios from "axios";
 
 const SchemeManager = () => {
   const [schemes, setSchemes] = useState([]);
-  const [newScheme, setNewScheme] = useState("");
+  const [accountHeads, setAccountHeads] = useState([]); // Store Credit Codes
+
+  // Form State
+  const [newSchemeName, setNewSchemeName] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState("");
+
   const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("userInfo"));
     setUserInfo(user);
-    fetchSchemes();
+    if (user) {
+      fetchSchemes(user);
+      fetchAccountHeads(user);
+    }
   }, []);
 
-  const fetchSchemes = async () => {
+  const fetchSchemes = async (user) => {
     try {
-      const { data } = await axios.get("http://localhost:5000/api/schemes");
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      const { data } = await axios.get(
+        "http://localhost:5000/api/schemes",
+        config
+      );
       setSchemes(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Fetch Account Codes (Credit Side Only)
+  const fetchAccountHeads = async (user) => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      const { data } = await axios.get(
+        "http://localhost:5000/api/accounts",
+        config
+      );
+      // Filter only CREDIT (Income) codes
+      const creditAccounts = data.filter((acc) => acc.type === "Credit");
+      setAccountHeads(creditAccounts);
     } catch (error) {
       console.error(error);
     }
@@ -27,16 +64,23 @@ const SchemeManager = () => {
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!newScheme) return;
+    if (!newSchemeName || !selectedAccount)
+      return alert("Please enter name and select account code");
+
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       await axios.post(
         "http://localhost:5000/api/schemes",
-        { name: newScheme },
+        {
+          name: newSchemeName,
+          accountHead: selectedAccount,
+        },
         config
       );
-      setNewScheme("");
-      fetchSchemes();
+
+      setNewSchemeName("");
+      setSelectedAccount("");
+      fetchSchemes(userInfo);
     } catch (error) {
       alert("Error adding scheme");
     }
@@ -47,7 +91,7 @@ const SchemeManager = () => {
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       await axios.delete(`http://localhost:5000/api/schemes/${id}`, config);
-      fetchSchemes();
+      fetchSchemes(userInfo);
     } catch (error) {
       alert("Error deleting scheme");
     }
@@ -63,26 +107,48 @@ const SchemeManager = () => {
       </h2>
 
       <Row>
-        <Col md={6}>
+        <Col md={5}>
           <Card className="shadow-sm border-0 p-3 mb-4">
             <h5 className="mb-3">Add New Scheme</h5>
-            <Form onSubmit={handleAdd} className="d-flex gap-2">
-              <Form.Control
-                placeholder="Enter Scheme Name (e.g. Nitya Annadhana)"
-                value={newScheme}
-                onChange={(e) => setNewScheme(e.target.value)}
-              />
-              <Button type="submit" variant="success">
-                <FaPlus /> Add
+            <Form onSubmit={handleAdd}>
+              <Form.Group className="mb-2">
+                <Form.Label>Scheme Name</Form.Label>
+                <Form.Control
+                  placeholder="e.g. Nitya Annadhana"
+                  value={newSchemeName}
+                  onChange={(e) => setNewSchemeName(e.target.value)}
+                />
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Link to Account Code (Credit)</Form.Label>
+                <Form.Select
+                  value={selectedAccount}
+                  onChange={(e) => setSelectedAccount(e.target.value)}
+                >
+                  <option value="">-- Select Account --</option>
+                  {accountHeads.map((acc) => (
+                    <option key={acc._id} value={acc._id}>
+                      {acc.code} - {acc.name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+
+              <Button type="submit" variant="success" className="w-100">
+                <FaPlus /> Add Scheme
               </Button>
             </Form>
           </Card>
+        </Col>
 
+        <Col md={7}>
           <Card className="shadow-sm border-0">
-            <Table hover className="mb-0">
+            <Table hover className="mb-0 align-middle">
               <thead className="bg-light">
                 <tr>
                   <th>Scheme Name</th>
+                  <th>Account Code</th>
                   <th className="text-end">Action</th>
                 </tr>
               </thead>
@@ -90,6 +156,15 @@ const SchemeManager = () => {
                 {schemes.map((s) => (
                   <tr key={s._id}>
                     <td className="fw-bold">{s.name}</td>
+                    <td>
+                      {s.accountHead ? (
+                        <Badge bg="info" text="dark">
+                          {s.accountHead.code} - {s.accountHead.name}
+                        </Badge>
+                      ) : (
+                        <Badge bg="danger">Unmapped</Badge>
+                      )}
+                    </td>
                     <td className="text-end">
                       <Button
                         size="sm"
@@ -103,7 +178,7 @@ const SchemeManager = () => {
                 ))}
                 {schemes.length === 0 && (
                   <tr>
-                    <td colSpan="2" className="text-center">
+                    <td colSpan="3" className="text-center">
                       No schemes found.
                     </td>
                   </tr>
@@ -111,12 +186,6 @@ const SchemeManager = () => {
               </tbody>
             </Table>
           </Card>
-        </Col>
-        <Col md={6}>
-          <Alert variant="info">
-            <strong>Note:</strong> These schemes will appear in the dropdown
-            menu on the Donation Page and Admin Entry form.
-          </Alert>
         </Col>
       </Row>
     </div>

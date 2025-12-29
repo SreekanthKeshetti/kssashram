@@ -1,62 +1,89 @@
 const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
 
 const buildVoucherPDF = (voucher, dataCallback, endCallback) => {
-  const doc = new PDFDocument({ size: "A5", layout: "landscape", margin: 30 }); // A5 Landscape is standard for vouchers
+  const doc = new PDFDocument({ size: "A5", layout: "landscape", margin: 30 });
 
   doc.on("data", dataCallback);
   doc.on("end", endCallback);
 
-  // --- Header ---
+  // --- 1. LOGO & HEADER ---
+  const logoPath = path.join(__dirname, "..", "logo.jpg");
+  if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, 30, 20, { width: 50 });
+  }
+
   doc
     .fontSize(18)
     .fillColor("#581818")
-    .text("KARUNASRI SEVA SAMITHI", { align: "center" });
-  doc.fontSize(10).text("Saroornagar, Hyderabad - 500035", { align: "center" });
+    .text("KARUNASRI SEVA SAMITHI", 0, 30, { align: "center" });
+  doc
+    .fontSize(10)
+    .text("Saroornagar, Hyderabad - 500035", 0, 55, { align: "center" });
   doc.moveDown();
 
-  // --- Title ---
+  // --- 2. TITLE ---
   const title =
     voucher.voucherType === "Debit" ? "PAYMENT VOUCHER" : "RECEIPT VOUCHER";
   doc
     .fontSize(14)
     .fillColor("black")
-    .text(title, { align: "center", underline: true });
-  doc.moveDown();
+    .text(title, 0, 80, { align: "center", underline: true });
 
-  // --- Details Box ---
-  const startY = 100;
-
-  // Left Side
+  // --- 3. DETAILS ---
+  const startY = 120;
   doc.fontSize(11).text(`Voucher No: ${voucher.voucherNo}`, 30, startY);
   doc.text(
     `Date: ${new Date(voucher.createdAt).toLocaleDateString()}`,
-    400,
+    450,
     startY
   );
 
-  doc.moveDown();
-  doc.text(`Paid To / Received From:`, 30, startY + 30);
-  doc.font("Helvetica-Bold").text(voucher.ledgerName, 180, startY + 30);
+  // Account Code Display
+  const accCode = voucher.accountHead ? voucher.accountHead.code : "---";
+  const accName = voucher.accountHead
+    ? voucher.accountHead.name
+    : "Unknown Ledger";
 
-  doc.font("Helvetica").text(`Sum of Rupees:`, 30, startY + 55);
+  doc.text(`Account Head:`, 30, startY + 30);
+  doc.font("Helvetica-Bold").text(`${accCode} - ${accName}`, 150, startY + 30);
+
+  doc.font("Helvetica").text(`Amount:`, 30, startY + 55);
   doc
     .font("Helvetica-Bold")
-    .text(`Rs. ${voucher.amount.toLocaleString()}/-`, 180, startY + 55);
+    .text(`Rs. ${voucher.amount.toLocaleString()}/-`, 150, startY + 55);
 
-  doc.font("Helvetica").text(`Towards:`, 30, startY + 80);
-  doc.text(voucher.description || "General Expense", 180, startY + 80);
+  doc.font("Helvetica").text(`Narration:`, 30, startY + 80);
+  doc.text(voucher.description || "-", 150, startY + 80);
 
   doc.text(`Payment Mode:`, 30, startY + 105);
-  doc.text(voucher.paymentMode, 180, startY + 105);
+  doc.text(voucher.paymentMode, 150, startY + 105);
 
-  // --- Footer Signatures ---
-  doc.moveDown(5);
-  const sigY = 300;
+  // --- 4. SIGNATURES (Requirement: Warden + 2 Committee) ---
+  const sigY = 320;
+  doc.fontSize(9);
 
-  doc.fontSize(10);
-  doc.text("Prepared By", 50, sigY);
-  doc.text("Receiver's Signature", 250, sigY);
-  doc.text("Authorized Signatory", 450, sigY);
+  // Warden (Prepared By)
+  doc.text("Prepared By:", 30, sigY - 15);
+  doc
+    .font("Helvetica-Bold")
+    .text(voucher.preparedBy ? voucher.preparedBy.name : "Warden", 30, sigY);
+  doc.font("Helvetica").text("(Warden/Accountant)", 30, sigY + 12);
+
+  // Receiver
+  doc.text("Receiver's Signature", 200, sigY);
+
+  // Approvers
+  doc.text("Authorized Signatories:", 400, sigY - 15);
+
+  // List names of people who clicked approve
+  if (voucher.approvedBy && voucher.approvedBy.length > 0) {
+    const names = voucher.approvedBy.map((u) => u.name).join(" & ");
+    doc.font("Helvetica-Bold").text(names, 400, sigY, { width: 180 });
+  } else {
+    doc.text("(Pending Approval)", 400, sigY);
+  }
 
   doc.end();
 };
