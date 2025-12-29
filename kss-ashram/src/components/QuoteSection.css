@@ -1,0 +1,51 @@
+.quote-section {
+  /* High Quality Spiritual Texture */
+  background-image: url("https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=1920&auto=format&fit=crop");
+
+  /* THIS creates the Parallax Effect */
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+
+  position: relative;
+  padding: 120px 0; /* More padding to see the effect better */
+  text-align: center;
+  color: white;
+  width: 100%;
+}
+
+.quote-overlay {
+  /* Dark Maroon tint so text pops */
+  background-color: rgba(88, 24, 24, 0.7);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* Ensure content sits ON TOP of the overlay */
+.quote-content-wrapper {
+  position: relative;
+  z-index: 2;
+}
+
+.quote-text {
+  font-family: "Playfair Display", serif;
+  font-size: 2.5rem; /* Larger for impact */
+  font-style: italic;
+  line-height: 1.6;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 20px;
+}
+
+.quote-author {
+  font-family: "Lato", sans-serif;
+  font-size: 1.1rem;
+  color: #daa520; /* Gold */
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: 700;
+}

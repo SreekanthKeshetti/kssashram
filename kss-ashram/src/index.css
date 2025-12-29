@@ -1,0 +1,38 @@
+@import url("https://fonts.googleapis.com/css2?family=Lato:wght@200;400&family=Playfair+Display:wght@700&display=swap");
+
+:root {
+  /* --- Premium Color Palette --- */
+  --primary-color: #d35400; /* Deep Saffron (Om/Fire color) */
+  --primary-hover: #e67e22; /* Lighter Orange */
+  --secondary-color: #581818; /* Royal Maroon */
+  --gold-accent: #daa520; /* Goldenrod */
+  --text-dark: #2c3e50;
+  --text-light: #ffffff;
+  --bg-cream: #fffbf0; /* Light Cream for section backgrounds */
+
+  /* --- Fonts --- */
+  --font-heading: "Playfair Display", serif; /* Divine Look */
+  --font-body: "Lato", sans-serif; /* Clean Readability */
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-dark);
+  background-color: #f8f9fa;
+  margin: 0;
+  padding: 0;
+}
+
+/* Global Typography Overrides */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}
+
+a {
+  text-decoration: none;
+}

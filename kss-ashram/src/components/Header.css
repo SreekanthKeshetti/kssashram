@@ -1,0 +1,81 @@
+/* Top Strip (Maroon) */
+.top-bar {
+  background-color: var(--secondary-color);
+  font-size: 0.9rem;
+  color: white;
+}
+
+.top-bar a {
+  color: rgba(255, 255, 255, 0.8);
+  transition: color 0.3s;
+}
+
+.top-bar a:hover {
+  color: var(--gold-accent);
+}
+
+/* Main Navbar */
+.navbar-custom {
+  background-color: white;
+  border-bottom: 3px solid var(--gold-accent);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Logo Circle */
+.logo-circle {
+  width: 50px;
+  height: 50px;
+  background-color: var(--primary-color);
+  border-radius: 50%;
+  color: white;
+  font-weight: bold;
+  font-size: 24px;
+  margin-right: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Navigation Links */
+.nav-link-custom {
+  font-weight: 500 !important;
+  color: var(--text-dark) !important;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem !important;
+  transition: color 0.3s ease;
+}
+
+.nav-link-custom:hover,
+.nav-link-custom.active {
+  color: var(--primary-color) !important;
+}
+
+/* Login Link */
+.login-link {
+  color: var(--primary-color) !important;
+  font-weight: bold !important;
+}
+
+/* Common Button Style (Scoped to Header if needed, or global) */
+.btn-donate-nav {
+  background: linear-gradient(
+    45deg,
+    var(--primary-color),
+    var(--primary-hover)
+  );
+  color: white !important;
+  border: none;
+  font-weight: 700;
+  padding: 10px 25px;
+  border-radius: 30px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-donate-nav:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(211, 84, 0, 0.4);
+}

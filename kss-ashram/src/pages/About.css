@@ -1,0 +1,124 @@
+/* --- Page Hero (Breadcrumb style) --- */
+.page-hero {
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+    url("https://images.unsplash.com/photo-1469044552483-057d60517869?q=80&w=1920&auto=format&fit=crop");
+  background-size: cover;
+  background-position: center;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: white;
+}
+
+.page-title {
+  font-family: "Playfair Display", serif;
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Section Styling --- */
+.about-section {
+  padding: 80px 0;
+  background-color: white;
+}
+
+.about-bg-cream {
+  background-color: #fffbf5; /* Light cream for alternating sections */
+}
+
+/* Headings */
+.section-heading {
+  font-family: "Playfair Display", serif;
+  color: #581818;
+  font-size: 2.2rem;
+  margin-bottom: 20px;
+  position: relative;
+  display: inline-block;
+}
+
+.section-heading::after {
+  content: "";
+  display: block;
+  width: 60%;
+  height: 3px;
+  background-color: #d35400; /* Saffron underline */
+  margin-top: 10px;
+}
+
+.text-content {
+  font-family: "Lato", sans-serif;
+  color: #555;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+/* --- Mission Cards --- */
+.mission-card {
+  background: white;
+  padding: 40px 30px;
+  text-align: center;
+  border-top: 5px solid #d35400;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s;
+  height: 100%;
+}
+
+.mission-card:hover {
+  transform: translateY(-10px);
+}
+
+.mission-icon {
+  font-size: 3rem;
+  color: #daa520; /* Gold */
+  margin-bottom: 20px;
+}
+
+.mission-title {
+  font-family: "Playfair Display", serif;
+  font-size: 1.5rem;
+  color: #581818;
+  margin-bottom: 15px;
+}
+
+/* --- Founder Section --- */
+.founder-img-box {
+  position: relative;
+  padding: 10px;
+  border: 2px solid #daa520; /* Gold Border */
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.founder-img {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 4px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Stats Strip --- */
+.stats-strip {
+  background-color: #581818;
+  padding: 50px 0;
+  color: white;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffd700;
+  font-family: "Playfair Display", serif;
+}
+
+.stat-label {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}

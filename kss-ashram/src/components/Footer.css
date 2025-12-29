@@ -1,0 +1,204 @@
+.footer-section {
+  background-color: #421c1c; /* Solid Deep Maroon - High Contrast */
+  color: #ffffff; /* Force all text to white by default */
+  padding-top: 70px;
+  padding-bottom: 20px;
+  font-family: "Lato", sans-serif;
+  border-top: 6px solid #daa520; /* Gold Top Border */
+  position: relative;
+}
+
+/* Optional: Background Pattern Overlay for texture */
+.footer-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("https://www.transparenttextures.com/patterns/black-scales.png");
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+/* Ensure content is above the background pattern */
+.footer-section .container {
+  position: relative;
+  z-index: 2;
+}
+
+/* --- Typography --- */
+.footer-brand {
+  font-family: "Playfair Display", serif;
+  color: #ffd700; /* Bright Gold */
+  font-weight: 700;
+  font-size: 1.8rem; /* Larger */
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.footer-address {
+  color: #f0f0f0; /* Near White */
+  font-size: 1rem;
+  line-height: 1.8;
+  opacity: 0.9;
+}
+
+/* Headings - Making them VERY Visible */
+.footer-heading {
+  color: #ffd700; /* Bright Gold */
+  font-family: "Playfair Display", serif;
+  font-weight: 700;
+  font-size: 1.4rem;
+  margin-bottom: 25px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid rgba(218, 165, 32, 0.3); /* Subtle gold line */
+  display: inline-block;
+}
+
+/* --- QR Code Box --- */
+.footer-qr-box {
+  background-color: white;
+  padding: 10px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-top: 15px;
+  text-align: center;
+}
+
+.footer-qr-img {
+  width: 90px;
+  height: 90px;
+}
+
+.qr-label {
+  display: block;
+  color: #333;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+
+/* --- Links --- */
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-links li {
+  margin-bottom: 15px;
+}
+
+.footer-links a {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 1.05rem;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+}
+
+/* Hover effect: text turns Gold and moves right */
+.footer-links a:hover {
+  color: #ffd700;
+  padding-left: 8px;
+}
+
+/* --- Contact Items --- */
+.contact-item {
+  display: flex;
+  align-items: flex-start; /* Align to top of icon */
+  margin-bottom: 20px;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.contact-icon {
+  color: #ffd700; /* Gold Icon */
+  font-size: 1.2rem;
+  margin-right: 15px;
+  margin-top: 3px;
+}
+
+/* --- Social Row --- */
+.social-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: 50px;
+  padding-top: 30px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.social-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  margin: 0 10px;
+  font-size: 1.2rem;
+  transition: background 0.3s, transform 0.3s;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.social-icon-btn:hover {
+  background-color: #ffd700;
+  color: #421c1c; /* Dark text on gold background */
+  transform: translateY(-5px);
+}
+
+/* --- Payment Row --- */
+.payment-row {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.payment-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #ccc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 15px;
+}
+
+.payment-icons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Icons are white by default, fully visible */
+.pay-icon {
+  font-size: 2.2rem;
+  color: white;
+}
+
+.pay-img {
+  height: 25px;
+  background-color: white; /* Add white background so colored logos pop */
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* --- Copyright --- */
+.copyright-text {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 20px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #bbb;
+}
+
+.copyright-text a {
+  color: #ffd700;
+  text-decoration: none;
+}

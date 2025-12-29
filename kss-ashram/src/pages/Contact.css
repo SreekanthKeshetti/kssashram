@@ -1,0 +1,37 @@
+.contact-hero {
+  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+    url("https://images.unsplash.com/photo-1534536281715-e28d76689b4d?q=80&w=1920&auto=format&fit=crop");
+  background-size: cover;
+  background-position: center;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: white;
+}
+
+.contact-box-icon {
+  width: 60px;
+  height: 60px;
+  background-color: #fffbf5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d35400; /* Saffron */
+  font-size: 24px;
+  margin-bottom: 15px;
+  border: 1px solid #d35400;
+}
+
+.form-control-ashram {
+  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 5px;
+}
+
+.form-control-ashram:focus {
+  border-color: #d35400;
+  box-shadow: 0 0 0 0.2rem rgba(211, 84, 0, 0.25);
+}

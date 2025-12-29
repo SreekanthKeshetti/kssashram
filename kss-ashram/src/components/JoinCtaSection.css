@@ -1,0 +1,156 @@
+/* 1. Section Container - Traditional Light Cream Background */
+.join-cta-section {
+  position: relative;
+  background-color: #fffbf5;
+  padding: 80px 0;
+  border-top: 1px solid #e6ccb2; /* Subtle Gold/Tan border top */
+  border-bottom: 1px solid #e6ccb2; /* Subtle Gold/Tan border bottom */
+  overflow: hidden; /* Ensures animations don't spill over */
+}
+
+/* 2. Flex Layout: Flower - Content - Flower */
+.cta-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center everything */
+  gap: 40px; /* Space between flowers and text */
+  position: relative;
+}
+
+/* 3. The Mandala/Flower Images Styling */
+.flower-decor {
+  width: 140px;
+  height: 140px;
+  opacity: 0.2; /* Make it subtle like a watermark */
+  filter: sepia(1) saturate(1.5) hue-rotate(-10deg); /* Gives it a golden/brown tint */
+}
+
+/* 4. Rotation Animation for Flowers */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.flower-rotate {
+  animation: spin-slow 40s linear infinite; /* Very slow, dignified rotation */
+}
+
+/* 5. Center Content Text Styling */
+.cta-content {
+  text-align: center;
+  z-index: 2;
+  max-width: 600px;
+}
+
+.trust-name-cta {
+  font-family: "Playfair Display", serif; /* Premium Heading Font */
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #581818; /* Royal Maroon */
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.sub-text-cta {
+  font-family: "Lato", sans-serif;
+  color: #666; /* Soft grey text */
+  font-size: 1.1rem;
+  margin-bottom: 35px;
+  font-weight: 400;
+}
+
+/* 6. WhatsApp & Button Container */
+.whatsapp-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* 7. The Green Icon Circle */
+.wa-icon-circle {
+  width: 65px;
+  height: 65px;
+  background-color: #25d366; /* WhatsApp Green */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 32px;
+  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.whatsapp-box:hover .wa-icon-circle {
+  transform: scale(1.1); /* Grow slightly on hover */
+}
+
+/* Pulse/Ripple Effect behind the icon */
+.wa-icon-circle::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #25d366;
+  opacity: 0;
+  animation: ripple 2s infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* 8. The "Join Us" Button */
+.btn-join-us {
+  background: linear-gradient(45deg, #581818, #800000); /* Maroon Gradient */
+  color: white !important; /* Force white text */
+  padding: 12px 40px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.btn-join-us:hover {
+  background: linear-gradient(45deg, #d35400, #e67e22); /* Saffron on Hover */
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(211, 84, 0, 0.4);
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  .trust-name-cta {
+    font-size: 1.6rem;
+  }
+
+  .cta-wrapper {
+    gap: 0;
+  }
+
+  /* Flowers are hidden via Bootstrap d-none class in JSX, 
+     but we ensure safety here just in case */
+  .flower-decor {
+    display: none;
+  }
+}
