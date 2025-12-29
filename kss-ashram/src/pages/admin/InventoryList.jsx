@@ -47,18 +47,73 @@ const InventoryList = () => {
     fetchInventory();
   }, [fetchInventory]);
 
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   try {
+  //     const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  //     const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+  //     await axios.post("http://localhost:5000/api/inventory", formData, config);
+  //     setShowModal(false);
+  //     fetchInventory();
+  //     alert("Stock Updated Successfully!");
+  //     // eslint-disable-next-line no-unused-vars
+  //   } catch (error) {
+  //     alert("Error updating stock");
+  //   }
+  // };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Basic Validation
+    if (!formData.itemName || !formData.quantity) {
+      alert("Please enter Item Name and Quantity");
+      return;
+    }
+
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.post("http://localhost:5000/api/inventory", formData, config);
+      const config = {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+
+      // Prepare Payload (Ensure types are correct)
+      const payload = {
+        itemName: formData.itemName,
+        category: formData.category,
+        quantity: Number(formData.quantity), // <--- Force Number
+        unit: formData.unit,
+        isPerishable:
+          formData.isPerishable === true || formData.isPerishable === "true", // Handle boolean
+        expiryDate: formData.expiryDate || null,
+        branch: "Headquarters", // Ensure branch is sent
+      };
+
+      console.log("Sending Payload:", payload); // Debugging: Check console to see what is sent
+
+      await axios.post("http://localhost:5000/api/inventory", payload, config);
+
       setShowModal(false);
       fetchInventory();
+
+      // Reset Form
+      setFormData({
+        itemName: "",
+        category: "Food",
+        isPerishable: false,
+        quantity: "",
+        unit: "kg",
+        expiryDate: "",
+      });
+
       alert("Stock Updated Successfully!");
-      // eslint-disable-next-line no-unused-vars
     } catch (error) {
-      alert("Error updating stock");
+      console.error("Add Stock Error:", error.response?.data); // Check console for details
+      // Show the specific error message from Backend
+      alert(error.response?.data?.message || "Error updating stock");
     }
   };
 
@@ -199,6 +254,7 @@ const InventoryList = () => {
               <Form.Label>Item Name</Form.Label>
               <Form.Control
                 name="itemName"
+                value={formData.itemName}
                 onChange={handleChange}
                 required
                 placeholder="e.g. Rice, Oil, Chairs"
@@ -209,7 +265,11 @@ const InventoryList = () => {
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Category</Form.Label>
-                  <Form.Select name="category" onChange={handleChange}>
+                  <Form.Select
+                    name="category"
+                    value={formData.category} // <--- Added value
+                    onChange={handleChange}
+                  >
                     <option>Food</option>
                     <option>Non-Food</option>
                     <option>Medical</option>
@@ -223,6 +283,7 @@ const InventoryList = () => {
                   <Form.Control
                     type="number"
                     name="quantity"
+                    value={formData.quantity} // <--- Added value
                     onChange={handleChange}
                     required
                   />
@@ -234,7 +295,11 @@ const InventoryList = () => {
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Unit</Form.Label>
-                  <Form.Select name="unit" onChange={handleChange}>
+                  <Form.Select
+                    name="unit"
+                    value={formData.unit}
+                    onChange={handleChange}
+                  >
                     <option>kg</option>
                     <option>liters</option>
                     <option>bags</option>
@@ -249,6 +314,7 @@ const InventoryList = () => {
                     type="checkbox"
                     label="Is Perishable?"
                     name="isPerishable"
+                    checked={formData.isPerishable}
                     onChange={handleChange}
                   />
                 </Form.Group>
@@ -262,6 +328,7 @@ const InventoryList = () => {
                 <Form.Control
                   type="date"
                   name="expiryDate"
+                  value={formData.expiryDate}
                   onChange={handleChange}
                 />
               </Form.Group>
