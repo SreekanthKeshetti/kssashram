@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useCallback } from "react";
 import {
   Table,
@@ -10,12 +11,23 @@ import {
   Form,
   Alert,
 } from "react-bootstrap";
-import { FaPlus, FaMapMarkerAlt, FaUsers } from "react-icons/fa";
+import {
+  FaPlus,
+  FaMapMarkerAlt,
+  FaClipboardList,
+  FaUsers,
+  FaCheckSquare,
+  FaSquare,
+} from "react-icons/fa";
 import axios from "axios";
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
+
+  // Attendance Modal State
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [error, setError] = useState("");
 
   // Form Data
@@ -40,8 +52,40 @@ const EventList = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEvents();
   }, [fetchEvents]);
+
+  // --- ATTENDANCE HANDLER ---
+  const toggleAttendance = async (regId, currentStatus) => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+
+      const { data } = await axios.put(
+        `http://localhost:5000/api/events/${selectedEvent._id}/attendance`,
+        {
+          registrationId: regId,
+          status: !currentStatus,
+        },
+        config
+      );
+
+      // Update local state immediately to reflect change
+      setSelectedEvent((prev) => ({
+        ...prev,
+        registrations: data.registrations,
+      }));
+      fetchEvents(); // Refresh main list
+    } catch (err) {
+      alert("Error updating attendance");
+    }
+  };
+
+  const openAttendanceModal = (evt) => {
+    setSelectedEvent(evt);
+    setShowAttendanceModal(true);
+  };
 
   // Handle Create Event
   const handleSubmit = async (e) => {
@@ -111,6 +155,7 @@ const EventList = () => {
                 <th>Type</th>
                 <th>Location</th>
                 <th>Registrations</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -136,6 +181,16 @@ const EventList = () => {
                       <FaUsers className="me-1" /> {e.registrations.length}
                     </Badge>
                   </td>
+                  <td>
+                    <Button
+                      size="sm"
+                      variant="outline-dark"
+                      onClick={() => openAttendanceModal(e)}
+                      title="Manage Attendance"
+                    >
+                      <FaClipboardList /> Attendance
+                    </Button>
+                  </td>
                 </tr>
               ))}
               {events.length === 0 && (
@@ -149,7 +204,58 @@ const EventList = () => {
           </Table>
         </Card.Body>
       </Card>
-
+      {/* --- ATTENDANCE MODAL --- */}
+      <Modal
+        show={showAttendanceModal}
+        onHide={() => setShowAttendanceModal(false)}
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Attendance: {selectedEvent?.title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedEvent?.registrations.length === 0 ? (
+            <p className="text-center text-muted">No registrations yet.</p>
+          ) : (
+            <Table striped bordered hover>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th className="text-center">Status</th>
+                  <th className="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedEvent?.registrations.map((reg) => (
+                  <tr key={reg._id}>
+                    <td>{reg.name}</td>
+                    <td>{reg.phone}</td>
+                    <td className="text-center">
+                      {reg.attended ? (
+                        <Badge bg="success">Present</Badge>
+                      ) : (
+                        <Badge bg="danger">Absent</Badge>
+                      )}
+                    </td>
+                    <td className="text-center">
+                      <Button
+                        size="sm"
+                        variant={
+                          reg.attended ? "outline-danger" : "outline-success"
+                        }
+                        onClick={() => toggleAttendance(reg._id, reg.attended)}
+                      >
+                        {reg.attended ? "Mark Absent" : "Mark Present"}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Modal.Body>
+      </Modal>
       {/* Create Event Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>

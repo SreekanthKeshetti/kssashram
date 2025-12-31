@@ -52,5 +52,27 @@ const createMember = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+// @desc    Add Activity to Member
+// @route   POST /api/members/:id/activity
+const addMemberActivity = async (req, res) => {
+  try {
+    const member = await Member.findById(req.params.id);
+    if (!member) return res.status(404).json({ message: "Member not found" });
 
-module.exports = { getMembers, createMember };
+    const { eventName, role, date } = req.body;
+
+    member.activities.push({
+      eventName,
+      role,
+      date: date || Date.now(),
+    });
+
+    await member.save();
+    res.json(member);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Export
+module.exports = { getMembers, createMember, addMemberActivity };

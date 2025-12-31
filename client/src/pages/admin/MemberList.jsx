@@ -15,12 +15,21 @@ import {
   FaUserTie,
   FaCheckCircle,
   FaTimesCircle,
+  FaTasks,
 } from "react-icons/fa";
 import axios from "axios";
 
 const MemberList = () => {
   const [members, setMembers] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  // Activity Modal State
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [activityData, setActivityData] = useState({
+    eventName: "",
+    role: "",
+    date: "",
+  });
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
@@ -52,6 +61,33 @@ const MemberList = () => {
       console.error(err);
       setError("Failed to fetch members");
     }
+  };
+  // --- ACTIVITY HANDLER ---
+  const handleAddActivity = async (e) => {
+    e.preventDefault();
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+
+      await axios.post(
+        `http://localhost:5000/api/members/${selectedMember._id}/activity`,
+        activityData,
+        config
+      );
+
+      alert("Activity Logged Successfully!");
+      setShowActivityModal(false);
+      setActivityData({ eventName: "", role: "", date: "" });
+      fetchMembers(); // Refresh to update list (if we showed count)
+      // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      alert("Error logging activity");
+    }
+  };
+
+  const openActivityModal = (member) => {
+    setSelectedMember(member);
+    setShowActivityModal(true);
   };
 
   const handleSubmit = async (e) => {
@@ -110,6 +146,7 @@ const MemberList = () => {
                 <th>Type</th>
                 <th>Joined Date</th>
                 <th>Fee Status</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -140,6 +177,16 @@ const MemberList = () => {
                       </span>
                     )}
                   </td>
+                  <td>
+                    <Button
+                      size="sm"
+                      variant="outline-dark"
+                      onClick={() => openActivityModal(m)}
+                      title="Log Activity"
+                    >
+                      <FaTasks /> Log Work
+                    </Button>
+                  </td>
                 </tr>
               ))}
               {members.length === 0 && (
@@ -153,6 +200,64 @@ const MemberList = () => {
           </Table>
         </Card.Body>
       </Card>
+      {/* --- ACTIVITY MODAL --- */}
+      <Modal
+        show={showActivityModal}
+        onHide={() => setShowActivityModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Log Member Activity</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Member:{" "}
+            <strong>
+              {selectedMember?.firstName} {selectedMember?.lastName}
+            </strong>
+          </p>
+          <Form onSubmit={handleAddActivity}>
+            <Form.Group className="mb-3">
+              <Form.Label>Event / Program Name</Form.Label>
+              <Form.Control
+                placeholder="e.g. Janmashtami Setup"
+                value={activityData.eventName}
+                onChange={(e) =>
+                  setActivityData({
+                    ...activityData,
+                    eventName: e.target.value,
+                  })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Role / Responsibility</Form.Label>
+              <Form.Control
+                placeholder="e.g. Food Serving Volunteer"
+                value={activityData.role}
+                onChange={(e) =>
+                  setActivityData({ ...activityData, role: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Date</Form.Label>
+              <Form.Control
+                type="date"
+                value={activityData.date}
+                onChange={(e) =>
+                  setActivityData({ ...activityData, date: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Button type="submit" className="w-100 btn-ashram">
+              Save Activity
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
 
       {/* Add Member Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">

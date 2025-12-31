@@ -1,6 +1,8 @@
 const fs = require("fs"); // <--- Add at top
 const path = require("path"); // <--- Add at top
 const Student = require("../models/Student");
+const { buildProgressPDF } = require("../utils/generateProgressPDF");
+const nodemailer = require("nodemailer");
 
 // @desc    Register a new Student (Employee)
 // @route   POST /api/students
@@ -149,9 +151,27 @@ const approveStudent = async (req, res) => {
 
 // @desc    Get Single Student by ID
 // @route   GET /api/students/:id
+// const getStudentById = async (req, res) => {
+//   try {
+//     const student = await Student.findById(req.params.id);
+//     if (student) {
+//       res.json(student);
+//     } else {
+//       res.status(404).json({ message: "Student not found" });
+//     }
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+///////////
 const getStudentById = async (req, res) => {
   try {
-    const student = await Student.findById(req.params.id);
+    // Populate sponsor to see donor details in frontend
+    const student = await Student.findById(req.params.id).populate(
+      "sponsor",
+      "donorName donorEmail"
+    );
     if (student) {
       res.json(student);
     } else {
@@ -277,6 +297,114 @@ const deleteDocument = async (req, res) => {
   }
 };
 
+// @desc    Record Student Leave
+// @route   POST /api/students/:id/leave
+const addStudentLeave = async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    const { startDate, endDate, reason } = req.body;
+
+    // Add to leaves array
+    student.leaves.push({
+      startDate,
+      endDate,
+      reason,
+      status: "On Leave",
+    });
+
+    await student.save();
+    res.json(student);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Mark Student as Returned
+// @route   PUT /api/students/:id/leave/:leaveId
+const updateLeaveStatus = async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    // Find the specific leave record
+    const leave = student.leaves.id(req.params.leaveId);
+    if (!leave)
+      return res.status(404).json({ message: "Leave record not found" });
+
+    leave.status = "Returned";
+    leave.actualReturnDate = Date.now();
+
+    await student.save();
+    res.json(student);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+// @desc    Email Progress Report to Sponsor (KSS_STU_20)
+// @route   POST /api/students/:id/email-sponsor
+const emailProgressReport = async (req, res) => {
+  try {
+    // Populate sponsor to get donorEmail
+    const student = await Student.findById(req.params.id).populate("sponsor");
+
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    if (!student.sponsor || !student.sponsor.donorEmail) {
+      return res
+        .status(400)
+        .json({ message: "No sponsor mapped or sponsor has no email." });
+    }
+
+    // 1. Generate PDF
+    let buffers = [];
+    const pdfPromise = new Promise((resolve) => {
+      buildProgressPDF(
+        student,
+        (chunk) => buffers.push(chunk),
+        () => resolve(Buffer.concat(buffers))
+      );
+    });
+    const pdfBuffer = await pdfPromise;
+
+    // 2. Send Email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: student.sponsor.donorEmail,
+      subject: `Progress Report: ${student.firstName} ${student.lastName}`,
+      html: `
+        <h3>Namaste ${student.sponsor.donorName},</h3>
+        <p>We are happy to share the periodic progress report of the student you are supporting: <strong>${student.firstName} ${student.lastName}</strong>.</p>
+        <p>Please find the detailed report attached.</p>
+        <p>Your support is making a real difference in their life.</p>
+        <br/>
+        <p>Regards,<br/>Karunasri Seva Samithi</p>
+      `,
+      attachments: [
+        {
+          filename: `Progress_Report_${student.firstName}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+    });
+
+    res.json({ message: "Progress report sent successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Export ALL functions
 module.exports = {
   createStudent,
@@ -287,4 +415,7 @@ module.exports = {
   deleteStudent,
   uploadDocuments,
   deleteDocument, // <--- Add these
+  addStudentLeave,
+  updateLeaveStatus, // <--- Add these
+  emailProgressReport, // <--- Add this
 };

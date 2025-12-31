@@ -22,6 +22,9 @@ const eventSchema = mongoose.Schema(
         name: { type: String, required: true },
         phone: { type: String, required: true },
         registeredAt: { type: Date, default: Date.now },
+        // --- NEW FIELD ---
+        attended: { type: Boolean, default: false },
+        // ----------------
       },
     ],
 

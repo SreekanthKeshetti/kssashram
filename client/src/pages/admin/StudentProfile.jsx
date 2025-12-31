@@ -652,6 +652,7 @@ import {
   FaPhone,
   FaFileAlt,
   FaCloudUploadAlt,
+  FaSuitcase,
 } from "react-icons/fa";
 import axios from "axios";
 
@@ -696,6 +697,11 @@ const StudentProfile = () => {
   // --- DOCUMENT STATES ---
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [newLeave, setNewLeave] = useState({
+    startDate: "",
+    endDate: "",
+    reason: "",
+  });
 
   useEffect(() => {
     fetchStudent();
@@ -754,6 +760,46 @@ const StudentProfile = () => {
       alert("Upload failed");
     }
     setUploading(false);
+  };
+
+  // --- LEAVE HANDLERS ---
+  const addLeave = async () => {
+    if (!newLeave.startDate || !newLeave.reason)
+      return alert("Please fill Start Date and Reason");
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.post(
+        `http://localhost:5000/api/students/${id}/leave`,
+        newLeave,
+        config
+      );
+
+      alert("Leave Recorded");
+      setNewLeave({ startDate: "", endDate: "", reason: "" });
+      fetchStudent();
+    } catch (err) {
+      alert("Error recording leave");
+    }
+  };
+
+  const markReturned = async (leaveId) => {
+    if (!window.confirm("Confirm student has returned to Ashram?")) return;
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.put(
+        `http://localhost:5000/api/students/${id}/leave/${leaveId}`,
+        {},
+        config
+      );
+
+      alert("Student Marked as Returned");
+      fetchStudent();
+    } catch (err) {
+      alert("Error updating status");
+    }
   };
 
   const handleDeleteDoc = async (filePath) => {
@@ -915,6 +961,7 @@ const StudentProfile = () => {
         <Spinner animation="border" />
       </div>
     );
+  const currentLeave = student.leaves?.find((l) => l.status === "On Leave");
 
   return (
     <div>
@@ -938,6 +985,11 @@ const StudentProfile = () => {
           </span>
         </div>
         <div className="ms-auto d-flex gap-2">
+          {currentLeave && (
+            <Badge bg="warning" text="dark" className="align-self-center me-2">
+              ON LEAVE
+            </Badge>
+          )}
           {/* ALUMNI BUTTON: Only show if Active */}
           {student.admissionStatus === "Active" && (
             <Button
@@ -1147,17 +1199,72 @@ const StudentProfile = () => {
           )}
 
           {/* Sponsor Card */}
+          {/* Sponsor Card */}
           <Card className="shadow-sm border-0 bg-light">
             <Card.Body>
               <h6 className="text-maroon fw-bold">
                 <FaHandHoldingHeart /> Sponsor Details
               </h6>
+
               {student.sponsor ? (
                 <div className="mt-3">
                   <p className="text-success fw-bold mb-1">Sponsored</p>
-                  <small className="text-muted">
-                    Sponsor ID: {student.sponsor.slice(-6)}
-                  </small>
+
+                  {/* --- FIX: Handle Object vs String --- */}
+                  <div className="text-muted small mb-3">
+                    {typeof student.sponsor === "object" ? (
+                      <>
+                        <strong>Name:</strong> {student.sponsor.donorName}
+                        <br />
+                        <strong>ID:</strong>{" "}
+                        {student.sponsor._id.toString().slice(-6).toUpperCase()}
+                      </>
+                    ) : (
+                      <>
+                        <strong>ID:</strong>{" "}
+                        {student.sponsor.toString().slice(-6).toUpperCase()}
+                      </>
+                    )}
+                  </div>
+                  {/* ----------------------------------- */}
+
+                  {/* Email Report Button */}
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="w-100 mb-2"
+                    onClick={async () => {
+                      if (
+                        !confirm(
+                          "Send Progress Report PDF to Sponsor via Email?"
+                        )
+                      )
+                        return;
+                      try {
+                        const userInfo = JSON.parse(
+                          localStorage.getItem("userInfo")
+                        );
+                        const config = {
+                          headers: {
+                            Authorization: `Bearer ${userInfo.token}`,
+                          },
+                        };
+                        await axios.post(
+                          `http://localhost:5000/api/students/${id}/email-sponsor`,
+                          {},
+                          config
+                        );
+                        alert("Report Sent Successfully!");
+                      } catch (err) {
+                        alert(
+                          err.response?.data?.message || "Error sending report"
+                        );
+                      }
+                    }}
+                  >
+                    <FaEnvelope className="me-2" /> Email Progress Report
+                  </Button>
+
                   <div className="mt-2">
                     <Button
                       size="sm"
@@ -1498,6 +1605,137 @@ const StudentProfile = () => {
                       </p>
                     )}
                   </Row>
+                </Tab>
+                {/* --- NEW LEAVES TAB --- */}
+                <Tab
+                  eventKey="leaves"
+                  title={
+                    <span>
+                      <FaSuitcase /> Leaves
+                    </span>
+                  }
+                >
+                  {/* Leave Form */}
+                  <div className="p-3 bg-light rounded mb-4">
+                    <h6 className="text-maroon">Record New Leave</h6>
+                    {currentLeave ? (
+                      <Alert variant="warning">
+                        Student is currently on leave (Since{" "}
+                        {new Date(currentLeave.startDate).toLocaleDateString()}
+                        ).
+                        <br />
+                        <strong>Reason:</strong> {currentLeave.reason}
+                        <div className="mt-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => markReturned(currentLeave._id)}
+                          >
+                            Mark as Returned
+                          </Button>
+                        </div>
+                      </Alert>
+                    ) : (
+                      <Row className="g-2">
+                        <Col md={4}>
+                          <Form.Label className="small">Start Date</Form.Label>
+                          <Form.Control
+                            type="date"
+                            value={newLeave.startDate}
+                            onChange={(e) =>
+                              setNewLeave({
+                                ...newLeave,
+                                startDate: e.target.value,
+                              })
+                            }
+                          />
+                        </Col>
+                        <Col md={4}>
+                          <Form.Label className="small">
+                            Expected Return
+                          </Form.Label>
+                          <Form.Control
+                            type="date"
+                            value={newLeave.endDate}
+                            onChange={(e) =>
+                              setNewLeave({
+                                ...newLeave,
+                                endDate: e.target.value,
+                              })
+                            }
+                          />
+                        </Col>
+                        <Col md={4}>
+                          <Form.Label className="small">Reason</Form.Label>
+                          <Form.Control
+                            placeholder="e.g. Going Home"
+                            value={newLeave.reason}
+                            onChange={(e) =>
+                              setNewLeave({
+                                ...newLeave,
+                                reason: e.target.value,
+                              })
+                            }
+                          />
+                        </Col>
+                        <Col md={12} className="text-end mt-2">
+                          <Button size="sm" variant="danger" onClick={addLeave}>
+                            Record Leave
+                          </Button>
+                        </Col>
+                      </Row>
+                    )}
+                  </div>
+
+                  {/* Leave History Table */}
+                  <h6 className="mb-3">Leave History</h6>
+                  <Table striped bordered hover size="sm">
+                    <thead>
+                      <tr>
+                        <th>Start Date</th>
+                        <th>Return Date</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {student.leaves &&
+                        student.leaves.map((l, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              {new Date(l.startDate).toLocaleDateString()}
+                            </td>
+                            <td>
+                              {l.actualReturnDate
+                                ? new Date(
+                                    l.actualReturnDate
+                                  ).toLocaleDateString()
+                                : l.endDate
+                                ? new Date(l.endDate).toLocaleDateString() +
+                                  " (Exp)"
+                                : "-"}
+                            </td>
+                            <td>{l.reason}</td>
+                            <td>
+                              {l.status === "On Leave" ? (
+                                <Badge bg="warning" text="dark">
+                                  On Leave
+                                </Badge>
+                              ) : (
+                                <Badge bg="success">Returned</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      {(!student.leaves || student.leaves.length === 0) && (
+                        <tr>
+                          <td colSpan="4" className="text-center text-muted">
+                            No leave history.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
                 </Tab>
               </Tabs>
             </Card.Body>

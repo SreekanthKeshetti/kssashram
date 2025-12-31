@@ -68,5 +68,30 @@ const registerForEvent = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+// @desc    Mark Attendance (Staff Only)
+// @route   PUT /api/events/:id/attendance
+const markAttendance = async (req, res) => {
+  try {
+    const { registrationId, status } = req.body; // status = true/false
 
-module.exports = { getEvents, createEvent, registerForEvent };
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    // Find the specific registration inside the array
+    const registration = event.registrations.id(registrationId);
+    if (!registration)
+      return res.status(404).json({ message: "Registration not found" });
+
+    registration.attended = status;
+    await event.save();
+
+    res.json({
+      message: "Attendance updated",
+      registrations: event.registrations,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getEvents, createEvent, registerForEvent, markAttendance };

@@ -11,6 +11,9 @@ const {
   deleteStudent,
   uploadDocuments,
   deleteDocument,
+  addStudentLeave,
+  updateLeaveStatus,
+  emailProgressReport,
 } = require("../controllers/studentController");
 const { protect, admin } = require("../middleware/authMiddleware");
 // --- MULTER CONFIG (Same as Donation) ---
@@ -49,5 +52,11 @@ router.route("/:id/approve").put(protect, approveStudent);
 // --- NEW DOCUMENT ROUTES ---
 router.post("/:id/upload", protect, upload.array("files", 5), uploadDocuments);
 router.delete("/:id/documents", protect, deleteDocument);
+
+// Leave Management Routes
+router.post("/:id/leave", protect, addStudentLeave);
+router.put("/:id/leave/:leaveId", protect, updateLeaveStatus);
+// Email Sponsor Route
+router.post("/:id/email-sponsor", protect, emailProgressReport);
 
 module.exports = router;

@@ -4,6 +4,7 @@ const {
   getEvents,
   createEvent,
   registerForEvent,
+  markAttendance,
 } = require("../controllers/eventController");
 const { protect, staff } = require("../middleware/authMiddleware");
 
@@ -13,5 +14,6 @@ router
   .post(protect, staff, createEvent); // <--- 'staff' allows Manager AND Admin
 
 router.route("/:id/register").post(registerForEvent); // Public can register
+router.put("/:id/attendance", protect, staff, markAttendance);
 
 module.exports = router;

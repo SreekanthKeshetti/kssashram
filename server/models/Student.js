@@ -118,6 +118,19 @@ const studentSchema = mongoose.Schema(
       },
     ],
     // ----------------------------------------------
+    leaves: [
+      {
+        startDate: { type: Date, required: true },
+        endDate: { type: Date }, // Estimated return date
+        actualReturnDate: { type: Date }, // When they actually came back
+        reason: { type: String, required: true },
+        status: {
+          type: String,
+          enum: ["On Leave", "Returned"],
+          default: "On Leave",
+        },
+      },
+    ],
 
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
