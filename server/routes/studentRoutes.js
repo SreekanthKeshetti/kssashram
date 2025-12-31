@@ -14,8 +14,9 @@ const {
   addStudentLeave,
   updateLeaveStatus,
   emailProgressReport,
+  updateStatutoryInfo,
 } = require("../controllers/studentController");
-const { protect, admin } = require("../middleware/authMiddleware");
+const { protect, admin, staff } = require("../middleware/authMiddleware");
 // --- MULTER CONFIG (Same as Donation) ---
 const storage = multer.diskStorage({
   destination(req, file, cb) {
@@ -58,5 +59,7 @@ router.post("/:id/leave", protect, addStudentLeave);
 router.put("/:id/leave/:leaveId", protect, updateLeaveStatus);
 // Email Sponsor Route
 router.post("/:id/email-sponsor", protect, emailProgressReport);
+// New Route for Legal/Statutory Updates
+router.put("/:id/statutory", protect, staff, updateStatutoryInfo);
 
 module.exports = router;

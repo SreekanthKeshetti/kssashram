@@ -148,7 +148,7 @@
 const fs = require("fs"); // <--- Add this at the very top
 const path = require("path"); // <--- Ensure this is imported too
 const Donation = require("../models/Donation");
-const { buildReceipt } = require("../utils/generatePDF"); // Ensure this path is correct
+const { buildReceipt, buildTaxCertificate } = require("../utils/generatePDF"); // Ensure this path is correct
 const Scheme = require("../models/Scheme"); // <--- Import Scheme
 const nodemailer = require("nodemailer");
 const { logAudit } = require("../utils/auditLogger"); // <--- Import
@@ -450,7 +450,96 @@ const getMyDonations = async (req, res) => {
   }
 };
 
-// Export it
+const getDonorByPhone = async (req, res) => {
+  try {
+    const { phone } = req.query;
+    if (!phone)
+      return res.status(400).json({ message: "Phone number required" });
+
+    // Create a regex that allows flexible matching (ignores case, trims)
+    const searchRegex = new RegExp(phone.trim(), "i");
+
+    // Find the most recent donation
+    const donation = await Donation.findOne({
+      donorPhone: { $regex: searchRegex },
+    }).sort({ createdAt: -1 });
+
+    if (donation) {
+      res.json({
+        success: true,
+        donor: {
+          donorName: donation.donorName,
+          donorPhone: donation.donorPhone,
+          donorEmail: donation.donorEmail,
+          donorPan: donation.donorPan,
+          donorAadhaar: donation.donorAadhaar,
+        },
+      });
+    } else {
+      res
+        .status(404)
+        .json({ success: false, message: "Donor not found with this number." });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// --- IMPROVED: Tax Certificate Generation ---
+const generateTaxCertificate = async (req, res) => {
+  try {
+    const { phone, year } = req.query;
+
+    if (!phone || !year)
+      return res.status(400).json({ message: "Phone and Year required" });
+
+    // 1. Calculate Date Range for Financial Year (Apr 1 to Mar 31)
+    const start = new Date(`${year}-04-01`);
+    const end = new Date(`${parseInt(year) + 1}-03-31`);
+    // Set end time to end of day
+    end.setHours(23, 59, 59, 999);
+
+    // 2. Flexible Phone Search
+    const searchRegex = new RegExp(phone.trim(), "i");
+
+    const donations = await Donation.find({
+      donorPhone: { $regex: searchRegex },
+      createdAt: { $gte: start, $lte: end },
+    }).sort({ createdAt: 1 });
+
+    if (donations.length === 0) {
+      return res.status(404).json({
+        message: `No donations found for ${phone} in FY ${year}-${
+          parseInt(year) + 1
+        }`,
+      });
+    }
+
+    // 3. Get latest donor details
+    const latestDonation = donations[donations.length - 1];
+    const donorDetails = {
+      name: latestDonation.donorName,
+      phone: latestDonation.donorPhone,
+      pan: latestDonation.donorPan || "N/A",
+      address: latestDonation.address || "Address not recorded",
+    };
+
+    const filename = `TaxCert_${year}_${donorDetails.name}.pdf`;
+    res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-type", "application/pdf");
+
+    buildTaxCertificate(
+      donorDetails,
+      donations,
+      `April ${year} - March ${parseInt(year) + 1}`,
+      (chunk) => res.write(chunk),
+      () => res.end()
+    );
+  } catch (error) {
+    console.error("Certificate Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
 module.exports = {
   createDonation,
   createPublicDonation,
@@ -459,5 +548,7 @@ module.exports = {
   emailReceipt,
   uploadMedia,
   deleteMedia,
-  getMyDonations, // <--- Add this
+  getMyDonations,
+  getDonorByPhone, // <--- Updated
+  generateTaxCertificate, // <--- Updated
 };

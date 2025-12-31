@@ -1,10 +1,105 @@
+// const Event = require("../models/Event");
+
+// // @desc    Get all events (Public)
+// // @route   GET /api/events
+// const getEvents = async (req, res) => {
+//   try {
+//     // Sort by date (Nearest first)
+//     const events = await Event.find({}).sort({ date: 1 });
+//     res.json(events);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Create new event (Manager/Admin)
+// // @route   POST /api/events
+// const createEvent = async (req, res) => {
+//   try {
+//     const { title, description, date, time, location, eventType, branch } =
+//       req.body;
+
+//     const event = await Event.create({
+//       title,
+//       description,
+//       date,
+//       time,
+//       location,
+//       eventType,
+//       branch: branch || "Headquarters",
+//       createdBy: req.user._id, // Will be the Manager's ID
+//     });
+
+//     res.status(201).json(event);
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Register for event (Public Guest)
+// // @route   POST /api/events/:id/register
+// const registerForEvent = async (req, res) => {
+//   try {
+//     const event = await Event.findById(req.params.id);
+//     if (!event) return res.status(404).json({ message: "Event not found" });
+
+//     const { name, phone } = req.body;
+
+//     // Prevent duplicate registration by phone number
+//     const alreadyRegistered = event.registrations.find(
+//       (r) => r.phone === phone
+//     );
+//     if (alreadyRegistered) {
+//       return res
+//         .status(400)
+//         .json({ message: "This phone number is already registered." });
+//     }
+
+//     // Add to registrations
+//     event.registrations.push({
+//       user: req.user ? req.user._id : null,
+//       name,
+//       phone,
+//     });
+
+//     await event.save();
+//     res.json({ message: "Registration Successful" });
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// };
+// // @desc    Mark Attendance (Staff Only)
+// // @route   PUT /api/events/:id/attendance
+// const markAttendance = async (req, res) => {
+//   try {
+//     const { registrationId, status } = req.body; // status = true/false
+
+//     const event = await Event.findById(req.params.id);
+//     if (!event) return res.status(404).json({ message: "Event not found" });
+
+//     // Find the specific registration inside the array
+//     const registration = event.registrations.id(registrationId);
+//     if (!registration)
+//       return res.status(404).json({ message: "Registration not found" });
+
+//     registration.attended = status;
+//     await event.save();
+
+//     res.json({
+//       message: "Attendance updated",
+//       registrations: event.registrations,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// module.exports = { getEvents, createEvent, registerForEvent, markAttendance };
 const Event = require("../models/Event");
 
-// @desc    Get all events (Public)
-// @route   GET /api/events
+// @desc    Get all events
 const getEvents = async (req, res) => {
   try {
-    // Sort by date (Nearest first)
     const events = await Event.find({}).sort({ date: 1 });
     res.json(events);
   } catch (error) {
@@ -12,12 +107,20 @@ const getEvents = async (req, res) => {
   }
 };
 
-// @desc    Create new event (Manager/Admin)
-// @route   POST /api/events
+// @desc    Create new event (Updated for Fees)
 const createEvent = async (req, res) => {
   try {
-    const { title, description, date, time, location, eventType, branch } =
-      req.body;
+    const {
+      title,
+      description,
+      date,
+      time,
+      location,
+      eventType,
+      branch,
+      isPaid,
+      feeAmount,
+    } = req.body;
 
     const event = await Event.create({
       title,
@@ -26,8 +129,12 @@ const createEvent = async (req, res) => {
       time,
       location,
       eventType,
+      // --- NEW FIELDS ---
+      isPaid: isPaid || false,
+      feeAmount: isPaid ? Number(feeAmount) : 0,
+      // ------------------
       branch: branch || "Headquarters",
-      createdBy: req.user._id, // Will be the Manager's ID
+      createdBy: req.user._id,
     });
 
     res.status(201).json(event);
@@ -36,8 +143,7 @@ const createEvent = async (req, res) => {
   }
 };
 
-// @desc    Register for event (Public Guest)
-// @route   POST /api/events/:id/register
+// @desc    Register for event (Updated for Payment Status)
 const registerForEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
@@ -45,21 +151,23 @@ const registerForEvent = async (req, res) => {
 
     const { name, phone } = req.body;
 
-    // Prevent duplicate registration by phone number
     const alreadyRegistered = event.registrations.find(
       (r) => r.phone === phone
     );
     if (alreadyRegistered) {
       return res
         .status(400)
-        .json({ message: "This phone number is already registered." });
+        .json({ message: "Phone number already registered." });
     }
 
-    // Add to registrations
+    // Determine Status: If Paid Event -> 'Pending', else 'Free'
+    const initialStatus = event.isPaid ? "Pending" : "Free";
+
     event.registrations.push({
       user: req.user ? req.user._id : null,
       name,
       phone,
+      paymentStatus: initialStatus, // <--- Set Status
     });
 
     await event.save();
@@ -68,16 +176,14 @@ const registerForEvent = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
-// @desc    Mark Attendance (Staff Only)
-// @route   PUT /api/events/:id/attendance
+
+// @desc    Mark Attendance
 const markAttendance = async (req, res) => {
   try {
-    const { registrationId, status } = req.body; // status = true/false
-
+    const { registrationId, status } = req.body;
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    // Find the specific registration inside the array
     const registration = event.registrations.id(registrationId);
     if (!registration)
       return res.status(404).json({ message: "Registration not found" });
@@ -94,4 +200,33 @@ const markAttendance = async (req, res) => {
   }
 };
 
-module.exports = { getEvents, createEvent, registerForEvent, markAttendance };
+// --- NEW: Mark Payment Status (Admin/Staff) ---
+const updatePaymentStatus = async (req, res) => {
+  try {
+    const { registrationId, status } = req.body; // 'Paid' or 'Waived'
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
+    const registration = event.registrations.id(registrationId);
+    if (!registration)
+      return res.status(404).json({ message: "Registration not found" });
+
+    registration.paymentStatus = status;
+    await event.save();
+
+    res.json({
+      message: "Payment status updated",
+      registrations: event.registrations,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  getEvents,
+  createEvent,
+  registerForEvent,
+  markAttendance,
+  updatePaymentStatus,
+};

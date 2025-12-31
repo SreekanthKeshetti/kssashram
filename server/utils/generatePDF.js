@@ -224,5 +224,122 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
 
   doc.end();
 };
+// --- NEW FUNCTION: Consolidated Tax Certificate ---
+const buildTaxCertificate = (
+  donorDetails,
+  donations,
+  dateRange,
+  dataCallback,
+  endCallback
+) => {
+  const doc = new PDFDocument({ size: "A4", margin: 50 });
 
-module.exports = { buildReceipt };
+  doc.on("data", dataCallback);
+  doc.on("end", endCallback);
+
+  // 1. Header & Logo
+  const logoPath = path.join(__dirname, "..", "logo.jpg");
+  if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, 50, 45, { width: 60 });
+  }
+
+  doc
+    .fillColor("#581818")
+    .fontSize(20)
+    .text("KARUNASRI SEVA SAMITHI", 120, 50, { align: "left" })
+    .fontSize(10)
+    .text("Plot No. 123, Temple Road, Saroornagar, Hyderabad - 500035", 120, 75)
+    .text(
+      "Reg No: 123/2024 | PAN: AAATE1234E | 80G URN: AAATE1234EF20214",
+      120,
+      90
+    );
+
+  doc
+    .moveTo(50, 115)
+    .lineTo(550, 115)
+    .strokeColor("#DAA520")
+    .lineWidth(2)
+    .stroke();
+
+  // 2. Certificate Title
+  doc.moveDown(4);
+  doc
+    .fillColor("black")
+    .fontSize(16)
+    .text("STATEMENT OF DONATION (FORM 10BE)", {
+      align: "center",
+      underline: true,
+    });
+  doc.fontSize(10).text(`Financial Year: ${dateRange}`, { align: "center" });
+
+  // 3. Donor Details
+  doc.moveDown(2);
+  doc.text(`Donor Name: ${donorDetails.name}`, 50);
+  doc.text(`Phone: ${donorDetails.phone}`);
+  doc.text(`PAN: ${donorDetails.pan || "N/A"}`);
+  doc.text(`Address: ${donorDetails.address || "N/A"}`);
+
+  // 4. Donation Table
+  doc.moveDown(2);
+  let y = doc.y;
+
+  // Table Header
+  doc.font("Helvetica-Bold");
+  doc.text("Date", 50, y);
+  doc.text("Receipt No", 150, y);
+  doc.text("Mode", 300, y);
+  doc.text("Amount (Rs)", 450, y, { align: "right" });
+
+  doc
+    .moveTo(50, y + 15)
+    .lineTo(550, y + 15)
+    .lineWidth(1)
+    .strokeColor("black")
+    .stroke();
+  y += 25;
+
+  // Table Body
+  doc.font("Helvetica");
+  let total = 0;
+
+  donations.forEach((d) => {
+    doc.text(new Date(d.createdAt).toLocaleDateString(), 50, y);
+    doc.text(d._id.toString().slice(-6).toUpperCase(), 150, y);
+    doc.text(d.paymentMode, 300, y);
+    doc.text(d.amount.toLocaleString("en-IN") + "/-", 450, y, {
+      align: "right",
+    });
+
+    total += d.amount;
+    y += 20;
+  });
+
+  doc.moveTo(50, y).lineTo(550, y).lineWidth(1).stroke();
+  y += 10;
+
+  // Total
+  doc.font("Helvetica-Bold").fontSize(12);
+  doc.text("Total Donations:", 300, y);
+  doc.text(`Rs. ${total.toLocaleString("en-IN")}/-`, 450, y, {
+    align: "right",
+  });
+
+  // 5. Footer / Declaration
+  doc.moveDown(4);
+  doc.font("Helvetica").fontSize(10);
+  doc.text(
+    "Certified that the above donations are received by Karunasri Seva Samithi and are exempt u/s 80G of the Income Tax Act, 1961.",
+    50,
+    doc.y,
+    { align: "justify" }
+  );
+
+  doc.moveDown(4);
+  doc.text("Authorized Signatory", 400, doc.y);
+  doc.text("(Karunasri Seva Samithi)", 380, doc.y + 15);
+
+  doc.end();
+};
+
+module.exports = { buildReceipt, buildTaxCertificate };

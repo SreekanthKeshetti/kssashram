@@ -404,6 +404,28 @@ const emailProgressReport = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// --- NEW: Update Statutory Forms & Inspections ---
+const updateStatutoryInfo = async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    // 1. Update Forms Checklist
+    if (req.body.formsStatus) {
+      student.formsStatus = { ...student.formsStatus, ...req.body.formsStatus };
+    }
+
+    // 2. Add Inspection Log
+    if (req.body.newInspection) {
+      student.inspections.push(req.body.newInspection);
+    }
+
+    await student.save();
+    res.json(student);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // Export ALL functions
 module.exports = {
@@ -418,4 +440,5 @@ module.exports = {
   addStudentLeave,
   updateLeaveStatus, // <--- Add these
   emailProgressReport, // <--- Add this
+  updateStatutoryInfo, // <--- Add this
 };

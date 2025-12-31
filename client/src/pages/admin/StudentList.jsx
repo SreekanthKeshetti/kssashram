@@ -295,7 +295,6 @@ const StudentList = () => {
                   <td>{renderOverallStatus(s.admissionStatus)}</td>
                   {/* --------------------------- */}
 
-                  <td></td>
                   <td>
                     <div className="d-flex gap-2">
                       <Button

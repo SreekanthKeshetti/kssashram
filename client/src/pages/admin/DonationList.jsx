@@ -13,7 +13,14 @@ import {
   Modal,
   Form,
 } from "react-bootstrap";
-import { FaPlus, FaFilePdf, FaImages, FaTrash } from "react-icons/fa";
+import {
+  FaPlus,
+  FaFilePdf,
+  FaImages,
+  FaTrash,
+  FaSearch,
+  FaCertificate,
+} from "react-icons/fa";
 import axios from "axios";
 
 const DonationList = () => {
@@ -274,6 +281,63 @@ const DonationList = () => {
       alert("An error occurred while exporting. Check console for details.");
     }
   };
+  // --- STATE FOR TAX CERTIFICATE MODAL ---
+  const [showTaxModal, setShowTaxModal] = useState(false);
+  const [taxYear, setTaxYear] = useState(new Date().getFullYear());
+  const [taxPhone, setTaxPhone] = useState("");
+
+  // --- NEW: SEARCH DONOR FUNCTION (Inside Component) ---
+  const handleSearchDonor = async () => {
+    if (!formData.donorPhone)
+      return alert("Please enter a phone number to search.");
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+
+      const { data } = await axios.get(
+        `http://localhost:5000/api/donations/search?phone=${formData.donorPhone}`,
+        config
+      );
+
+      if (data.success) {
+        setFormData((prev) => ({
+          ...prev,
+          donorName: data.donor.donorName,
+          donorEmail: data.donor.donorEmail || "",
+          donorPan: data.donor.donorPan || "",
+          donorAadhaar: data.donor.donorAadhaar || "",
+        }));
+        alert("Donor details found and autofilled!");
+      }
+    } catch (err) {
+      alert("Donor not found. Please enter details manually.");
+    }
+  };
+
+  // --- NEW: DOWNLOAD TAX CERTIFICATE ---
+  const handleDownloadTaxCert = async (e) => {
+    e.preventDefault();
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const response = await axios.get(
+        `http://localhost:5000/api/donations/tax-certificate?phone=${taxPhone}&year=${taxYear}`,
+        {
+          headers: { Authorization: `Bearer ${userInfo.token}` },
+          responseType: "blob",
+        }
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `TaxCert_${taxPhone}_${taxYear}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      setShowTaxModal(false);
+    } catch (err) {
+      alert("Error: No donations found for this donor in the selected year.");
+    }
+  };
   return (
     <div>
       {/* --- Header --- */}
@@ -288,6 +352,13 @@ const DonationList = () => {
           <p className="text-muted">Track all incoming donations</p>
         </Col>
         <Col className="text-end">
+          <Button
+            variant="info"
+            className="me-2 text-white"
+            onClick={() => setShowTaxModal(true)}
+          >
+            <FaCertificate /> Tax Cert
+          </Button>
           <Button variant="success" className="me-2" onClick={handleExport}>
             <FaFilePdf /> Export
           </Button>
@@ -300,10 +371,32 @@ const DonationList = () => {
           </Button>
         </Col>
       </Row>
-
+      <Row>
+        <Col md={6} className="mb-3">
+          <Form.Label>
+            Phone Number <span className="text-danger">*</span>
+          </Form.Label>
+          <div className="input-group">
+            <Form.Control
+              type="text"
+              name="donorPhone"
+              value={formData.donorPhone}
+              onChange={handleChange}
+              required
+              placeholder="Enter phone to search"
+            />
+            <Button
+              variant="outline-secondary"
+              onClick={handleSearchDonor}
+              title="Search Existing Donor"
+            >
+              <FaSearch />
+            </Button>
+          </div>
+        </Col>
+      </Row>
       {/* --- Error Alert --- */}
       {error && <Alert variant="danger">{error}</Alert>}
-
       {/* --- Data Table --- */}
       <Card className="shadow-sm border-0">
         <Card.Body className="p-0">
@@ -461,7 +554,6 @@ const DonationList = () => {
           )}
         </Card.Body>
       </Card>
-
       {/* --- ADD DONATION MODAL --- */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>
@@ -692,6 +784,40 @@ const DonationList = () => {
               </Row>
             </>
           )}
+        </Modal.Body>
+      </Modal>
+      {/* 3. ADD TAX CERTIFICATE MODAL (At the bottom) */}
+      <Modal show={showTaxModal} onHide={() => setShowTaxModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Generate Consolidated 80G Certificate</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleDownloadTaxCert}>
+            <Form.Group className="mb-3">
+              <Form.Label>Donor Phone Number</Form.Label>
+              <Form.Control
+                required
+                value={taxPhone}
+                onChange={(e) => setTaxPhone(e.target.value)}
+                placeholder="Enter Donor Phone"
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Financial Year (Start Year)</Form.Label>
+              <Form.Select
+                value={taxYear}
+                onChange={(e) => setTaxYear(e.target.value)}
+              >
+                <option value="2023">2023 - 2024</option>
+                <option value="2024">2024 - 2025</option>
+                <option value="2025">2025 - 2026 (Current)</option>{" "}
+                {/* Select this for recent entries */}
+              </Form.Select>
+            </Form.Group>
+            <Button type="submit" variant="primary" className="w-100">
+              Download Certificate
+            </Button>
+          </Form>
         </Modal.Body>
       </Modal>
     </div>

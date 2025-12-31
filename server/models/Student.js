@@ -22,6 +22,21 @@ const studentSchema = mongoose.Schema(
       form18: { type: Boolean, default: false }, // Order of placement
       form7: { type: Boolean, default: false }, // Individual care plan
     },
+    // --- NEW FIELD: INSPECTION LOG (KSS_STU_21) ---
+    inspections: [
+      {
+        date: { type: Date, default: Date.now },
+        officialName: String, // e.g. "District Child Protection Officer"
+        department: String, // e.g. "CWC", "DCPU"
+        remarks: String, // e.g. "File verified, Form 7 missing"
+        status: {
+          type: String,
+          enum: ["Satisfactory", "Action Required"],
+          default: "Satisfactory",
+        },
+      },
+    ],
+    // ----------------------------------------------
 
     // --- Education & Health (KSS_STU_14) ---
     schoolName: { type: String },

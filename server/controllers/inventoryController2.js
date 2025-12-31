@@ -1,5 +1,5 @@
-const Inventory = require('../models/Inventory');
-const { logAudit } = require('../utils/auditLogger'); // Ensure this path is correct
+const Inventory = require("../models/Inventory");
+const { logAudit } = require("../utils/auditLogger"); // Ensure this path is correct
 
 // @desc    Get all inventory items
 // @route   GET /api/inventory
@@ -16,35 +16,49 @@ const getInventory = async (req, res) => {
 // @route   POST /api/inventory
 const addInventoryItem = async (req, res) => {
   try {
-    const { itemName, category, isPerishable, expiryDate, quantity, unit, branch } = req.body;
+    const {
+      itemName,
+      category,
+      isPerishable,
+      expiryDate,
+      quantity,
+      unit,
+      branch,
+    } = req.body;
 
     // 1. Validation
     if (!itemName || !quantity || !category || !unit) {
-      return res.status(400).json({ message: 'Please fill all required fields' });
+      return res
+        .status(400)
+        .json({ message: "Please fill all required fields" });
     }
 
     // 2. Check if item exists (Case insensitive search)
     // We use regex to find 'Rice' even if user types 'rice'
-    const existingItem = await Inventory.findOne({ 
-      itemName: { $regex: new RegExp(`^${itemName}$`, 'i') }, 
-      branch: branch || 'Headquarters' 
+    const existingItem = await Inventory.findOne({
+      itemName: { $regex: new RegExp(`^${itemName}$`, "i") },
+      branch: branch || "Headquarters",
     });
 
     // --- SCENARIO A: UPDATE EXISTING ITEM ---
     if (existingItem) {
       const oldQty = existingItem.quantity; // Capture OLD value
       const newQty = Number(quantity);
-      
+
       existingItem.quantity += newQty;
       existingItem.lastUpdatedBy = req.user._id;
-      
+
       // Update other fields if provided
       if (expiryDate) existingItem.expiryDate = expiryDate;
-      
+
       await existingItem.save();
 
       // Log Audit
-      await logAudit(req, 'UPDATE', 'Inventory', existingItem._id, 
+      await logAudit(
+        req,
+        "UPDATE",
+        "Inventory",
+        existingItem._id,
         `Stock Added: ${itemName}. Qty changed from ${oldQty} to ${existingItem.quantity} (${unit})`
       );
 
@@ -59,17 +73,20 @@ const addInventoryItem = async (req, res) => {
       expiryDate,
       quantity: Number(quantity),
       unit,
-      branch: branch || 'Headquarters',
-      lastUpdatedBy: req.user._id
+      branch: branch || "Headquarters",
+      lastUpdatedBy: req.user._id,
     });
 
     // Log Audit (No oldQty here)
-    await logAudit(req, 'CREATE', 'Inventory', newItem._id, 
+    await logAudit(
+      req,
+      "CREATE",
+      "Inventory",
+      newItem._id,
       `New Item Added: ${itemName} - Initial Stock: ${quantity} ${unit}`
     );
 
     res.status(201).json(newItem);
-
   } catch (error) {
     console.error("Inventory Error:", error);
     res.status(400).json({ message: error.message });

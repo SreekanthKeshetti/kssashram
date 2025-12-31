@@ -46,6 +46,8 @@ const {
   uploadMedia,
   deleteMedia,
   getMyDonations,
+  getDonorByPhone, // <--- Import
+  generateTaxCertificate, // <--- Import
 } = require("../controllers/donationController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -81,6 +83,11 @@ const upload = multer({
     checkFileType(file, cb);
   },
 });
+// 1. Search Route (Must be before /:id routes to avoid conflict)
+router.get("/search", protect, getDonorByPhone);
+
+// 2. Tax Certificate Route
+router.get("/tax-certificate", protect, generateTaxCertificate);
 
 // 1. Protected Routes (For Admin/Employee Dashboard)
 router.route("/").post(protect, createDonation).get(protect, getDonations);

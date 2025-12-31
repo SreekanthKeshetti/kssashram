@@ -653,6 +653,9 @@ import {
   FaFileAlt,
   FaCloudUploadAlt,
   FaSuitcase,
+  FaGavel,
+  FaClipboardCheck,
+  FaBuilding,
 } from "react-icons/fa";
 import axios from "axios";
 
@@ -702,6 +705,22 @@ const StudentProfile = () => {
     endDate: "",
     reason: "",
   });
+  // 1. STATE FOR INSPECTIONS & FORMS
+  const [forms, setForms] = useState({
+    form20: false,
+    form44: false,
+    form37: false,
+    form17: false,
+    form18: false,
+    form7: false,
+  });
+  const [newInspection, setNewInspection] = useState({
+    date: "",
+    officialName: "",
+    department: "",
+    remarks: "",
+    status: "Satisfactory",
+  });
 
   useEffect(() => {
     fetchStudent();
@@ -718,6 +737,10 @@ const StudentProfile = () => {
       );
       setStudent(data);
       setEditData(data);
+      // Load existing forms status
+      if (data.formsStatus) {
+        setForms(data.formsStatus);
+      }
       setLoading(false);
     } catch (error) {
       console.error(error);
@@ -963,6 +986,52 @@ const StudentProfile = () => {
     );
   const currentLeave = student.leaves?.find((l) => l.status === "On Leave");
 
+  // 3. HANDLERS
+  const handleFormToggle = async (formName) => {
+    const updatedForms = { ...forms, [formName]: !forms[formName] };
+    setForms(updatedForms); // Optimistic UI update
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.put(
+        `http://localhost:5000/api/students/${id}/statutory`,
+        { formsStatus: updatedForms },
+        config
+      );
+    } catch (err) {
+      alert("Error updating form status");
+    }
+  };
+
+  const addInspection = async () => {
+    if (!newInspection.officialName || !newInspection.date)
+      return alert("Fill details");
+
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+
+      const { data } = await axios.put(
+        `http://localhost:5000/api/students/${id}/statutory`,
+        { newInspection },
+        config
+      );
+
+      setStudent(data); // Refresh student data with new log
+      setNewInspection({
+        date: "",
+        officialName: "",
+        department: "",
+        remarks: "",
+        status: "Satisfactory",
+      });
+      alert("Inspection Logged");
+    } catch (err) {
+      alert("Error adding inspection");
+    }
+  };
+
   return (
     <div>
       {/* Header */}
@@ -1198,7 +1267,6 @@ const StudentProfile = () => {
             </Card>
           )}
 
-          {/* Sponsor Card */}
           {/* Sponsor Card */}
           <Card className="shadow-sm border-0 bg-light">
             <Card.Body>
@@ -1736,6 +1804,209 @@ const StudentProfile = () => {
                       )}
                     </tbody>
                   </Table>
+                </Tab>
+                <Tab
+                  eventKey="legal"
+                  title={
+                    <span>
+                      <FaGavel /> Legal & Statutory
+                    </span>
+                  }
+                >
+                  <div className="p-3">
+                    {/* SECTION 1: MANDATORY FORMS CHECKLIST */}
+                    <h5 className="text-maroon border-bottom pb-2 mb-3">
+                      <FaClipboardCheck /> Juvenile Justice Act Forms
+                    </h5>
+                    <Row className="mb-4">
+                      <Col md={6}>
+                        <div className="form-check form-switch mb-3">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={forms.form17}
+                            onChange={() => handleFormToggle("form17")}
+                          />
+                          <label className="form-check-label">
+                            Form 17 (Report at Production)
+                          </label>
+                        </div>
+                        <div className="form-check form-switch mb-3">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={forms.form18}
+                            onChange={() => handleFormToggle("form18")}
+                          />
+                          <label className="form-check-label">
+                            Form 18 (Order of Placement)
+                          </label>
+                        </div>
+                        <div className="form-check form-switch mb-3">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={forms.form20}
+                            onChange={() => handleFormToggle("form20")}
+                          />
+                          <label className="form-check-label">
+                            Form 20 (Undertaking by Guardian)
+                          </label>
+                        </div>
+                      </Col>
+                      <Col md={6}>
+                        <div className="form-check form-switch mb-3">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={forms.form7}
+                            onChange={() => handleFormToggle("form7")}
+                          />
+                          <label className="form-check-label">
+                            Form 7 (Individual Care Plan)
+                          </label>
+                        </div>
+                        <div className="form-check form-switch mb-3">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={forms.form44}
+                            onChange={() => handleFormToggle("form44")}
+                          />
+                          <label className="form-check-label">
+                            Form 44 (Release Order)
+                          </label>
+                        </div>
+                        <div className="form-check form-switch mb-3">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={forms.form37}
+                            onChange={() => handleFormToggle("form37")}
+                          />
+                          <label className="form-check-label">
+                            Form 37 (After Care Placement)
+                          </label>
+                        </div>
+                      </Col>
+                    </Row>
+
+                    {/* SECTION 2: INSPECTION TRACKING */}
+                    <h5 className="text-maroon border-bottom pb-2 mb-3">
+                      <FaBuilding /> Government Inspection Log
+                    </h5>
+
+                    {/* Inspection Form */}
+                    <div className="bg-light p-3 rounded mb-3">
+                      <Row className="g-2">
+                        <Col md={3}>
+                          <Form.Control
+                            type="date"
+                            value={newInspection.date}
+                            onChange={(e) =>
+                              setNewInspection({
+                                ...newInspection,
+                                date: e.target.value,
+                              })
+                            }
+                          />
+                        </Col>
+                        <Col md={3}>
+                          <Form.Control
+                            placeholder="Official Name"
+                            value={newInspection.officialName}
+                            onChange={(e) =>
+                              setNewInspection({
+                                ...newInspection,
+                                officialName: e.target.value,
+                              })
+                            }
+                          />
+                        </Col>
+                        <Col md={2}>
+                          <Form.Select
+                            value={newInspection.department}
+                            onChange={(e) =>
+                              setNewInspection({
+                                ...newInspection,
+                                department: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="">Dept</option>
+                            <option>CWC</option>
+                            <option>DCPU</option>
+                            <option>Police</option>
+                            <option>Other</option>
+                          </Form.Select>
+                        </Col>
+                        <Col md={2}>
+                          <Form.Control
+                            placeholder="Remarks"
+                            value={newInspection.remarks}
+                            onChange={(e) =>
+                              setNewInspection({
+                                ...newInspection,
+                                remarks: e.target.value,
+                              })
+                            }
+                          />
+                        </Col>
+                        <Col md={2}>
+                          <Button
+                            variant="dark"
+                            className="w-100"
+                            onClick={addInspection}
+                          >
+                            Log
+                          </Button>
+                        </Col>
+                      </Row>
+                    </div>
+
+                    {/* Inspection Table */}
+                    <Table striped bordered hover size="sm">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Official</th>
+                          <th>Dept</th>
+                          <th>Remarks</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {student.inspections &&
+                          student.inspections.map((insp, idx) => (
+                            <tr key={idx}>
+                              <td>
+                                {new Date(insp.date).toLocaleDateString()}
+                              </td>
+                              <td>{insp.officialName}</td>
+                              <td>
+                                <Badge bg="secondary">{insp.department}</Badge>
+                              </td>
+                              <td>{insp.remarks}</td>
+                              <td>
+                                {insp.status === "Action Required" ? (
+                                  <Badge bg="danger">Action Req</Badge>
+                                ) : (
+                                  <Badge bg="success">OK</Badge>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        {(!student.inspections ||
+                          student.inspections.length === 0) && (
+                          <tr>
+                            <td colSpan="5" className="text-center text-muted">
+                              No inspections recorded.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </Table>
+                  </div>
                 </Tab>
               </Tabs>
             </Card.Body>
