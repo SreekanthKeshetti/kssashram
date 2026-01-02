@@ -34,6 +34,16 @@ const donationSchema = mongoose.Schema(
     },
     paymentReference: { type: String }, // Cheque No or Transaction ID
 
+    // --- NEW FIELDS FOR REMINDERS (KSS_DON_12, 13) ---
+    isRecurring: { type: Boolean, default: false },
+    reminderFrequency: {
+      type: String,
+      enum: ["Annual", "Monthly"],
+      default: "Annual",
+    },
+    nextReminderDate: { type: Date }, // The date of the NEXT donation (e.g. Next Year)
+    // -------------------------------------------------
+
     // System Details
     branch: { type: String, required: true, default: "Headquarters" }, // KSS_GEN_2
     receiptStatus: {

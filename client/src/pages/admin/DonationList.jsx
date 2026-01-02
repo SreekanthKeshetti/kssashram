@@ -45,6 +45,7 @@ const DonationList = () => {
     paymentMode: "Cash",
     paymentReference: "",
     branch: "Headquarters",
+    isRecurring: false, // <--- Add this
   });
   // --- MEDIA MODAL STATE ---
   const [showMediaModal, setShowMediaModal] = useState(false);
@@ -97,9 +98,14 @@ const DonationList = () => {
   }, [fetchDonations]);
 
   // Handle Input Change
-  function handleChange(e) {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  }
+  // function handleChange(e) {
+  //   setFormData({ ...formData, [e.target.name]: e.target.value });
+  // }
+  const handleChange = (e) => {
+    const value =
+      e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    setFormData({ ...formData, [e.target.name]: value });
+  };
 
   // Handle Form Submit
   const handleSubmit = async (e) => {
@@ -672,6 +678,21 @@ const DonationList = () => {
                   onChange={handleChange}
                   placeholder="Optional"
                 />
+              </Col>
+              <Col md={12} className="mb-3">
+                <Form.Check
+                  type="checkbox"
+                  id="isRecurring"
+                  label="Remind Donor Next Year? (Annual Recurring)"
+                  name="isRecurring"
+                  checked={formData.isRecurring}
+                  onChange={handleChange}
+                  className="fw-bold text-primary"
+                />
+                <Form.Text className="text-muted">
+                  If checked, the system will send an email 30 days and 7 days
+                  before the same date next year.
+                </Form.Text>
               </Col>
             </Row>
 

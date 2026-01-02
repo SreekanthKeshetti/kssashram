@@ -173,12 +173,25 @@ const createDonation = async (req, res) => {
       paymentMode,
       paymentReference,
       branch,
+      isRecurring, // <--- Destructure this
     } = req.body;
+
+    // Calculate Next Reminder Date (If Recurring)
+    let nextDate = null;
+    if (isRecurring) {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() + 1); // Default to Next Year (Annual)
+      nextDate = d;
+    }
 
     const accountHeadId = await getAccountHeadForScheme(scheme);
 
     const donation = await Donation.create({
       donorName,
+      // ... existing fields ...
+      isRecurring: isRecurring || false,
+      nextReminderDate: nextDate,
+      // ...
       donorPhone,
       donorEmail,
       donorPan,

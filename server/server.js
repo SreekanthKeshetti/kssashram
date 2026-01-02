@@ -45,11 +45,14 @@ const memberRoutes = require("./routes/memberRoutes"); // Import
 const schemeRoutes = require("./routes/schemeRoutes"); // Import
 const auditRoutes = require("./routes/auditRoutes"); // Import
 const accountRoutes = require("./routes/accountRoutes"); // Import
+const runScheduler = require("./utils/reminderScheduler"); // <--- Import
 
 dotenv.config();
 connectDB();
 
 const app = express();
+// Start the Scheduler
+runScheduler(); // <--- Add this line
 
 app.use(cors());
 app.use(express.json());
