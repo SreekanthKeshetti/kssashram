@@ -2,79 +2,71 @@ const mongoose = require("mongoose");
 
 const studentSchema = mongoose.Schema(
   {
-    // --- Personal Details ---
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    dob: { type: Date, required: true },
-    gender: { type: String, enum: ["Male", "Female"], required: true },
-    guardianName: { type: String, required: true }, // KSS_STU_8
-    contactNumber: { type: String, required: true },
-    address: { type: String, required: true },
-    branch: { type: String, required: true },
+    // --- 1. NEW FIELDS FROM LEGACY DATA ---
+    admissionNumber: { type: String }, // Maps to CCI_Admin__c
+    caseNumber: { type: String }, // Maps to Case_Profile_Number__c
+    studentType: {
+      type: String,
+      enum: ["BPL", "Orphan", "Semi_Orphan", "General"],
+      default: "General",
+    }, // Maps to Student_Type__c
+    alternateContact: { type: String }, // Maps to KSS_Mobile_2__c
 
-    // --- Statutory Forms (Checklist KSS_STU_8 to KSS_STU_13) ---
-    // We store 'true' if the form is submitted/verified
+    // --- 2. EXISTING FIELDS (Updated) ---
+    firstName: { type: String, required: true }, // Derived from LastName column
+    lastName: { type: String, required: true }, // Derived from LastName column
+
+    dob: { type: Date }, // Made optional to prevent import errors if missing
+    gender: { type: String, enum: ["Male", "Female"], default: "Male" },
+
+    guardianName: { type: String, default: "Not Recorded" }, // CSV doesn't have this, so default it
+    contactNumber: { type: String }, // Maps to PersonMobilePhone
+
+    address: { type: String, default: "Ashram Address" }, // Default if missing
+    branch: { type: String, required: true }, // Maps to Branch__c (KS Sindhu -> Karunya Sindu)
+
+    // --- 3. EXISTING FUNCTIONALITY FIELDS ---
     formsStatus: {
-      form20: { type: Boolean, default: false }, // Undertaking by guardian
-      form44: { type: Boolean, default: false }, // Release order
-      form37: { type: Boolean, default: false }, // After care placement
-      form17: { type: Boolean, default: false }, // Report at production
-      form18: { type: Boolean, default: false }, // Order of placement
-      form7: { type: Boolean, default: false }, // Individual care plan
+      form20: { type: Boolean, default: false },
+      form44: { type: Boolean, default: false },
+      form37: { type: Boolean, default: false },
+      form17: { type: Boolean, default: false },
+      form18: { type: Boolean, default: false },
+      form7: { type: Boolean, default: false },
     },
-    // --- NEW FIELD: INSPECTION LOG (KSS_STU_21) ---
+
     inspections: [
       {
         date: { type: Date, default: Date.now },
-        officialName: String, // e.g. "District Child Protection Officer"
-        department: String, // e.g. "CWC", "DCPU"
-        remarks: String, // e.g. "File verified, Form 7 missing"
-        status: {
-          type: String,
-          enum: ["Satisfactory", "Action Required"],
-          default: "Satisfactory",
-        },
+        officialName: String,
+        department: String,
+        remarks: String,
+        status: { type: String, default: "Satisfactory" },
       },
     ],
-    // ----------------------------------------------
 
-    // --- Education & Health (KSS_STU_14) ---
     schoolName: { type: String },
-    currentClass: { type: String },
+    currentClass: { type: String }, // Maps to class
     healthIssues: { type: String },
 
-    // --- The 3-Tier Approval System (KSS_STU_3, 4, 5) ---
     approvals: {
       president: {
-        status: {
-          type: String,
-          enum: ["Pending", "Approved", "Rejected"],
-          default: "Pending",
-        },
+        status: { type: String, default: "Pending" },
         date: Date,
         remark: String,
       },
       secretary: {
-        status: {
-          type: String,
-          enum: ["Pending", "Approved", "Rejected"],
-          default: "Pending",
-        },
+        status: { type: String, default: "Pending" },
         date: Date,
         remark: String,
       },
       treasurer: {
-        status: {
-          type: String,
-          enum: ["Pending", "Approved", "Rejected"],
-          default: "Pending",
-        },
+        status: { type: String, default: "Pending" },
         date: Date,
         remark: String,
       },
     },
 
-    // Overall Status (Only 'Active' if all 3 approve)
     admissionStatus: {
       type: String,
       enum: ["Draft", "In Review", "Active", "Rejected", "Alumni"],
@@ -84,11 +76,10 @@ const studentSchema = mongoose.Schema(
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     sponsor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Donation", // Link to a specific Donor/Donation record
+      ref: "Donation",
       default: null,
     },
 
-    // --- KSS_STU_14: Education & Health Details ---
     educationHistory: [
       {
         year: String,
@@ -98,61 +89,40 @@ const studentSchema = mongoose.Schema(
         remarks: String,
       },
     ],
-
     healthRecords: [
       {
         date: { type: Date, default: Date.now },
-        checkupType: String, // e.g., "General", "Dental"
+        checkupType: String,
         doctorName: String,
         observation: String,
       },
     ],
-
-    // --- KSS_STU_7: Expenses ---
-    // We can track specific expenses for this student
     expenses: [
       {
         amount: Number,
-        description: String, // e.g., "School Fees", "Uniform"
+        description: String,
         date: { type: Date, default: Date.now },
       },
     ],
-    // --- NEW FIELD: ALUMNI TRACKING (KSS_FUT_1) ---
     alumniDetails: {
       jobTitle: String,
       company: String,
       currentLocation: String,
       email: String,
-      phone: String, // Current phone (might differ from guardian contact)
-      linkedIn: String,
+      phone: String,
     },
-    // --- NEW FIELD: DOCUMENTS (KSS_STU_11, 12, 16) ---
-    documents: [
-      {
-        type: String, // Stores file path e.g., "/uploads/student-123-aadhar.jpg"
-      },
-    ],
-    // ----------------------------------------------
+    documents: [{ type: String }],
     leaves: [
       {
-        startDate: { type: Date, required: true },
-        endDate: { type: Date }, // Estimated return date
-        actualReturnDate: { type: Date }, // When they actually came back
-        reason: { type: String, required: true },
-        status: {
-          type: String,
-          enum: ["On Leave", "Returned"],
-          default: "On Leave",
-        },
+        startDate: Date,
+        endDate: Date,
+        actualReturnDate: Date,
+        reason: String,
+        status: { type: String, default: "On Leave" },
       },
     ],
-
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
-
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Student", studentSchema);

@@ -1,5 +1,6 @@
 const fs = require("fs"); // <--- Add at top
 const path = require("path"); // <--- Add at top
+const csv = require("csv-parser");
 const Student = require("../models/Student");
 const { buildProgressPDF } = require("../utils/generateProgressPDF");
 const nodemailer = require("nodemailer");
@@ -19,6 +20,11 @@ const createStudent = async (req, res) => {
       branch,
       formsStatus,
       schoolName,
+      admissionNumber,
+      caseNumber,
+      studentType,
+      alternateContact,
+      currentClass,
     } = req.body;
 
     const student = await Student.create({
@@ -32,6 +38,12 @@ const createStudent = async (req, res) => {
       branch: branch || "Headquarters",
       formsStatus, // Expecting an object { form20: true, ... }
       schoolName,
+      createdBy: req.user._id,
+      admissionNumber,
+      caseNumber,
+      studentType,
+      alternateContact,
+      currentClass,
       createdBy: req.user._id,
     });
 
@@ -426,6 +438,139 @@ const updateStatutoryInfo = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+const importStudents = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+  const results = [];
+  const filePath = req.file.path;
+
+  try {
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on("data", (row) => {
+        // --- HELPER: FUZZY KEY FINDER ---
+        // Finds value even if header has spaces or case diffs
+        const getValue = (keywords) => {
+          const rowKeys = Object.keys(row);
+          const match = rowKeys.find((key) =>
+            keywords.some((k) => key.toLowerCase().includes(k.toLowerCase()))
+          );
+          return match ? row[match] : "";
+        };
+
+        // --- 1. SMART MAPPING ---
+
+        // A. Name (Look for 'Last' or 'Name')
+        let fName = "Unknown",
+          lName = ".";
+        const rawName = getValue(["LastName", "Name", "StudentName"]);
+        if (rawName) {
+          const parts = rawName.trim().split(" ");
+          lName = parts[0];
+          fName = parts.slice(1).join(" ") || parts[0];
+        }
+
+        // B. Branch (Look for 'Branch')
+        let normalizedBranch = "Headquarters";
+        const rawBranch = getValue(["Branch", "branch"]);
+        if (rawBranch) {
+          if (rawBranch.toLowerCase().includes("sindhu"))
+            normalizedBranch = "Karunya Sindu";
+          else if (rawBranch.toLowerCase().includes("bharathi"))
+            normalizedBranch = "Karunya Bharathi";
+        }
+
+        // C. Student Type (Look for 'Type', 'RecordType')
+        // CRITICAL FIX: Looks for *any* column with "Type" in the name
+        let sType = "General";
+        const rawType = getValue(["Student_Type", "StudentType", "RecordType"]);
+        if (rawType) {
+          const tLower = rawType.toLowerCase();
+          if (tLower.includes("semi")) sType = "Semi_Orphan";
+          else if (tLower.includes("orphan")) sType = "Orphan";
+          else if (tLower.includes("bpl")) sType = "BPL";
+        }
+
+        // D. Date of Birth (Look for 'Birth')
+        let birthDate = new Date(); // Default to today if missing
+        const rawDOB = getValue(["Birth", "DOB"]);
+        if (rawDOB) {
+          // Handle Excel formats or DD/MM/YYYY
+          const parsed = new Date(rawDOB);
+          if (!isNaN(parsed)) birthDate = parsed;
+        }
+
+        // E. Other Fields (Fuzzy Search)
+        const adminNo = getValue(["CCI_Admin", "Admin_No"]);
+        const caseNo = getValue(["Case_Profile", "CaseProfile"]); // Matches Case_Profile_Numbe
+        const mobile = getValue(["PersonMobile", "MobilePhone", "Contact"]);
+        const altMobile = getValue(["KSS_Mobile", "Mobile_2"]);
+        const cls = getValue(["class", "std", "grade"]);
+
+        // --- 2. PUSH DATA ---
+        if (rawName) {
+          results.push({
+            admissionNumber: adminNo,
+            caseNumber: caseNo,
+            firstName: fName,
+            lastName: lName,
+            currentClass: cls,
+            contactNumber: mobile || "0000000000",
+            alternateContact: altMobile,
+            dob: birthDate,
+            branch: normalizedBranch,
+            studentType: sType,
+
+            // Defaults
+            guardianName: "Legacy Record",
+            address: "Imported Data",
+            gender: "Male",
+
+            // --- AUTO APPROVE (3 TICKS) ---
+            admissionStatus: "Active",
+            approvals: {
+              president: {
+                status: "Approved",
+                date: new Date(),
+                remark: "Legacy Import",
+              },
+              secretary: {
+                status: "Approved",
+                date: new Date(),
+                remark: "Legacy Import",
+              },
+              treasurer: {
+                status: "Approved",
+                date: new Date(),
+                remark: "Legacy Import",
+              },
+            },
+            createdBy: req.user._id,
+          });
+        }
+      })
+      .on("end", async () => {
+        try {
+          if (results.length > 0) {
+            await Student.insertMany(results);
+            fs.unlinkSync(filePath);
+            res.json({
+              message: `Success! Imported ${results.length} students.`,
+            });
+          } else {
+            fs.unlinkSync(filePath);
+            res
+              .status(400)
+              .json({ message: "CSV was empty or could not map columns." });
+          }
+        } catch (dbError) {
+          res.status(500).json({ message: "DB Error: " + dbError.message });
+        }
+      });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // Export ALL functions
 module.exports = {
@@ -440,5 +585,6 @@ module.exports = {
   addStudentLeave,
   updateLeaveStatus, // <--- Add these
   emailProgressReport, // <--- Add this
+  importStudents,
   updateStatutoryInfo, // <--- Add this
 };

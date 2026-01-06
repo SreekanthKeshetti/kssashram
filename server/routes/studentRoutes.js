@@ -15,6 +15,7 @@ const {
   updateLeaveStatus,
   emailProgressReport,
   updateStatutoryInfo,
+  importStudents,
 } = require("../controllers/studentController");
 const { protect, admin, staff } = require("../middleware/authMiddleware");
 // --- MULTER CONFIG (Same as Donation) ---
@@ -28,10 +29,10 @@ const storage = multer.diskStorage({
 });
 
 const checkFileType = (file, cb) => {
-  const filetypes = /jpg|jpeg|png|pdf|doc|docx/; // Added doc/docx support
+  const filetypes = /jpg|jpeg|png|pdf|doc|docx|csv/; // Added doc/docx support
   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
   if (extname) return cb(null, true);
-  cb("Images or Documents only!");
+  cb("Images,Documents or CSVs only!");
 };
 
 const upload = multer({
@@ -61,5 +62,8 @@ router.put("/:id/leave/:leaveId", protect, updateLeaveStatus);
 router.post("/:id/email-sponsor", protect, emailProgressReport);
 // New Route for Legal/Statutory Updates
 router.put("/:id/statutory", protect, staff, updateStatutoryInfo);
+// NEW: Import Route (Admin Only)
+// Note: 'upload' is the multer middleware defined in your file
+router.post("/import", protect, admin, upload.single("file"), importStudents);
 
 module.exports = router;
