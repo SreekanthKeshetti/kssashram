@@ -1,345 +1,4 @@
 /* eslint-disable no-unused-vars */
-// /* eslint-disable no-unused-vars */
-// import React, { useEffect, useState, useCallback } from "react";
-// import {
-//   Table,
-//   Button,
-//   Badge,
-//   Card,
-//   Row,
-//   Col,
-//   Modal,
-//   Form,
-//   Alert,
-// } from "react-bootstrap";
-// import {
-//   FaPlus,
-//   FaMapMarkerAlt,
-//   FaClipboardList,
-//   FaUsers,
-//   FaCheckSquare,
-//   FaSquare,
-// } from "react-icons/fa";
-// import axios from "axios";
-
-// const EventList = () => {
-//   const [events, setEvents] = useState([]);
-//   const [showModal, setShowModal] = useState(false);
-
-//   // Attendance Modal State
-//   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-//   const [selectedEvent, setSelectedEvent] = useState(null);
-//   const [error, setError] = useState("");
-
-//   // Form Data
-//   const [formData, setFormData] = useState({
-//     title: "",
-//     description: "",
-//     date: "",
-//     time: "",
-//     location: "",
-//     eventType: "Celebration",
-//   });
-
-//   // Fetch Events
-//   const fetchEvents = useCallback(async () => {
-//     try {
-//       const { data } = await axios.get("http://localhost:5000/api/events");
-//       setEvents(data);
-//     } catch (error) {
-//       console.error(error);
-//       setError("Failed to load events");
-//     }
-//   }, []);
-
-//   useEffect(() => {
-//     // eslint-disable-next-line react-hooks/set-state-in-effect
-//     fetchEvents();
-//   }, [fetchEvents]);
-
-//   // --- ATTENDANCE HANDLER ---
-//   const toggleAttendance = async (regId, currentStatus) => {
-//     try {
-//       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-//       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-
-//       const { data } = await axios.put(
-//         `http://localhost:5000/api/events/${selectedEvent._id}/attendance`,
-//         {
-//           registrationId: regId,
-//           status: !currentStatus,
-//         },
-//         config
-//       );
-
-//       // Update local state immediately to reflect change
-//       setSelectedEvent((prev) => ({
-//         ...prev,
-//         registrations: data.registrations,
-//       }));
-//       fetchEvents(); // Refresh main list
-//     } catch (err) {
-//       alert("Error updating attendance");
-//     }
-//   };
-
-//   const openAttendanceModal = (evt) => {
-//     setSelectedEvent(evt);
-//     setShowAttendanceModal(true);
-//   };
-
-//   // Handle Create Event
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     try {
-//       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-//       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-
-//       // This API call works for both Admin AND Employee (Manager)
-//       await axios.post("http://localhost:5000/api/events", formData, config);
-
-//       setShowModal(false);
-//       fetchEvents();
-//       setFormData({
-//         title: "",
-//         description: "",
-//         date: "",
-//         time: "",
-//         location: "",
-//         eventType: "Celebration",
-//       });
-//       alert("Event Created Successfully!");
-//     } catch (error) {
-//       alert(error.response?.data?.message || "Error creating event");
-//     }
-//   };
-
-//   const handleChange = (e) => {
-//     setFormData({ ...formData, [e.target.name]: e.target.value });
-//   };
-
-//   return (
-//     <div>
-//       <Row className="mb-4 align-items-center">
-//         <Col>
-//           <h2
-//             className="text-maroon"
-//             style={{ fontFamily: "Playfair Display" }}
-//           >
-//             Events Management
-//           </h2>
-//           <p className="text-muted">
-//             Schedule Pujas, Workshops, and Celebrations
-//           </p>
-//         </Col>
-//         <Col className="text-end">
-//           {/* This button is visible to anyone who can access the Dashboard (Admin & Manager) */}
-//           <Button
-//             variant="primary"
-//             style={{ backgroundColor: "#581818", border: "none" }}
-//             onClick={() => setShowModal(true)}
-//           >
-//             <FaPlus /> Create Event
-//           </Button>
-//         </Col>
-//       </Row>
-
-//       {error && <Alert variant="danger">{error}</Alert>}
-
-//       <Card className="shadow-sm border-0">
-//         <Card.Body className="p-0">
-//           <Table hover responsive className="align-middle mb-0">
-//             <thead className="bg-light">
-//               <tr>
-//                 <th className="ps-4">Date</th>
-//                 <th>Event Name</th>
-//                 <th>Type</th>
-//                 <th>Location</th>
-//                 <th>Registrations</th>
-//                 <th>Action</th>
-//               </tr>
-//             </thead>
-//             <tbody>
-//               {events.map((e) => (
-//                 <tr key={e._id}>
-//                   <td className="ps-4">
-//                     <div className="fw-bold">
-//                       {new Date(e.date).toLocaleDateString()}
-//                     </div>
-//                     <small className="text-muted">{e.time}</small>
-//                   </td>
-//                   <td className="fw-bold">{e.title}</td>
-//                   <td>
-//                     <Badge bg="info" text="dark">
-//                       {e.eventType}
-//                     </Badge>
-//                   </td>
-//                   <td>
-//                     <FaMapMarkerAlt className="text-danger me-1" /> {e.location}
-//                   </td>
-//                   <td>
-//                     <Badge bg="secondary">
-//                       <FaUsers className="me-1" /> {e.registrations.length}
-//                     </Badge>
-//                   </td>
-//                   <td>
-//                     <Button
-//                       size="sm"
-//                       variant="outline-dark"
-//                       onClick={() => openAttendanceModal(e)}
-//                       title="Manage Attendance"
-//                     >
-//                       <FaClipboardList /> Attendance
-//                     </Button>
-//                   </td>
-//                 </tr>
-//               ))}
-//               {events.length === 0 && (
-//                 <tr>
-//                   <td colSpan="5" className="text-center py-5">
-//                     No events scheduled
-//                   </td>
-//                 </tr>
-//               )}
-//             </tbody>
-//           </Table>
-//         </Card.Body>
-//       </Card>
-//       {/* --- ATTENDANCE MODAL --- */}
-//       <Modal
-//         show={showAttendanceModal}
-//         onHide={() => setShowAttendanceModal(false)}
-//         size="lg"
-//       >
-//         <Modal.Header closeButton>
-//           <Modal.Title>Attendance: {selectedEvent?.title}</Modal.Title>
-//         </Modal.Header>
-//         <Modal.Body>
-//           {selectedEvent?.registrations.length === 0 ? (
-//             <p className="text-center text-muted">No registrations yet.</p>
-//           ) : (
-//             <Table striped bordered hover>
-//               <thead>
-//                 <tr>
-//                   <th>Name</th>
-//                   <th>Phone</th>
-//                   <th className="text-center">Status</th>
-//                   <th className="text-center">Action</th>
-//                 </tr>
-//               </thead>
-//               <tbody>
-//                 {selectedEvent?.registrations.map((reg) => (
-//                   <tr key={reg._id}>
-//                     <td>{reg.name}</td>
-//                     <td>{reg.phone}</td>
-//                     <td className="text-center">
-//                       {reg.attended ? (
-//                         <Badge bg="success">Present</Badge>
-//                       ) : (
-//                         <Badge bg="danger">Absent</Badge>
-//                       )}
-//                     </td>
-//                     <td className="text-center">
-//                       <Button
-//                         size="sm"
-//                         variant={
-//                           reg.attended ? "outline-danger" : "outline-success"
-//                         }
-//                         onClick={() => toggleAttendance(reg._id, reg.attended)}
-//                       >
-//                         {reg.attended ? "Mark Absent" : "Mark Present"}
-//                       </Button>
-//                     </td>
-//                   </tr>
-//                 ))}
-//               </tbody>
-//             </Table>
-//           )}
-//         </Modal.Body>
-//       </Modal>
-//       {/* Create Event Modal */}
-//       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
-//         <Modal.Header closeButton>
-//           <Modal.Title>Create New Event</Modal.Title>
-//         </Modal.Header>
-//         <Modal.Body>
-//           <Form onSubmit={handleSubmit}>
-//             <Row>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Event Title</Form.Label>
-//                 <Form.Control
-//                   name="title"
-//                   value={formData.title}
-//                   onChange={handleChange}
-//                   required
-//                 />
-//               </Col>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Type</Form.Label>
-//                 <Form.Select
-//                   name="eventType"
-//                   value={formData.eventType}
-//                   onChange={handleChange}
-//                 >
-//                   <option>Celebration</option>
-//                   <option>Training</option>
-//                   <option>Workshop</option>
-//                   <option>Puja</option>
-//                 </Form.Select>
-//               </Col>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Date</Form.Label>
-//                 <Form.Control
-//                   type="date"
-//                   name="date"
-//                   value={formData.date}
-//                   onChange={handleChange}
-//                   required
-//                 />
-//               </Col>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Time</Form.Label>
-//                 <Form.Control
-//                   type="text"
-//                   name="time"
-//                   value={formData.time}
-//                   placeholder="e.g. 10:00 AM"
-//                   onChange={handleChange}
-//                   required
-//                 />
-//               </Col>
-//               <Col md={12} className="mb-3">
-//                 <Form.Label>Location</Form.Label>
-//                 <Form.Control
-//                   name="location"
-//                   value={formData.location}
-//                   onChange={handleChange}
-//                   required
-//                 />
-//               </Col>
-//               <Col md={12} className="mb-3">
-//                 <Form.Label>Description</Form.Label>
-//                 <Form.Control
-//                   as="textarea"
-//                   rows={3}
-//                   name="description"
-//                   value={formData.description}
-//                   onChange={handleChange}
-//                   required
-//                 />
-//               </Col>
-//             </Row>
-//             <Button type="submit" className="w-100 btn-ashram">
-//               Publish Event
-//             </Button>
-//           </Form>
-//         </Modal.Body>
-//       </Modal>
-//     </div>
-//   );
-// };
-
-// export default EventList;
 import React, { useEffect, useState, useCallback } from "react";
 import {
   Table,
@@ -357,29 +16,33 @@ import {
   FaMapMarkerAlt,
   FaClipboardList,
   FaUsers,
-  FaRupeeSign,
+  FaCalendarCheck,
+  FaFileDownload,
+  FaBuilding,
 } from "react-icons/fa";
 import axios from "axios";
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
   const [showModal, setShowModal] = useState(false);
-
-  // Attendance Modal State
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [attendanceDate, setAttendanceDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [error, setError] = useState("");
 
-  // Form Data
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    date: "",
+    startDate: "",
+    endDate: "",
     time: "",
     location: "",
-    eventType: "Celebration",
+    eventType: "Training",
     isPaid: false,
     feeAmount: "",
+    branch: "Karunya Sindu", // Default Branch
   });
 
   const fetchEvents = useCallback(async () => {
@@ -397,15 +60,57 @@ const EventList = () => {
     fetchEvents();
   }, [fetchEvents]);
 
-  // --- ATTENDANCE HANDLER ---
-  const toggleAttendance = async (regId, currentStatus) => {
+  // --- NEW: DOWNLOAD PARTICIPANTS FUNCTION ---
+  const handleDownloadParticipants = () => {
+    if (!selectedEvent || selectedEvent.registrations.length === 0)
+      return alert("No participants to export.");
+
+    const headers = [
+      "Name",
+      "Phone",
+      "Registration Date",
+      "Payment Status",
+      "Days Attended",
+    ];
+
+    const rows = selectedEvent.registrations.map((r) => [
+      `"${r.name}"`, // Quote name to handle commas
+      `"${r.phone}"`,
+      new Date(r.registeredAt).toLocaleDateString(),
+      r.paymentStatus,
+      r.attendanceLog ? r.attendanceLog.length : 0,
+    ]);
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      headers.join(",") +
+      "\n" +
+      rows.map((e) => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Participants_${selectedEvent.title.replace(/\s+/g, "_")}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  // ------------------------------------------
+
+  const toggleAttendance = async (regId, currentLog) => {
     try {
+      const targetDateStr = new Date(attendanceDate).toDateString();
+      const isPresent = currentLog.some(
+        (d) => new Date(d).toDateString() === targetDateStr
+      );
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
       const { data } = await axios.put(
         `http://localhost:5000/api/events/${selectedEvent._id}/attendance`,
-        { registrationId: regId, status: !currentStatus },
+        { registrationId: regId, date: attendanceDate, status: !isPresent },
         config
       );
       setSelectedEvent((prev) => ({
@@ -418,7 +123,6 @@ const EventList = () => {
     }
   };
 
-  // --- PAYMENT HANDLER (Mark Paid) ---
   const markPayment = async (regId) => {
     if (!window.confirm("Confirm payment received?")) return;
     try {
@@ -442,6 +146,7 @@ const EventList = () => {
 
   const openAttendanceModal = (evt) => {
     setSelectedEvent(evt);
+    setAttendanceDate(new Date().toISOString().split("T")[0]);
     setShowAttendanceModal(true);
   };
 
@@ -450,20 +155,24 @@ const EventList = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      const payload = { ...formData };
+      if (!payload.endDate) payload.endDate = payload.startDate;
 
-      await axios.post("http://localhost:5000/api/events", formData, config);
+      await axios.post("http://localhost:5000/api/events", payload, config);
 
       setShowModal(false);
       fetchEvents();
       setFormData({
         title: "",
         description: "",
-        date: "",
+        startDate: "",
+        endDate: "",
         time: "",
         location: "",
-        eventType: "Celebration",
+        eventType: "Training",
         isPaid: false,
         feeAmount: "",
+        branch: "Karunya Sindu",
       });
       alert("Event Created Successfully!");
     } catch (error) {
@@ -477,6 +186,12 @@ const EventList = () => {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
+  const isPresentOnDate = (log) => {
+    if (!log) return false;
+    const target = new Date(attendanceDate).toDateString();
+    return log.some((d) => new Date(d).toDateString() === target);
+  };
+
   return (
     <div>
       <Row className="mb-4 align-items-center">
@@ -485,10 +200,10 @@ const EventList = () => {
             className="text-maroon"
             style={{ fontFamily: "Playfair Display" }}
           >
-            Events Management
+            Events & Trainings
           </h2>
           <p className="text-muted">
-            Schedule Pujas, Workshops, and Celebrations
+            Manage Tailoring, Computer Classes & Celebrations
           </p>
         </Col>
         <Col className="text-end">
@@ -509,58 +224,69 @@ const EventList = () => {
           <Table hover responsive className="align-middle mb-0">
             <thead className="bg-light">
               <tr>
-                <th className="ps-4">Date</th>
-                <th>Event Name</th>
+                <th className="ps-4">Dates</th>
+                <th>Title</th>
+                <th>Branch</th>
                 <th>Type</th>
                 <th>Fee</th>
-                <th>Registrations</th>
+                <th>Users</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {events.map((e) => (
-                <tr key={e._id}>
-                  <td className="ps-4">
-                    <div className="fw-bold">
-                      {new Date(e.date).toLocaleDateString()}
-                    </div>
-                    <small className="text-muted">{e.time}</small>
-                  </td>
-                  <td className="fw-bold">{e.title}</td>
-                  <td>
-                    <Badge bg="info" text="dark">
-                      {e.eventType}
-                    </Badge>
-                  </td>
-                  <td>
-                    {e.isPaid ? (
-                      <Badge bg="warning" text="dark">
-                        ₹ {e.feeAmount}
+              {events.map((e) => {
+                const start = new Date(e.startDate).toLocaleDateString();
+                const end = e.endDate
+                  ? new Date(e.endDate).toLocaleDateString()
+                  : start;
+                return (
+                  <tr key={e._id}>
+                    <td className="ps-4">
+                      <div className="fw-bold">{start}</div>
+                      {start !== end && (
+                        <small className="text-muted">to {end}</small>
+                      )}
+                    </td>
+                    <td className="fw-bold">{e.title}</td>
+                    <td>
+                      <Badge bg="light" text="dark" className="border">
+                        {e.branch}
                       </Badge>
-                    ) : (
-                      <Badge bg="success">Free</Badge>
-                    )}
-                  </td>
-                  <td>
-                    <Badge bg="secondary">
-                      <FaUsers className="me-1" /> {e.registrations.length}
-                    </Badge>
-                  </td>
-                  <td>
-                    <Button
-                      size="sm"
-                      variant="outline-dark"
-                      onClick={() => openAttendanceModal(e)}
-                      title="Manage Attendance"
-                    >
-                      <FaClipboardList /> Manage
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <Badge bg="info" text="dark">
+                        {e.eventType}
+                      </Badge>
+                    </td>
+                    <td>
+                      {e.isPaid ? (
+                        <Badge bg="warning" text="dark">
+                          ₹ {e.feeAmount}
+                        </Badge>
+                      ) : (
+                        <Badge bg="success">Free</Badge>
+                      )}
+                    </td>
+                    <td>
+                      <Badge bg="secondary">
+                        <FaUsers className="me-1" /> {e.registrations.length}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Button
+                        size="sm"
+                        variant="outline-dark"
+                        onClick={() => openAttendanceModal(e)}
+                      >
+                        <FaClipboardList /> Manage
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
               {events.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-5">
+                  <td colSpan="7" className="text-center py-5">
                     No events scheduled
                   </td>
                 </tr>
@@ -580,6 +306,26 @@ const EventList = () => {
           <Modal.Title>Manage: {selectedEvent?.title}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div className="d-flex align-items-center gap-2">
+              <strong>Attendance For:</strong>
+              <input
+                type="date"
+                className="form-control w-auto"
+                value={attendanceDate}
+                onChange={(e) => setAttendanceDate(e.target.value)}
+              />
+            </div>
+            {/* --- DOWNLOAD BUTTON --- */}
+            <Button
+              variant="success"
+              size="sm"
+              onClick={handleDownloadParticipants}
+            >
+              <FaFileDownload /> Export List
+            </Button>
+          </div>
+
           {selectedEvent?.registrations.length === 0 ? (
             <p className="text-center text-muted">No registrations yet.</p>
           ) : (
@@ -587,18 +333,22 @@ const EventList = () => {
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Phone</th>
-                  <th className="text-center">Payment</th>
-                  <th className="text-center">Attendance</th>
+                  <th className="text-center">Attended</th>
+                  <th className="text-center">Fee</th>
+                  <th className="text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {selectedEvent?.registrations.map((reg) => (
                   <tr key={reg._id}>
-                    <td>{reg.name}</td>
-                    <td>{reg.phone}</td>
-
-                    {/* Payment Column */}
+                    <td>
+                      {reg.name}
+                      <br />
+                      <small className="text-muted">{reg.phone}</small>
+                    </td>
+                    <td className="text-center fw-bold">
+                      {reg.attendanceLog?.length || 0} Days
+                    </td>
                     <td className="text-center">
                       {reg.paymentStatus === "Paid" ||
                       reg.paymentStatus === "Free" ? (
@@ -613,17 +363,25 @@ const EventList = () => {
                         </Button>
                       )}
                     </td>
-
-                    {/* Attendance Column */}
                     <td className="text-center">
                       <Button
                         size="sm"
                         variant={
-                          reg.attended ? "outline-danger" : "outline-success"
+                          isPresentOnDate(reg.attendanceLog)
+                            ? "success"
+                            : "outline-secondary"
                         }
-                        onClick={() => toggleAttendance(reg._id, reg.attended)}
+                        onClick={() =>
+                          toggleAttendance(reg._id, reg.attendanceLog)
+                        }
                       >
-                        {reg.attended ? "Mark Absent" : "Mark Present"}
+                        {isPresentOnDate(reg.attendanceLog) ? (
+                          <>
+                            <FaCalendarCheck /> Present
+                          </>
+                        ) : (
+                          "Mark Present"
+                        )}
                       </Button>
                     </td>
                   </tr>
@@ -637,13 +395,13 @@ const EventList = () => {
       {/* Create Event Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Create New Event</Modal.Title>
+          <Modal.Title>Create New Training / Event</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
             <Row>
-              <Col md={6} className="mb-3">
-                <Form.Label>Event Title</Form.Label>
+              <Col md={12} className="mb-3">
+                <Form.Label>Title</Form.Label>
                 <Form.Control
                   name="title"
                   value={formData.title}
@@ -651,6 +409,7 @@ const EventList = () => {
                   required
                 />
               </Col>
+
               <Col md={6} className="mb-3">
                 <Form.Label>Type</Form.Label>
                 <Form.Select
@@ -658,42 +417,68 @@ const EventList = () => {
                   value={formData.eventType}
                   onChange={handleChange}
                 >
-                  <option>Celebration</option>
                   <option>Training</option>
+                  <option>Tailoring</option>
+                  <option>Computer Training</option>
+                  <option>Celebration</option>
                   <option>Workshop</option>
-                  <option>Puja</option>
                 </Form.Select>
               </Col>
               <Col md={6} className="mb-3">
-                <Form.Label>Date</Form.Label>
+                <Form.Label>Branch (Organizer)</Form.Label>
+                <Form.Select
+                  name="branch"
+                  value={formData.branch}
+                  onChange={handleChange}
+                >
+                  <option value="Karunya Sindu">Karunya Sindu</option>
+                  <option value="Karunya Bharathi">Karunya Bharathi</option>
+                  <option value="Headquarters">Headquarters</option>
+                </Form.Select>
+              </Col>
+
+              <Col md={6} className="mb-3">
+                <Form.Label>Start Date</Form.Label>
                 <Form.Control
                   type="date"
-                  name="date"
-                  value={formData.date}
+                  name="startDate"
+                  value={formData.startDate}
                   onChange={handleChange}
                   required
                 />
               </Col>
               <Col md={6} className="mb-3">
-                <Form.Label>Time</Form.Label>
+                <Form.Label>End Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                />
+              </Col>
+
+              <Col md={6} className="mb-3">
+                <Form.Label>Time / Schedule</Form.Label>
                 <Form.Control
                   type="text"
                   name="time"
                   value={formData.time}
-                  placeholder="e.g. 10:00 AM"
+                  placeholder="e.g. 10 AM"
                   onChange={handleChange}
                   required
                 />
               </Col>
-              <Col md={12} className="mb-3">
-                <Form.Label>Location</Form.Label>
+              <Col md={6} className="mb-3">
+                <Form.Label>Physical Venue / Location</Form.Label>
                 <Form.Control
                   name="location"
                   value={formData.location}
+                  placeholder="e.g. Community Hall"
                   onChange={handleChange}
                   required
                 />
               </Col>
+
               <Col md={12} className="mb-3">
                 <Form.Label>Description</Form.Label>
                 <Form.Control
@@ -706,11 +491,10 @@ const EventList = () => {
                 />
               </Col>
 
-              {/* --- PAID EVENT SECTION --- */}
               <Col md={6}>
                 <Form.Check
                   type="switch"
-                  label="Is this a Paid Event?"
+                  label="Is Paid Training?"
                   name="isPaid"
                   checked={formData.isPaid}
                   onChange={handleChange}
@@ -720,7 +504,7 @@ const EventList = () => {
               {formData.isPaid && (
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Fee Amount (₹)</Form.Label>
+                    <Form.Label>Fee (₹)</Form.Label>
                     <Form.Control
                       type="number"
                       name="feeAmount"
@@ -733,7 +517,7 @@ const EventList = () => {
               )}
             </Row>
             <Button type="submit" className="w-100 btn-ashram">
-              Publish Event
+              Create Training
             </Button>
           </Form>
         </Modal.Body>

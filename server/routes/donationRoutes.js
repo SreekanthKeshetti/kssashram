@@ -48,6 +48,8 @@ const {
   getMyDonations,
   getDonorByPhone, // <--- Import
   generateTaxCertificate, // <--- Import
+  getDailySevaList,
+  importDonations,
 } = require("../controllers/donationController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -66,14 +68,15 @@ const storage = multer.diskStorage({
 });
 // Allow only Images and Videos
 const checkFileType = (file, cb) => {
-  const filetypes = /jpg|jpeg|png|mp4|mov|pdf/;
+  // --- FIX: ADDED 'csv' TO ALLOWED EXTENSIONS ---
+  const filetypes = /jpg|jpeg|png|mp4|mov|pdf|csv|xlsx|xls/;
   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = filetypes.test(file.mimetype);
+  // We relax mimetype checking for CSVs as they vary greatly (text/csv, application/vnd.ms-excel, etc)
 
-  if (extname && mimetype) {
+  if (extname) {
     return cb(null, true);
   } else {
-    cb("Images, Videos, or PDFs only!");
+    cb("Images, Videos, PDFs, or CSVs only!"); // Updated error message
   }
 };
 
@@ -102,5 +105,7 @@ router.post("/public", createPublicDonation);
 router.post("/:id/upload", protect, upload.array("files", 5), uploadMedia);
 router.delete("/:id/media", protect, deleteMedia); // <--- Add this
 router.get("/my", protect, getMyDonations); // <--- Add this
+router.get("/daily-seva", protect, getDailySevaList);
+router.post("/import", protect, upload.single("file"), importDonations);
 
 module.exports = router;

@@ -656,6 +656,8 @@ import {
   FaGavel,
   FaClipboardCheck,
   FaBuilding,
+  FaMedal,
+  FaRunning,
 } from "react-icons/fa";
 import axios from "axios";
 
@@ -720,6 +722,13 @@ const StudentProfile = () => {
     department: "",
     remarks: "",
     status: "Satisfactory",
+  });
+  // --- NEW ACTIVITY STATE ---
+  const [newActivity, setNewActivity] = useState({
+    activityType: "Sports",
+    name: "",
+    participationLevel: "",
+    achievement: "",
   });
 
   useEffect(() => {
@@ -1030,6 +1039,29 @@ const StudentProfile = () => {
     } catch (err) {
       alert("Error adding inspection");
     }
+  };
+  // --- ADD ACTIVITY HANDLER ---
+  const addActivity = () => {
+    if (!newActivity.name || !newActivity.participationLevel)
+      return alert("Please fill details");
+
+    handleUpdate({
+      newActivityEntry: {
+        activityType: newActivity.activityType,
+        name: newActivity.name,
+        participationLevel: newActivity.participationLevel,
+        achievement: newActivity.achievement,
+        date: new Date(),
+      },
+    });
+
+    setNewActivity({
+      activityType: "Sports",
+      name: "",
+      participationLevel: "",
+      achievement: "",
+    });
+    alert("Activity Added!");
   };
 
   return (
@@ -1580,6 +1612,147 @@ const StudentProfile = () => {
                     </Row>
                   </div>
                 </Tab>
+                {/* --- NEW TAB: EXTRA-CURRICULAR --- */}
+                <Tab
+                  eventKey="activities"
+                  title={
+                    <span>
+                      <FaRunning /> Extra-Curricular
+                    </span>
+                  }
+                >
+                  {/* 1. Activity List Table */}
+                  <Table striped bordered hover size="sm">
+                    <thead className="bg-light">
+                      <tr>
+                        <th>Category</th>
+                        <th>Activity Name</th>
+                        <th>Level / Participation</th>
+                        <th>Achievements / Remarks</th>
+                        <th>Date Recorded</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {student.activities &&
+                        student.activities.map((act, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <Badge
+                                bg={
+                                  act.activityType === "Vedic/Spiritual"
+                                    ? "warning"
+                                    : act.activityType === "Sports"
+                                    ? "success"
+                                    : act.activityType === "Arts"
+                                    ? "info"
+                                    : "secondary"
+                                }
+                                text="dark"
+                              >
+                                {act.activityType}
+                              </Badge>
+                            </td>
+                            <td className="fw-bold">{act.name}</td>
+                            <td>{act.participationLevel}</td>
+                            <td>
+                              {act.achievement ? (
+                                <span className="text-success fw-bold">
+                                  <FaMedal /> {act.achievement}
+                                </span>
+                              ) : (
+                                "-"
+                              )}
+                            </td>
+                            <td className="small text-muted">
+                              {new Date(act.date).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                      {(!student.activities ||
+                        student.activities.length === 0) && (
+                        <tr>
+                          <td colSpan="5" className="text-center text-muted">
+                            No activities recorded yet.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
+
+                  {/* 2. Add Activity Form */}
+                  <div className="p-3 bg-light rounded mt-3 border">
+                    <h6 className="text-maroon fw-bold">
+                      Add New Activity / Achievement
+                    </h6>
+                    <Row className="g-2">
+                      <Col md={3}>
+                        <Form.Label className="small">Category</Form.Label>
+                        <Form.Select
+                          value={newActivity.activityType}
+                          onChange={(e) =>
+                            setNewActivity({
+                              ...newActivity,
+                              activityType: e.target.value,
+                            })
+                          }
+                        >
+                          <option>Sports</option>
+                          <option>Arts</option>
+                          <option>Vedic/Spiritual</option>
+                          <option>Vocational</option>
+                          <option>Other</option>
+                        </Form.Select>
+                      </Col>
+                      <Col md={3}>
+                        <Form.Label className="small">Activity Name</Form.Label>
+                        <Form.Control
+                          placeholder="e.g. Yoga, Cricket, Slokas"
+                          value={newActivity.name}
+                          onChange={(e) =>
+                            setNewActivity({
+                              ...newActivity,
+                              name: e.target.value,
+                            })
+                          }
+                        />
+                      </Col>
+                      <Col md={3}>
+                        <Form.Label className="small">Level / Role</Form.Label>
+                        <Form.Control
+                          placeholder="e.g. Daily Practice, District Level"
+                          value={newActivity.participationLevel}
+                          onChange={(e) =>
+                            setNewActivity({
+                              ...newActivity,
+                              participationLevel: e.target.value,
+                            })
+                          }
+                        />
+                      </Col>
+                      <Col md={3}>
+                        <Form.Label className="small">
+                          Achievement (Optional)
+                        </Form.Label>
+                        <Form.Control
+                          placeholder="e.g. Won 1st Prize"
+                          value={newActivity.achievement}
+                          onChange={(e) =>
+                            setNewActivity({
+                              ...newActivity,
+                              achievement: e.target.value,
+                            })
+                          }
+                        />
+                      </Col>
+                      <Col md={12} className="text-end mt-3">
+                        <Button size="sm" variant="dark" onClick={addActivity}>
+                          <FaPlus className="me-1" /> Add Activity Record
+                        </Button>
+                      </Col>
+                    </Row>
+                  </div>
+                </Tab>
+
                 {/* --- NEW DOCUMENTS TAB --- */}
                 <Tab
                   eventKey="documents"

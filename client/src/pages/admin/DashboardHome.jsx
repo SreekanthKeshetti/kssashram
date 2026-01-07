@@ -130,22 +130,61 @@ const DashboardHome = () => {
 
       {/* --- Key Metrics Cards (Dynamic Data) --- */}
       <Row className="mb-4">
-        {/* 1. Total Donations */}
-        <Col md={3}>
+        {/* 1. TOTAL INCOME (Combined) */}
+        <Col md={4}>
           <Card
             className="p-3 mb-3 text-white shadow border-0"
             style={{ background: "linear-gradient(45deg, #11998e, #38ef7d)" }}
           >
             <div className="d-flex justify-content-between align-items-center">
               <div>
-                {/* Display Real Income */}
                 <h3 className="mb-0 fw-bold">
                   ₹ {stats.financials.income.toLocaleString()}
                 </h3>
-                <small>Total Donations</small>
+                <small>Total Trust Income</small>
               </div>
               <div style={{ fontSize: "2rem", opacity: 0.5 }}>
                 <FaHandHoldingHeart />
+              </div>
+            </div>
+          </Card>
+        </Col>
+
+        {/* 2. KARUNYA SINDU INCOME */}
+        <Col md={4}>
+          <Card
+            className="p-3 mb-3 text-white shadow border-0"
+            style={{ background: "linear-gradient(45deg, #FF8008, #FFC837)" }}
+          >
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h3 className="mb-0 fw-bold">
+                  ₹ {stats.financials.incomeSindu?.toLocaleString() || 0}
+                </h3>
+                <small>Karunya Sindu</small>
+              </div>
+              <div style={{ fontSize: "2rem", opacity: 0.5 }}>
+                <FaRupeeSign />
+              </div>
+            </div>
+          </Card>
+        </Col>
+
+        {/* 3. KARUNYA BHARATHI INCOME */}
+        <Col md={4}>
+          <Card
+            className="p-3 mb-3 text-white shadow border-0"
+            style={{ background: "linear-gradient(45deg, #8E2DE2, #4A00E0)" }}
+          >
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <h3 className="mb-0 fw-bold">
+                  ₹ {stats.financials.incomeBharathi?.toLocaleString() || 0}
+                </h3>
+                <small>Karunya Bharathi</small>
+              </div>
+              <div style={{ fontSize: "2rem", opacity: 0.5 }}>
+                <FaRupeeSign />
               </div>
             </div>
           </Card>

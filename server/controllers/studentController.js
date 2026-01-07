@@ -206,6 +206,16 @@ const updateStudent = async (req, res) => {
         req.body.educationHistory || student.educationHistory;
       student.healthRecords = req.body.healthRecords || student.healthRecords;
 
+      // --- 2. Update Activities (NEW) ---
+      // If we send a full list
+      if (req.body.activities) {
+        student.activities = req.body.activities;
+      }
+      // If we send a single new activity to push
+      if (req.body.newActivityEntry) {
+        student.activities.push(req.body.newActivityEntry);
+      }
+      // ----------------------------------
       // 2. Update Sponsor (if provided)
       // We check undefined because sending 'null' is a valid update (to remove sponsor)
       if (req.body.sponsor !== undefined) {
@@ -219,6 +229,14 @@ const updateStudent = async (req, res) => {
       student.contactNumber = req.body.contactNumber || student.contactNumber;
       student.address = req.body.address || student.address;
       student.dob = req.body.dob || student.dob;
+      // Update New Schema Fields
+      student.admissionNumber =
+        req.body.admissionNumber || student.admissionNumber;
+      student.caseNumber = req.body.caseNumber || student.caseNumber;
+      student.studentType = req.body.studentType || student.studentType;
+      student.alternateContact =
+        req.body.alternateContact || student.alternateContact;
+      student.currentClass = req.body.currentClass || student.currentClass;
 
       // 4. Update Expenses (Push to array)
       if (req.body.newExpense) {

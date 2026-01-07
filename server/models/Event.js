@@ -45,13 +45,24 @@ const eventSchema = mongoose.Schema(
   {
     title: { type: String, required: true },
     description: { type: String, required: true },
-    date: { type: Date, required: true },
+    // --- DATE & DURATION ---
+    startDate: { type: Date, required: true }, // Was 'date'
+    endDate: { type: Date }, // NEW: For multi-day trainings
     time: { type: String, required: true },
-    location: { type: String, required: true },
 
+    location: { type: String, required: true },
     eventType: {
       type: String,
-      enum: ["Celebration", "Training", "Workshop", "Puja", "Other"],
+      enum: [
+        "Celebration",
+        "Training",
+        "Workshop",
+        "Puja",
+        "Tailoring",
+        "Computer Training",
+        "Mana Varasatwa Sampada",
+        "Other",
+      ],
       default: "Celebration",
     },
 
@@ -73,6 +84,10 @@ const eventSchema = mongoose.Schema(
           enum: ["Pending", "Paid", "Free", "Waived"],
           default: "Free",
         },
+        // --- UPDATED ATTENDANCE TRACKING ---
+        // Instead of boolean, we store DATES attended
+        attendanceLog: [{ type: Date }],
+        // -----------------------------------
       },
     ],
 

@@ -60,9 +60,20 @@ const Inventory = require("../models/Inventory");
 // @route   GET /api/reports/stats
 const getDashboardStats = async (req, res) => {
   try {
-    // 1. Calculate Total Donations (Income)
+    // 1. Fetch All Donations
     const donations = await Donation.find({});
+
+    // --- NEW LOGIC: Calculate Split ---
     const totalIncome = donations.reduce((acc, item) => acc + item.amount, 0);
+
+    const incomeSindu = donations
+      .filter((d) => d.branch === "Karunya Sindu")
+      .reduce((acc, item) => acc + item.amount, 0);
+
+    const incomeBharathi = donations
+      .filter((d) => d.branch === "Karunya Bharathi")
+      .reduce((acc, item) => acc + item.amount, 0);
+    // ----------------------------------
 
     // 2. Calculate Total Expenses (Only Approved Debit Vouchers)
     const expenses = await Voucher.find({
@@ -71,25 +82,25 @@ const getDashboardStats = async (req, res) => {
     });
     const totalExpense = expenses.reduce((acc, item) => acc + item.amount, 0);
 
-    // 3. Count Active Students (Only those with 'Active' status)
+    // 3. Counts
     const studentCount = await Student.countDocuments({
       admissionStatus: "Active",
     });
-
-    // 4. Count Low Stock Items (Quantity < 10)
     const lowStockCount = await Inventory.countDocuments({
       quantity: { $lt: 10 },
     });
 
-    // 5. Get Recent 5 Donations for the table
+    // 4. Recent Donations
     const recentDonations = await Donation.find({})
       .sort({ createdAt: -1 })
       .limit(5)
-      .select("donorName amount scheme createdAt");
+      .select("donorName amount scheme createdAt branch"); // Added branch to select
 
     res.json({
       financials: {
         income: totalIncome,
+        incomeSindu, // <--- Sending to frontend
+        incomeBharathi, // <--- Sending to frontend
         expense: totalExpense,
         balance: totalIncome - totalExpense,
       },
@@ -103,6 +114,7 @@ const getDashboardStats = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 // --- NEW: Custom Finance Report (KSS_FIN_14) ---
 const getCustomFinanceReport = async (req, res) => {
   try {

@@ -96,6 +96,14 @@ const DashboardLayout = () => {
               <FaHandHoldingHeart /> Donations
             </Link>
           </li>
+          <li>
+            <Link
+              to="/dashboard/daily-seva"
+              className={`menu-item ${isActive("daily-seva")}`}
+            >
+              <FaCalendarAlt /> Daily Seva List
+            </Link>
+          </li>
 
           {/* Module: Students (KSS_STU) */}
           <li>

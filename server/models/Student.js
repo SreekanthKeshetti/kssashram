@@ -79,6 +79,20 @@ const studentSchema = mongoose.Schema(
       ref: "Donation",
       default: null,
     },
+    // --- NEW: EXTRA-CURRICULAR ACTIVITIES ---
+    activities: [
+      {
+        activityType: {
+          type: String,
+          enum: ["Sports", "Arts", "Vedic/Spiritual", "Vocational", "Other"],
+        },
+        name: String, // e.g. "Yoga", "Cricket", "Painting"
+        participationLevel: String, // e.g. "School Level", "District", "Daily Practice"
+        achievement: String, // e.g. "Won Gold Medal", "Completed Level 1"
+        date: { type: Date, default: Date.now }, // Date of achievement or entry
+      },
+    ],
+    // ----------------------------------------
 
     educationHistory: [
       {

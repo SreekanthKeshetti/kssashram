@@ -146,6 +146,9 @@
 // module.exports = { createDonation, getDonations };
 
 const fs = require("fs"); // <--- Add this at the very top
+const csv = require("csv-parser"); // Ensure csv-parser is installed
+const AccountHead = require("../models/AccountHead"); // Import AccountHead model
+
 const path = require("path"); // <--- Ensure this is imported too
 const Donation = require("../models/Donation");
 const { buildReceipt, buildTaxCertificate } = require("../utils/generatePDF"); // Ensure this path is correct
@@ -168,12 +171,18 @@ const createDonation = async (req, res) => {
       donorPhone,
       donorEmail,
       donorPan,
+      donorAadhaar,
       amount,
       scheme,
       paymentMode,
       paymentReference,
       branch,
       isRecurring, // <--- Destructure this
+      occasion,
+      inNameOf,
+      programDate,
+      category,
+      address,
     } = req.body;
 
     // Calculate Next Reminder Date (If Recurring)
@@ -195,6 +204,7 @@ const createDonation = async (req, res) => {
       donorPhone,
       donorEmail,
       donorPan,
+      donorAadhaar,
       amount,
       scheme,
       accountHead: accountHeadId,
@@ -202,6 +212,11 @@ const createDonation = async (req, res) => {
       paymentReference,
       branch: branch || "Headquarters",
       collectedBy: req.user._id,
+      occasion,
+      inNameOf,
+      programDate: programDate || null,
+      category: category || "Household", // Default to Household if not selected
+      address,
     });
     await logAudit(
       req,
@@ -486,6 +501,7 @@ const getDonorByPhone = async (req, res) => {
           donorEmail: donation.donorEmail,
           donorPan: donation.donorPan,
           donorAadhaar: donation.donorAadhaar,
+          address: donation.address, // <--- Good to have address too
         },
       });
     } else {
@@ -553,6 +569,129 @@ const generateTaxCertificate = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// --- NEW: Get Daily Seva List (Today's Sponsors) ---
+const getDailySevaList = async (req, res) => {
+  try {
+    const { date } = req.query; // Format: YYYY-MM-DD
+
+    if (!date) return res.status(400).json({ message: "Date is required" });
+
+    // Construct Start and End of the selected day
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    // Find donations scheduled for this PROGRAM DATE
+    const donations = await Donation.find({
+      programDate: { $gte: start, $lte: end },
+    }).sort({ createdAt: 1 });
+
+    res.json(donations);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 2. NEW: IMPORT DONATIONS FROM CSV
+// --- UPDATED: IMPORT DONATIONS (Client Specific Mapping) ---
+const importDonations = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+  const results = [];
+  const filePath = req.file.path;
+
+  // 1. Get the category chosen by user in Frontend (default to Household if missing)
+  const userSelectedCategory = req.body.category || "Household";
+
+  const accountHeads = await AccountHead.find({});
+  const accountMap = {};
+  accountHeads.forEach((acc) => {
+    accountMap[acc.code.toString()] = acc._id;
+  });
+
+  try {
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on("data", (row) => {
+        // ... (Keep existing getValue helper) ...
+        const getValue = (keywords) => {
+          const rowKeys = Object.keys(row);
+          const match = rowKeys.find((key) =>
+            keywords.some((k) => key.toLowerCase() === k.toLowerCase())
+          );
+          if (row[keywords[0]]) return row[keywords[0]];
+          return match ? row[match] : "";
+        };
+
+        // ... (Keep Name, Phone, Account Code mapping) ...
+        const dName = row.LastName || row.Name || "Unknown Donor";
+        const dPhone = row.Phone || "0000000000";
+        const rawCode = row.KSS_Category__c || "";
+        let matchedAccountId = null;
+        if (rawCode && accountMap[rawCode])
+          matchedAccountId = accountMap[rawCode];
+
+        const dPan = row["PAN NUMBER"] || row.PAN || "";
+        const dAadhaar = row.AADHAAR || row.Aadhaar || "";
+        const dEmail = row.Email_Address || "";
+        const dAmount = Number(row.Amount) || 0;
+        const dDate = row.Date ? new Date(row.Date) : new Date();
+        const dScheme = "General Donation";
+        const dBranch = "Headquarters";
+        const dAddress = "";
+
+        // --- THE FIX: CATEGORY LOGIC ---
+        // 1. Check if the row itself has a category column
+        // 2. If NOT, use the 'userSelectedCategory' we got from the dropdown
+        const rowCategory = getValue(["Category", "Type"]);
+        const finalCategory = rowCategory || userSelectedCategory;
+        // -------------------------------
+
+        if (dName && dName !== "Unknown Donor") {
+          results.push({
+            donorName: dName,
+            donorPhone: dPhone,
+            donorEmail: dEmail,
+            donorPan: dPan,
+            donorAadhaar: dAadhaar,
+            address: dAddress,
+            amount: dAmount,
+            scheme: dScheme,
+            accountHead: matchedAccountId,
+            paymentMode: "Cash",
+            category: finalCategory, // <--- SAVING IT HERE
+            branch: dBranch,
+            createdAt: dDate,
+            receiptStatus: "Generated",
+            collectedBy: req.user._id,
+          });
+        }
+      })
+      // ... (Rest of the function stays same) ...
+      .on("end", async () => {
+        // ... insertMany logic ...
+        try {
+          if (results.length > 0) {
+            await Donation.insertMany(results);
+            fs.unlinkSync(filePath);
+            res.json({
+              message: `Successfully imported ${results.length} donations as '${userSelectedCategory}'`,
+            });
+          } else {
+            fs.unlinkSync(filePath);
+            res.status(400).json({ message: "No valid data found." });
+          }
+        } catch (err) {
+          res.status(500).json({ message: "DB Error: " + err.message });
+        }
+      });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createDonation,
   createPublicDonation,
@@ -564,4 +703,6 @@ module.exports = {
   getMyDonations,
   getDonorByPhone, // <--- Updated
   generateTaxCertificate, // <--- Updated
+  getDailySevaList,
+  importDonations,
 };

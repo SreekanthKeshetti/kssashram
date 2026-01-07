@@ -77,6 +77,7 @@ import SystemAudit from "./pages/admin/SystemAudit";
 import CashReconciliation from "./pages/admin/CashReconciliation";
 import UserProfile from "./pages/UserProfile";
 import DonationHistory from "./pages/DonationHistory";
+import DailySeva from "./pages/admin/DailySeva";
 
 // --- Layout Wrapper for Public Pages ---
 // This ensures Header and Footer only appear on public pages, not the dashboard
@@ -127,6 +128,7 @@ function App() {
         <Route path="settings" element={<SchemeManager />} />{" "}
         <Route path="audit" element={<SystemAudit />} />
         <Route path="finance/reconcile" element={<CashReconciliation />} />{" "}
+        <Route path="daily-seva" element={<DailySeva />} />
         {/* New Route */}
         {/* Admin Settings */}
         {/* New Route */}

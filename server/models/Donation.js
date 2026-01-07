@@ -15,6 +15,10 @@ const donationSchema = mongoose.Schema(
     donorPan: { type: String }, // For Tax Benefit (KSS_DON_8)
     donorAadhaar: { type: String },
 
+    // --- NEW FIELD: BILLING ADDRESS ---
+    address: { type: String },
+    // ---------------------------------
+
     // Donation Details
     amount: { type: Number, required: true },
     scheme: { type: String, required: true }, // e.g. Nitya Annadhana
@@ -34,6 +38,14 @@ const donationSchema = mongoose.Schema(
     },
     paymentReference: { type: String }, // Cheque No or Transaction ID
 
+    // --- NEW FIELD: DONATION CATEGORY ---
+    category: {
+      type: String,
+      enum: ["Household", "Organizational"],
+      default: "Household",
+    },
+    // ------------------------------------
+
     // --- NEW FIELDS FOR REMINDERS (KSS_DON_12, 13) ---
     isRecurring: { type: Boolean, default: false },
     reminderFrequency: {
@@ -42,7 +54,12 @@ const donationSchema = mongoose.Schema(
       default: "Annual",
     },
     nextReminderDate: { type: Date }, // The date of the NEXT donation (e.g. Next Year)
-    // -------------------------------------------------
+    // -------------------------------------------
+    // --- NEW: SPECIAL OCCASION FIELDS (Tithi/Seva) ---
+    occasion: { type: String }, // e.g. "Birthday", "Wedding Anniversary", "In Memory Of"
+    inNameOf: { type: String }, // e.g. "Sairam" or "Late Father Name"
+    programDate: { type: Date }, // The actual date to perform the seva (e.g., Feb 14)
+    // -------------------------------------------
 
     // System Details
     branch: { type: String, required: true, default: "Headquarters" }, // KSS_GEN_2

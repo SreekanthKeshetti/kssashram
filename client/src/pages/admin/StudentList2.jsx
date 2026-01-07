@@ -10,7 +10,6 @@ import {
   Col,
   Modal,
   Form,
-  ButtonGroup,
 } from "react-bootstrap";
 import {
   FaPlus,
@@ -22,8 +21,6 @@ import {
   FaFileDownload,
   FaTrash,
   FaFileUpload,
-  FaUserFriends,
-  FaHistory,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -34,10 +31,6 @@ const StudentList = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-
-  // --- NEW: FILTER STATE ---
-  // Default to "Active" so they see current students first
-  const [filterStatus, setFilterStatus] = useState("Active");
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -74,25 +67,47 @@ const StudentList = () => {
     }
   };
 
-  // --- FILTER LOGIC ---
-  const filteredStudents = students.filter((s) => {
-    if (filterStatus === "All") return true;
-    if (filterStatus === "Alumni") return s.admissionStatus === "Alumni";
-    // For "Active", we usually want Active + In Review + Draft (Everything except Alumni/Rejected)
-    if (filterStatus === "Active")
-      return (
-        s.admissionStatus === "Active" ||
-        s.admissionStatus === "In Review" ||
-        s.admissionStatus === "Draft"
-      );
-    return true;
-  });
+  // --- EXPORT FUNCTION (CSV) ---
+  // const handleExport = () => {
+  //   if (students.length === 0) return alert("No data to export");
 
-  // --- UPDATED EXPORT FUNCTION (Exports ONLY what is currently visible) ---
+  //   const headers = [
+  //     "First Name",
+  //     "Last Name",
+  //     "Guardian",
+  //     "DOB",
+  //     "Gender",
+  //     "Contact",
+  //     "Branch",
+  //     "Status",
+  //   ];
+  //   const rows = students.map((s) => [
+  //     s.firstName,
+  //     s.lastName,
+  //     s.guardianName,
+  //     new Date(s.dob).toLocaleDateString(),
+  //     s.gender,
+  //     s.contactNumber,
+  //     s.branch,
+  //     s.admissionStatus,
+  //   ]);
+
+  //   const csvContent =
+  //     "data:text/csv;charset=utf-8," +
+  //     headers.join(",") +
+  //     "\n" +
+  //     rows.map((e) => e.join(",")).join("\n");
+  //   const encodedUri = encodeURI(csvContent);
+  //   const link = document.createElement("a");
+  //   link.setAttribute("href", encodedUri);
+  //   link.setAttribute("download", "Students_List.csv");
+  //   document.body.appendChild(link);
+  //   link.click();
+  // };
   const handleExport = () => {
-    if (filteredStudents.length === 0)
-      return alert("No data to export in current view");
+    if (students.length === 0) return alert("No data to export");
 
+    // 1. Define All Headers matching your Data Sheet + System Fields
     const headers = [
       "CCI Admin No",
       "Case Profile No",
@@ -113,42 +128,41 @@ const StudentList = () => {
       "Treasurer Approval",
     ];
 
-    // Use filteredStudents instead of students
-    const rows = filteredStudents.map((s) => [
+    // 2. Map Data Rows
+    const rows = students.map((s) => [
       s.admissionNumber || "-",
       s.caseNumber || "-",
-      `"${s.firstName}"`,
+      `"${s.firstName}"`, // Wrap strings in quotes to handle commas
       `"${s.lastName}"`,
       s.currentClass || "-",
       s.dob ? new Date(s.dob).toLocaleDateString() : "-",
       s.gender,
-      `"${s.contactNumber || "-"}"`,
+      `"${s.contactNumber || "-"}"`, // Quote phones to prevent Excel scientific notation
       `"${s.alternateContact || "-"}"`,
       s.studentType || "General",
       s.branch,
       `"${s.guardianName || "-"}"`,
-      `"${s.address ? s.address.replace(/\n/g, " ") : "-"}"`,
+      `"${s.address ? s.address.replace(/\n/g, " ") : "-"}"`, // Remove newlines from address
       s.admissionStatus,
       s.approvals?.president?.status || "Pending",
       s.approvals?.secretary?.status || "Pending",
       s.approvals?.treasurer?.status || "Pending",
     ]);
 
+    // 3. Create CSV Content
     const csvContent =
       "data:text/csv;charset=utf-8," +
       headers.join(",") +
       "\n" +
       rows.map((e) => e.join(",")).join("\n");
 
+    // 4. Trigger Download
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    // Dynamic Filename based on filter
+    // Add timestamp to filename
     const dateStr = new Date().toISOString().split("T")[0];
-    link.setAttribute(
-      "download",
-      `KSS_${filterStatus}_Students_${dateStr}.csv`
-    );
+    link.setAttribute("download", `Students_Master_List_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -169,6 +183,7 @@ const StudentList = () => {
     }
   };
 
+  // ... (Helper functions: handleApprove, handleChange, handleSubmit, openViewModal, StatusBadge) ...
   const handleApprove = async (status) => {
     try {
       const config = {
@@ -214,11 +229,6 @@ const StudentList = () => {
         contactNumber: "",
         address: "",
         branch: "Headquarters",
-        admissionNumber: "",
-        caseNumber: "",
-        studentType: "General",
-        alternateContact: "",
-        currentClass: "",
       });
     } catch (error) {
       alert("Error submitting application");
@@ -249,7 +259,7 @@ const StudentList = () => {
       </Badge>
     );
   };
-
+  // --- NEW HELPER: Overall Admission Status ---
   const renderOverallStatus = (status) => {
     switch (status) {
       case "Active":
@@ -270,7 +280,7 @@ const StudentList = () => {
             REJECTED
           </Badge>
         );
-      default:
+      default: // 'In Review' or 'Draft'
         return (
           <Badge bg="secondary" style={{ fontSize: "0.9rem" }}>
             IN REVIEW
@@ -278,7 +288,7 @@ const StudentList = () => {
         );
     }
   };
-
+  // --- IMPORT HANDLER ---
   const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -302,7 +312,7 @@ const StudentList = () => {
       );
 
       alert(data.message);
-      fetchStudents(userInfo);
+      fetchStudents(userInfo); // Refresh list to show new + old data
     } catch (err) {
       alert(err.response?.data?.message || "Import Failed");
     }
@@ -311,7 +321,7 @@ const StudentList = () => {
   return (
     <div>
       <Row className="mb-4 align-items-center">
-        <Col md={5}>
+        <Col>
           <h2
             className="text-maroon"
             style={{ fontFamily: "Playfair Display" }}
@@ -319,7 +329,8 @@ const StudentList = () => {
             Student Admissions
           </h2>
         </Col>
-        <Col md={7} className="text-end">
+        <Col className="text-end">
+          {/* --- EXPORT BUTTON (Beside New Admission) --- */}
           <input
             type="file"
             id="csvInput"
@@ -328,6 +339,7 @@ const StudentList = () => {
             onChange={handleImport}
           />
 
+          {/* IMPORT BUTTON - Triggers the hidden input */}
           <Button
             variant="warning"
             className="me-2 text-dark"
@@ -350,82 +362,53 @@ const StudentList = () => {
         </Col>
       </Row>
 
-      {/* --- FILTER TABS --- */}
-      <div className="mb-3">
-        <ButtonGroup>
-          <Button
-            variant={filterStatus === "Active" ? "dark" : "outline-dark"}
-            onClick={() => setFilterStatus("Active")}
-          >
-            <FaUserFriends className="me-2" /> Current Students
-          </Button>
-          <Button
-            variant={filterStatus === "Alumni" ? "info" : "outline-info"}
-            onClick={() => setFilterStatus("Alumni")}
-          >
-            <FaHistory className="me-2" /> Alumni List
-          </Button>
-          <Button
-            variant={filterStatus === "All" ? "secondary" : "outline-secondary"}
-            onClick={() => setFilterStatus("All")}
-          >
-            All Records
-          </Button>
-        </ButtonGroup>
-      </div>
-
-      <Card className="shadow-sm border-0">
+      {/* <Card className="shadow-sm border-0">
         <Card.Body className="p-0">
-          <Table
-            hover
-            responsive
-            className="align-middle mb-0 table-striped"
-            style={{ fontSize: "0.85rem" }}
-          >
-            <thead className="bg-light text-uppercase">
+          <Table hover responsive className="align-middle mb-0">
+            <thead className="bg-light">
               <tr>
-                <th className="ps-3">Admin No</th>
-                <th>Name / Case No</th>
+                <th className="ps-4">Admin No</th>
+                <th>Name</th>
                 <th>Class</th>
-                <th>DOB</th>
-                <th>Mobile</th>
-                <th>Alt Mobile</th>
+                <th>Guardian</th>
                 <th>Branch</th>
                 <th>Type</th>
                 <th className="text-center">Approvals</th>
+                <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
-            {/* USE FILTERED STUDENTS HERE */}
             <tbody>
-              {filteredStudents.map((s) => (
+              {students.map((s) => (
                 <tr key={s._id}>
-                  <td className="ps-3 fw-bold text-primary">
+                  <td className="ps-4 text-muted small">
                     {s.admissionNumber || "-"}
                   </td>
-
-                  <td>
-                    <div className="fw-bold text-dark">
-                      {s.firstName} {s.lastName}
+                  <td className="fw-bold">
+                    {s.firstName} {s.lastName}
+                    <div className="small text-muted fw-normal">
+                      {s.caseNumber}
                     </div>
-                    {s.caseNumber && (
-                      <div className="text-muted small">
-                        Case: {s.caseNumber}
-                      </div>
-                    )}
                   </td>
-
-                  <td>{s.currentClass || "-"}</td>
-                  <td>{s.dob ? new Date(s.dob).toLocaleDateString() : "-"}</td>
-                  <td>{s.contactNumber || "-"}</td>
-                  <td>{s.alternateContact || "-"}</td>
-
+                  <td>{s.currentClass}</td>
                   <td>
                     <Badge bg="light" text="dark" className="border">
                       {s.branch}
                     </Badge>
                   </td>
-
+                  <td>
+                    <Badge
+                      bg={
+                        s.studentType === "Orphan"
+                          ? "danger"
+                          : s.studentType === "Semi_Orphan"
+                          ? "warning"
+                          : "secondary"
+                      }
+                    >
+                      {s.studentType}
+                    </Badge>
+                  </td>
                   <td>
                     <Badge
                       bg={
@@ -440,6 +423,147 @@ const StudentList = () => {
                     </Badge>
                   </td>
 
+                  <td>{s.guardianName}</td>
+                  <td className="text-center">
+                    <small>
+                      P:{" "}
+                      {s.approvals.president.status === "Approved"
+                        ? "✅"
+                        : "⏳"}{" "}
+                      | S:{" "}
+                      {s.approvals.secretary.status === "Approved"
+                        ? "✅"
+                        : "⏳"}{" "}
+                      | T:{" "}
+                      {s.approvals.treasurer.status === "Approved"
+                        ? "✅"
+                        : "⏳"}
+                    </small>
+                  </td>
+                  
+                  <td>{renderOverallStatus(s.admissionStatus)}</td>
+
+                  <td>
+                    <div className="d-flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline-primary"
+                        onClick={() => openViewModal(s)}
+                        title="View Status"
+                      >
+                        <FaEye />
+                      </Button>
+
+                      <Link
+                        to={`/dashboard/students/${s._id}`}
+                        className="btn btn-sm btn-dark"
+                        title="Full Profile"
+                      >
+                        <FaUserGraduate />
+                      </Link>
+
+                      {currentUser?.role === "admin" && (
+                        <Button
+                          size="sm"
+                          variant="outline-danger"
+                          onClick={() => handleDelete(s._id)}
+                          title="Delete"
+                        >
+                          <FaTrash />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {students.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="text-center py-5">
+                    No students found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </Card.Body>
+      </Card> */}
+      <Card className="shadow-sm border-0">
+        <Card.Body className="p-0">
+          <Table
+            hover
+            responsive
+            className="align-middle mb-0 table-striped"
+            style={{ fontSize: "0.85rem" }}
+          >
+            <thead className="bg-light text-uppercase">
+              <tr>
+                <th className="ps-3">Admin No</th>
+                <th>Name / Case No</th> {/* Combined to save space */}
+                <th>Class</th>
+                <th>DOB</th> {/* New */}
+                <th>Mobile</th>
+                <th>Alt Mobile</th> {/* New */}
+                <th>Branch</th>
+                <th>Type</th>
+                <th className="text-center">Approvals</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((s) => (
+                <tr key={s._id}>
+                  {/* 1. Admin No */}
+                  <td className="ps-3 fw-bold text-primary">
+                    {s.admissionNumber || "-"}
+                  </td>
+
+                  {/* 2. Name & Case No */}
+                  <td>
+                    <div className="fw-bold text-dark">
+                      {s.firstName} {s.lastName}
+                    </div>
+                    {s.caseNumber && (
+                      <div className="text-muted small">
+                        Case: {s.caseNumber}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* 3. Class */}
+                  <td>{s.currentClass || "-"}</td>
+
+                  {/* 4. DOB (New) */}
+                  <td>{s.dob ? new Date(s.dob).toLocaleDateString() : "-"}</td>
+
+                  {/* 5. Mobile */}
+                  <td>{s.contactNumber || "-"}</td>
+
+                  {/* 6. Alt Mobile (New) */}
+                  <td>{s.alternateContact || "-"}</td>
+
+                  {/* 7. Branch */}
+                  <td>
+                    <Badge bg="light" text="dark" className="border">
+                      {s.branch}
+                    </Badge>
+                  </td>
+
+                  {/* 8. Student Type (Fixed Mapping) */}
+                  <td>
+                    <Badge
+                      bg={
+                        s.studentType === "Orphan"
+                          ? "danger"
+                          : s.studentType === "Semi_Orphan"
+                          ? "warning"
+                          : "secondary"
+                      }
+                    >
+                      {s.studentType}
+                    </Badge>
+                  </td>
+
+                  {/* 9. Approvals (3 Ticks) */}
                   <td className="text-center">
                     <div
                       className="d-flex justify-content-center gap-1"
@@ -489,6 +613,7 @@ const StudentList = () => {
                     </div>
                   </td>
 
+                  {/* 10. Action */}
                   <td>
                     <div className="d-flex gap-2">
                       <Button
@@ -499,15 +624,13 @@ const StudentList = () => {
                       >
                         <FaEye />
                       </Button>
-
                       <Link
                         to={`/dashboard/students/${s._id}`}
                         className="btn btn-sm btn-dark"
-                        title="Full Profile"
                       >
                         <FaUserGraduate />
                       </Link>
-
+                      {/* Delete Button */}
                       {currentUser?.role === "admin" && (
                         <Button
                           size="sm"
@@ -521,25 +644,17 @@ const StudentList = () => {
                   </td>
                 </tr>
               ))}
-              {filteredStudents.length === 0 && (
-                <tr>
-                  <td colSpan="10" className="text-center py-5 text-muted">
-                    No records found in "{filterStatus}" view.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </Table>
         </Card.Body>
       </Card>
 
-      {/* Keep the MODALS exactly as they are */}
+      {/* --- MODALS (View & Add) --- */}
       <Modal
         show={showViewModal}
         onHide={() => setShowViewModal(false)}
         size="lg"
       >
-        {/* ... (View Modal Content) ... */}
         <Modal.Header closeButton>
           <Modal.Title>Application Details</Modal.Title>
         </Modal.Header>
@@ -655,12 +770,79 @@ const StudentList = () => {
         </Modal.Body>
       </Modal>
 
+      {/* <Modal
+        show={showAddModal}
+        onHide={() => setShowAddModal(false)}
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>New Student Application</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmit}>
+            <Row>
+              <Col md={6} className="mb-3">
+                <Form.Label>First Name</Form.Label>
+                <Form.Control
+                  name="firstName"
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={6} className="mb-3">
+                <Form.Label>Last Name</Form.Label>
+                <Form.Control
+                  name="lastName"
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={6} className="mb-3">
+                <Form.Label>Date of Birth</Form.Label>
+                <Form.Control
+                  type="date"
+                  name="dob"
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={6} className="mb-3">
+                <Form.Label>Guardian Name</Form.Label>
+                <Form.Control
+                  name="guardianName"
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={6} className="mb-3">
+                <Form.Label>Contact Number</Form.Label>
+                <Form.Control
+                  name="contactNumber"
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={12} className="mb-3">
+                <Form.Label>Address</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  name="address"
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+            </Row>
+            <Button type="submit" className="w-100 btn-ashram">
+              Submit Application
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal> */}
       <Modal
         show={showAddModal}
         onHide={() => setShowAddModal(false)}
         size="lg"
       >
-        {/* ... (Add Modal Content) ... */}
         <Modal.Header closeButton>
           <Modal.Title>New Student Admission</Modal.Title>
         </Modal.Header>
