@@ -37,6 +37,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 const {
   createDonation,
   getDonations,
@@ -54,18 +55,39 @@ const {
 
 const { protect } = require("../middleware/authMiddleware");
 // --- MULTER CONFIGURATION ---
+// const storage = multer.diskStorage({
+//   destination(req, file, cb) {
+//     cb(null, "uploads/"); // Save to 'uploads' folder
+//   },
+//   filename(req, file, cb) {
+//     // Rename file to: donationID-timestamp.ext
+//     cb(
+//       null,
+//       `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
+//     );
+//   },
+// });
+
+// --- 2. UPDATED MULTER CONFIGURATION (Auto-Create Folder) ---
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    cb(null, "uploads/"); // Save to 'uploads' folder
+    const uploadPath = "uploads/";
+
+    // Check if folder exists, if not, create it
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    cb(null, uploadPath);
   },
   filename(req, file, cb) {
-    // Rename file to: donationID-timestamp.ext
     cb(
       null,
       `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
     );
   },
 });
+// -------------------------------------------------------------
 // Allow only Images and Videos
 const checkFileType = (file, cb) => {
   // --- FIX: ADDED 'csv' TO ALLOWED EXTENSIONS ---

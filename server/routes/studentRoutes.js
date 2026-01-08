@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 const {
   createStudent,
   getStudents,
@@ -19,14 +20,32 @@ const {
 } = require("../controllers/studentController");
 const { protect, admin, staff } = require("../middleware/authMiddleware");
 // --- MULTER CONFIG (Same as Donation) ---
+// const storage = multer.diskStorage({
+//   destination(req, file, cb) {
+//     cb(null, "uploads/");
+//   },
+//   filename(req, file, cb) {
+//     cb(null, `STU-${Date.now()}${path.extname(file.originalname)}`);
+//   },
+// });
+// --- UPDATED MULTER CONFIGURATION (Auto-Create Folder) ---
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    cb(null, "uploads/");
+    const uploadPath = "uploads/";
+
+    // Check if folder exists, if not, create it
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    cb(null, uploadPath);
   },
   filename(req, file, cb) {
+    // Keep original name for CSVs or timestamp it
     cb(null, `STU-${Date.now()}${path.extname(file.originalname)}`);
   },
 });
+// -----------------------
 
 const checkFileType = (file, cb) => {
   const filetypes = /jpg|jpeg|png|pdf|doc|docx|csv/; // Added doc/docx support
