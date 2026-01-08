@@ -25,6 +25,7 @@ import {
   FaBuilding,
   FaLayerGroup,
   FaFileUpload,
+  FaClock,
 } from "react-icons/fa";
 import axios from "axios";
 
@@ -531,9 +532,25 @@ const DonationList = () => {
                       <Badge bg="info" text="dark">
                         {d.scheme}
                       </Badge>
-                      {d.occasion && (
-                        <div className="mt-1 small text-muted">
-                          <strong>{d.occasion}</strong>
+
+                      {/* --- RESTORED: Special Occasion Visuals --- */}
+                      {(d.occasion || d.programDate) && (
+                        <div
+                          className="mt-1 small"
+                          style={{ lineHeight: "1.2" }}
+                        >
+                          {d.occasion && (
+                            <div className="fw-bold text-secondary mb-1">
+                              {d.occasion}
+                            </div>
+                          )}
+
+                          {d.programDate && (
+                            <div className="text-danger fw-bold">
+                              <FaClock className="me-1" />
+                              {new Date(d.programDate).toLocaleDateString()}
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>

@@ -101,7 +101,7 @@ const DashboardLayout = () => {
               to="/dashboard/daily-seva"
               className={`menu-item ${isActive("daily-seva")}`}
             >
-              <FaCalendarAlt /> Daily Seva List
+              <FaCalendarAlt /> Today's Donors
             </Link>
           </li>
 
