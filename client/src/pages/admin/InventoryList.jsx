@@ -368,6 +368,7 @@ import {
 } from "react-icons/fa";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import BASE_URL from "../../apiConfig";
 
 const InventoryList = () => {
   const [items, setItems] = useState([]);
@@ -395,10 +396,7 @@ const InventoryList = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/inventory",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/inventory`, config);
       setItems(data);
     } catch (error) {
       console.error(error);
@@ -432,7 +430,7 @@ const InventoryList = () => {
         branch: "Headquarters",
       };
 
-      await axios.post("http://localhost:5000/api/inventory", payload, config);
+      await axios.post(`${BASE_URL}/api/inventory`, payload, config);
 
       setShowModal(false);
       fetchInventory();

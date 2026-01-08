@@ -333,6 +333,7 @@ import {
 } from "react-icons/fa";
 import axios from "axios";
 import "./Donate.css";
+import BASE_URL from "../../src/apiConfig";
 
 const Donate = () => {
   // State for form
@@ -355,7 +356,7 @@ const Donate = () => {
   useEffect(() => {
     const fetchSchemes = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5000/api/schemes");
+        const { data } = await axios.get(`${BASE_URL}/api/schemes`);
         setSchemesList(data);
         if (data.length > 0) setScheme(data[0].name);
       } catch (err) {
@@ -401,7 +402,7 @@ const Donate = () => {
       };
 
       // Call Public API
-      await axios.post("http://localhost:5000/api/donations/public", payload);
+      await axios.post(`${BASE_URL}/api/donations/public`, payload);
 
       setMessage({
         type: "success",

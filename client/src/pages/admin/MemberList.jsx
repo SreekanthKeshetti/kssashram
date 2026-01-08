@@ -18,6 +18,7 @@ import {
   FaTasks,
 } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const MemberList = () => {
   const [members, setMembers] = useState([]);
@@ -52,10 +53,7 @@ const MemberList = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/members",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/members`, config);
       setMembers(data);
     } catch (err) {
       console.error(err);
@@ -70,7 +68,7 @@ const MemberList = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
       await axios.post(
-        `http://localhost:5000/api/members/${selectedMember._id}/activity`,
+        `${BASE_URL}/api/members/${selectedMember._id}/activity`,
         activityData,
         config
       );
@@ -95,7 +93,7 @@ const MemberList = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.post("http://localhost:5000/api/members", formData, config);
+      await axios.post(`${BASE_URL}/api/members`, formData, config);
       setShowModal(false);
       fetchMembers();
       alert("Member Registered Successfully!");

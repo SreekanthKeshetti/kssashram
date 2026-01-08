@@ -10,6 +10,7 @@ import {
 } from "react-bootstrap";
 import { FaFilePdf, FaHandHoldingHeart } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../apiConfig";
 
 const DonationHistory = () => {
   const [donations, setDonations] = useState([]);
@@ -23,7 +24,7 @@ const DonationHistory = () => {
           headers: { Authorization: `Bearer ${userInfo.token}` },
         };
         const { data } = await axios.get(
-          "http://localhost:5000/api/donations/my",
+          `${BASE_URL}/api/donations/my`,
           config
         );
         setDonations(data);
@@ -40,7 +41,7 @@ const DonationHistory = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const response = await axios.get(
-        `http://localhost:5000/api/donations/${id}/receipt`,
+        `${BASE_URL}/api/donations/${id}/receipt`,
         {
           headers: { Authorization: `Bearer ${userInfo.token}` },
           responseType: "blob",

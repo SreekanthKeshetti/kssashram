@@ -92,6 +92,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Form, Alert, Spinner } from "react-bootstrap";
 import axios from "axios";
 import "./Login.css";
+import BASE_URL from "../apiConfig";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -117,7 +118,7 @@ const Login = () => {
       };
 
       const { data } = await axios.post(
-        "http://localhost:5000/api/users/login",
+        `${BASE_URL}/api/users/login`,
         { email, password },
         config
       );

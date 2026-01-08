@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Table, Badge, Card, Row, Col, Spinner, Form } from "react-bootstrap";
 import { FaShieldAlt, FaSearch } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const SystemAudit = () => {
   const [logs, setLogs] = useState([]);
@@ -17,10 +18,7 @@ const SystemAudit = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/audit/system",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/audit/system`, config);
       setLogs(data);
       setLoading(false);
     } catch (error) {

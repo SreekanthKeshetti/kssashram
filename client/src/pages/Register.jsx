@@ -302,6 +302,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Form, Row, Col, Alert } from "react-bootstrap"; // Ensure Alert is imported
 import axios from "axios";
 import "./Login.css";
+import BASE_URL from "../apiConfig";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -334,7 +335,7 @@ const Register = () => {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/users/register", {
+      const res = await axios.post(`${BASE_URL}/api/users/register`, {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,

@@ -11,6 +11,7 @@ import {
 } from "react-bootstrap";
 import { FaPlus, FaCheck, FaFilePdf, FaFileDownload } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const FinanceList = () => {
   const [vouchers, setVouchers] = useState([]);
@@ -39,7 +40,7 @@ const FinanceList = () => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       const { data } = await axios.get(
-        "http://localhost:5000/api/finance/vouchers",
+        `${BASE_URL}/api/finance/vouchers`,
         config
       );
       setVouchers(data);
@@ -51,10 +52,7 @@ const FinanceList = () => {
   const fetchAccountHeads = async (user) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/accounts",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/accounts`, config);
       setAccountHeads(data);
     } catch (error) {
       console.error(error);
@@ -112,11 +110,7 @@ const FinanceList = () => {
     e.preventDefault();
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.post(
-        "http://localhost:5000/api/finance/vouchers",
-        formData,
-        config
-      );
+      await axios.post(`${BASE_URL}/api/finance/vouchers`, formData, config);
       setShowModal(false);
       fetchVouchers(userInfo);
       alert("Voucher Created Successfully!");
@@ -136,7 +130,7 @@ const FinanceList = () => {
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       await axios.put(
-        `http://localhost:5000/api/finance/vouchers/${id}/approve`,
+        `${BASE_URL}/api/finance/vouchers/${id}/approve`,
         {},
         config
       );
@@ -270,7 +264,7 @@ const FinanceList = () => {
                                 responseType: "blob",
                               };
                               const response = await axios.get(
-                                `http://localhost:5000/api/finance/vouchers/${v._id}/pdf`,
+                                `${BASE_URL}/api/finance/vouchers/${v._id}/pdf`,
                                 config
                               );
 

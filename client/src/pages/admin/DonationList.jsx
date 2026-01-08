@@ -28,7 +28,7 @@ import {
   FaClock,
 } from "react-icons/fa";
 import axios from "axios";
-
+import BASE_URL from "../../apiConfig";
 const DonationList = () => {
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +77,7 @@ const DonationList = () => {
   useEffect(() => {
     const getSchemes = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5000/api/schemes");
+        const { data } = await axios.get(`${BASE_URL}/api/schemes`);
         setSchemes(data);
         if (data.length > 0)
           setFormData((prev) => ({ ...prev, scheme: data[0].name }));
@@ -97,10 +97,7 @@ const DonationList = () => {
         return;
       }
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/donations",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/donations`, config);
       setDonations(data);
       setLoading(false);
     } catch (err) {
@@ -131,7 +128,7 @@ const DonationList = () => {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const { data } = await axios.get(
-        `http://localhost:5000/api/donations/search?phone=${formData.donorPhone}`,
+        `${BASE_URL}/api/donations/search?phone=${formData.donorPhone}`,
         config
       );
       if (data.success) {
@@ -160,7 +157,7 @@ const DonationList = () => {
           Authorization: `Bearer ${userInfo.token}`,
         },
       };
-      await axios.post("http://localhost:5000/api/donations", formData, config);
+      await axios.post(`${BASE_URL}/api/donations`, formData, config);
       setShowModal(false);
       fetchDonations();
       setFormData({
@@ -294,7 +291,7 @@ const DonationList = () => {
         },
       };
       const { data } = await axios.post(
-        "http://localhost:5000/api/donations/import",
+        `${BASE_URL}/api/donations/import`,
         fd,
         config
       );
@@ -322,7 +319,7 @@ const DonationList = () => {
         },
       };
       await axios.post(
-        `http://localhost:5000/api/donations/${selectedDonation._id}/upload`,
+        `${BASE_URL}/api/donations/${selectedDonation._id}/upload`,
         fd,
         config
       );
@@ -348,7 +345,7 @@ const DonationList = () => {
         data: { filePath },
       };
       const { data } = await axios.delete(
-        `http://localhost:5000/api/donations/${selectedDonation._id}/media`,
+        `${BASE_URL}/api/donations/${selectedDonation._id}/media`,
         config
       );
       setSelectedDonation({ ...selectedDonation, media: data.media });
@@ -363,7 +360,7 @@ const DonationList = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const response = await axios.get(
-        `http://localhost:5000/api/donations/tax-certificate?phone=${taxPhone}&year=${taxYear}`,
+        `${BASE_URL}/api/donations/tax-certificate?phone=${taxPhone}&year=${taxYear}`,
         {
           headers: { Authorization: `Bearer ${userInfo.token}` },
           responseType: "blob",
@@ -399,7 +396,7 @@ const DonationList = () => {
       };
 
       const { data } = await axios.post(
-        "http://localhost:5000/api/donations/import",
+        `${BASE_URL}/api/donations/import`,
         fd,
         config
       );
@@ -582,7 +579,7 @@ const DonationList = () => {
                                 localStorage.getItem("userInfo")
                               );
                               const response = await axios.get(
-                                `http://localhost:5000/api/donations/${d._id}/receipt`,
+                                `${BASE_URL}/api/donations/${d._id}/receipt`,
                                 {
                                   headers: {
                                     Authorization: `Bearer ${userInfo.token}`,
@@ -885,7 +882,7 @@ const DonationList = () => {
               <Col md={4} key={i}>
                 <div className="border p-1">
                   <img
-                    src={`http://localhost:5000${path}`}
+                    src={`${BASE_URL}${path}`}
                     style={{ width: "100%", height: "150px" }}
                     alt=""
                   />

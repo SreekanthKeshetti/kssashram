@@ -11,6 +11,7 @@ import {
 import { FaPhoneAlt, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
 import axios from "axios"; // Make sure you installed axios
 import "./Contact.css";
+import BASE_URL from "../apiConfig";
 
 const Contact = () => {
   // State for form fields
@@ -36,10 +37,7 @@ const Contact = () => {
 
     try {
       // Connect to your backend API
-      const res = await axios.post(
-        "http://localhost:5000/api/contact",
-        formData
-      );
+      const res = await axios.post(`${BASE_URL}/api/contact`, formData);
 
       setStatus({ type: "success", msg: res.data.message });
       // Reset form

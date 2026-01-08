@@ -21,6 +21,7 @@ import {
   FaBuilding,
 } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
@@ -47,7 +48,7 @@ const EventList = () => {
 
   const fetchEvents = useCallback(async () => {
     try {
-      const { data } = await axios.get("http://localhost:5000/api/events");
+      const { data } = await axios.get(`${BASE_URL}/api/events`);
       setEvents(data);
     } catch (error) {
       console.error(error);
@@ -109,7 +110,7 @@ const EventList = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
       const { data } = await axios.put(
-        `http://localhost:5000/api/events/${selectedEvent._id}/attendance`,
+        `${BASE_URL}/api/events/${selectedEvent._id}/attendance`,
         { registrationId: regId, date: attendanceDate, status: !isPresent },
         config
       );
@@ -130,7 +131,7 @@ const EventList = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
       const { data } = await axios.put(
-        `http://localhost:5000/api/events/${selectedEvent._id}/payment`,
+        `${BASE_URL}/api/events/${selectedEvent._id}/payment`,
         { registrationId: regId, status: "Paid" },
         config
       );
@@ -158,7 +159,7 @@ const EventList = () => {
       const payload = { ...formData };
       if (!payload.endDate) payload.endDate = payload.startDate;
 
-      await axios.post("http://localhost:5000/api/events", payload, config);
+      await axios.post(`${BASE_URL}/api/events`, payload, config);
 
       setShowModal(false);
       fetchEvents();

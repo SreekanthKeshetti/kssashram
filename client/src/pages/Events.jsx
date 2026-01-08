@@ -16,6 +16,7 @@ import {
 } from "react-icons/fa";
 import axios from "axios";
 import "./Events.css";
+import BASE_URL from "../apiConfig";
 
 const Events = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
@@ -29,7 +30,7 @@ const Events = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5000/api/events");
+        const { data } = await axios.get(`${BASE_URL}/api/events`);
         setEvents(data);
       } catch (error) {
         console.error("Error fetching events", error);
@@ -65,7 +66,7 @@ const Events = () => {
     e.preventDefault();
     try {
       await axios.post(
-        `http://localhost:5000/api/events/${selectedEvent._id}/register`,
+        `${BASE_URL}/api/events/${selectedEvent._id}/register`,
         regData
       );
 
@@ -78,7 +79,7 @@ const Events = () => {
       setShowRegModal(false);
       setRegData({ name: "", phone: "" });
 
-      const { data } = await axios.get("http://localhost:5000/api/events");
+      const { data } = await axios.get(`${BASE_URL}/api/events`);
       setEvents(data);
     } catch (error) {
       alert(error.response?.data?.message || "Registration Failed");

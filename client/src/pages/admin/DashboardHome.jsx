@@ -78,6 +78,7 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const DashboardHome = () => {
   const [stats, setStats] = useState(null);
@@ -95,10 +96,7 @@ const DashboardHome = () => {
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       // Call the API to get REAL numbers
-      const { data } = await axios.get(
-        "http://localhost:5000/api/reports/stats",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/reports/stats`, config);
       setStats(data);
       setLoading(false);
     } catch (err) {

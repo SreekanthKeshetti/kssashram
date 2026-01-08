@@ -13,6 +13,7 @@ import {
 } from "react-bootstrap";
 import { FaTrash, FaPlus } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const SchemeManager = () => {
   const [schemes, setSchemes] = useState([]);
@@ -36,10 +37,7 @@ const SchemeManager = () => {
   const fetchSchemes = async (user) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/schemes",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/schemes`, config);
       setSchemes(data);
     } catch (error) {
       console.error(error);
@@ -50,10 +48,7 @@ const SchemeManager = () => {
   const fetchAccountHeads = async (user) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/accounts",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/accounts`, config);
       // Filter only CREDIT (Income) codes
       const creditAccounts = data.filter((acc) => acc.type === "Credit");
       setAccountHeads(creditAccounts);
@@ -70,7 +65,7 @@ const SchemeManager = () => {
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       await axios.post(
-        "http://localhost:5000/api/schemes",
+        `${BASE_URL}/api/schemes`,
         {
           name: newSchemeName,
           accountHead: selectedAccount,
@@ -90,7 +85,7 @@ const SchemeManager = () => {
     if (!window.confirm("Delete this scheme?")) return;
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.delete(`http://localhost:5000/api/schemes/${id}`, config);
+      await axios.delete(`${BASE_URL}/api/schemes/${id}`, config);
       fetchSchemes(userInfo);
     } catch (error) {
       alert("Error deleting scheme");

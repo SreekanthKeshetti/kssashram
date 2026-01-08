@@ -27,6 +27,7 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const StudentList = () => {
   const [students, setStudents] = useState([]);
@@ -64,10 +65,11 @@ const StudentList = () => {
   const fetchStudents = async (user) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/students",
-        config
-      );
+      // const { data } = await axios.get(
+      //   "http://localhost:5000/api/students",
+      //   config
+      // );
+      const { data } = await axios.get(`${BASE_URL}/api/students`, config);
       setStudents(data);
     } catch (error) {
       console.error(error);
@@ -161,7 +163,7 @@ const StudentList = () => {
       const config = {
         headers: { Authorization: `Bearer ${currentUser.token}` },
       };
-      await axios.delete(`http://localhost:5000/api/students/${id}`, config);
+      await axios.delete(`${BASE_URL}/api/students/${id}`, config);
       fetchStudents(currentUser);
       alert("Student Deleted");
     } catch (error) {
@@ -175,7 +177,7 @@ const StudentList = () => {
         headers: { Authorization: `Bearer ${currentUser.token}` },
       };
       await axios.put(
-        `http://localhost:5000/api/students/${selectedStudent._id}/approve`,
+        `${BASE_URL}/api/students/${selectedStudent._id}/approve`,
         {
           status: status,
           remark: "Approved via Dashboard",
@@ -201,7 +203,7 @@ const StudentList = () => {
       const config = {
         headers: { Authorization: `Bearer ${currentUser.token}` },
       };
-      await axios.post("http://localhost:5000/api/students", formData, config);
+      await axios.post(`${BASE_URL}/api/students`, formData, config);
       setShowAddModal(false);
       fetchStudents(currentUser);
       alert("Application Submitted!");
@@ -296,7 +298,7 @@ const StudentList = () => {
       };
 
       const { data } = await axios.post(
-        "http://localhost:5000/api/students/import",
+        `${BASE_URL}/api/students/import`,
         formData,
         config
       );

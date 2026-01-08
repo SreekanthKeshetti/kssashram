@@ -13,6 +13,7 @@ import {
 import { FaClipboardCheck, FaHistory } from "react-icons/fa";
 import axios from "axios";
 import { useNavigate } from "react-router-dom"; // 1. Import this
+import BASE_URL from "../../apiConfig";
 
 const StockAudit = () => {
   const navigate = useNavigate(); // 2. Initialize hook
@@ -30,10 +31,7 @@ const StockAudit = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/inventory",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/inventory`, config);
       setItems(data);
 
       // Initialize audit data with current system values
@@ -116,7 +114,7 @@ const StockAudit = () => {
       }));
 
       await axios.post(
-        "http://localhost:5000/api/inventory/audit",
+        `${BASE_URL}/api/inventory/audit`,
         { items: auditItems },
         config
       );

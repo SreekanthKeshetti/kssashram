@@ -186,6 +186,7 @@ import React, { useEffect, useState } from "react";
 import { Card, Row, Col, Form, Button, Alert, Spinner } from "react-bootstrap";
 import { FaCalendarAlt, FaPrint, FaOm } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const DailySeva = () => {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Default Today
@@ -204,7 +205,7 @@ const DailySeva = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
       const { data } = await axios.get(
-        `http://localhost:5000/api/donations/daily-seva?date=${date}`,
+        `${BASE_URL}/api/donations/daily-seva?date=${date}`,
         config
       );
       setSevas(data);

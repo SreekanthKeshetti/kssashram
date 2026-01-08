@@ -10,6 +10,7 @@ import {
 } from "react-bootstrap";
 import { FaUserCircle, FaSave, FaEdit } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../apiConfig";
 
 const UserProfile = () => {
   const [user, setUser] = useState({
@@ -30,7 +31,7 @@ const UserProfile = () => {
           headers: { Authorization: `Bearer ${userInfo.token}` },
         };
         const { data } = await axios.get(
-          "http://localhost:5000/api/users/profile",
+          `${BASE_URL}/api/users/profile`,
           config
         );
         setUser({ ...data, password: "", confirmPassword: "" });
@@ -53,7 +54,7 @@ const UserProfile = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
       const { data } = await axios.put(
-        "http://localhost:5000/api/users/profile",
+        `${BASE_URL}/api/users/profile`,
         {
           name: user.name,
           phone: user.phone,

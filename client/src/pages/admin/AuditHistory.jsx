@@ -185,6 +185,7 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const AuditHistory = () => {
   const [audits, setAudits] = useState([]);
@@ -202,7 +203,7 @@ const AuditHistory = () => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       const { data } = await axios.get(
-        "http://localhost:5000/api/inventory/audit",
+        `${BASE_URL}/api/inventory/audit`,
         config
       );
       setAudits(data);
@@ -227,10 +228,7 @@ const AuditHistory = () => {
       const config = {
         headers: { Authorization: `Bearer ${currentUser.token}` },
       };
-      await axios.delete(
-        `http://localhost:5000/api/inventory/audit/${id}`,
-        config
-      );
+      await axios.delete(`${BASE_URL}/api/inventory/audit/${id}`, config);
 
       alert("Audit Log Deleted");
       fetchAudits(currentUser); // Refresh list

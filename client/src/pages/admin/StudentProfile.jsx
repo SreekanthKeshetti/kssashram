@@ -660,6 +660,7 @@ import {
   FaRunning,
 } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const StudentProfile = () => {
   const { id } = useParams();
@@ -741,7 +742,7 @@ const StudentProfile = () => {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const { data } = await axios.get(
-        `http://localhost:5000/api/students/${id}`,
+        `${BASE_URL}/api/students/${id}`,
         config
       );
       setStudent(data);
@@ -781,7 +782,7 @@ const StudentProfile = () => {
         },
       };
       await axios.post(
-        `http://localhost:5000/api/students/${id}/upload`,
+        `${BASE_URL}/api/students/${id}/upload`,
         formData,
         config
       );
@@ -803,7 +804,7 @@ const StudentProfile = () => {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       await axios.post(
-        `http://localhost:5000/api/students/${id}/leave`,
+        `${BASE_URL}/api/students/${id}/leave`,
         newLeave,
         config
       );
@@ -822,7 +823,7 @@ const StudentProfile = () => {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       await axios.put(
-        `http://localhost:5000/api/students/${id}/leave/${leaveId}`,
+        `${BASE_URL}/api/students/${id}/leave/${leaveId}`,
         {},
         config
       );
@@ -842,10 +843,7 @@ const StudentProfile = () => {
         headers: { Authorization: `Bearer ${userInfo.token}` },
         data: { filePath },
       };
-      await axios.delete(
-        `http://localhost:5000/api/students/${id}/documents`,
-        config
-      );
+      await axios.delete(`${BASE_URL}/api/students/${id}/documents`, config);
       fetchStudent();
     } catch (err) {
       alert("Delete failed");
@@ -858,7 +856,7 @@ const StudentProfile = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
       await axios.put(
-        `http://localhost:5000/api/students/${id}`,
+        `${BASE_URL}/api/students/${id}`,
         {
           firstName: editData.firstName,
           lastName: editData.lastName,
@@ -882,11 +880,7 @@ const StudentProfile = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.put(
-        `http://localhost:5000/api/students/${id}`,
-        updateData,
-        config
-      );
+      await axios.put(`${BASE_URL}/api/students/${id}`, updateData, config);
       fetchStudent();
     } catch (error) {
       alert("Error updating student");
@@ -970,10 +964,7 @@ const StudentProfile = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/donations",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/donations`, config);
       setDonors(data);
     } catch (err) {
       alert("Failed to load donor list");
@@ -1004,7 +995,7 @@ const StudentProfile = () => {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       await axios.put(
-        `http://localhost:5000/api/students/${id}/statutory`,
+        `${BASE_URL}/api/students/${id}/statutory`,
         { formsStatus: updatedForms },
         config
       );
@@ -1022,7 +1013,7 @@ const StudentProfile = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
       const { data } = await axios.put(
-        `http://localhost:5000/api/students/${id}/statutory`,
+        `${BASE_URL}/api/students/${id}/statutory`,
         { newInspection },
         config
       );
@@ -1350,7 +1341,7 @@ const StudentProfile = () => {
                           },
                         };
                         await axios.post(
-                          `http://localhost:5000/api/students/${id}/email-sponsor`,
+                          `${BASE_URL}/api/students/${id}/email-sponsor`,
                           {},
                           config
                         );
@@ -1805,7 +1796,7 @@ const StudentProfile = () => {
 
                             {path.match(/\.(jpeg|jpg|png|gif)$/i) ? (
                               <img
-                                src={`http://localhost:5000${path}`}
+                                src={`${BASE_URL}${path}`}
                                 alt="Doc"
                                 style={{
                                   width: "100%",
@@ -1814,10 +1805,7 @@ const StudentProfile = () => {
                                   cursor: "pointer",
                                 }}
                                 onClick={() =>
-                                  window.open(
-                                    `http://localhost:5000${path}`,
-                                    "_blank"
-                                  )
+                                  window.open(`${BASE_URL}${path}`, "_blank")
                                 }
                               />
                             ) : (
@@ -1828,7 +1816,7 @@ const StudentProfile = () => {
                                 />
                                 <br />
                                 <a
-                                  href={`http://localhost:5000${path}`}
+                                  href={`${BASE_URL}${path}`}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="small text-decoration-none"

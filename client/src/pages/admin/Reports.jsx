@@ -24,6 +24,7 @@ import {
   FaFilter,
 } from "react-icons/fa";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const Reports = () => {
   // Dashboard Stats State
@@ -48,10 +49,7 @@ const Reports = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get(
-        "http://localhost:5000/api/reports/stats",
-        config
-      );
+      const { data } = await axios.get(`${BASE_URL}/api/reports/stats`, config);
       setStats(data);
       setLoading(false);
     } catch (err) {
@@ -70,7 +68,7 @@ const Reports = () => {
 
       const query = `startDate=${reportParams.startDate}&endDate=${reportParams.endDate}&reportType=${reportParams.reportType}`;
       const { data } = await axios.get(
-        `http://localhost:5000/api/reports/custom?${query}`,
+        `${BASE_URL}/api/reports/custom?${query}`,
         config
       );
 

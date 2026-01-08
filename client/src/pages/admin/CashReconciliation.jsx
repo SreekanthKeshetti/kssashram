@@ -5,6 +5,7 @@ import { Card, Row, Col, Form, Button, Alert, Spinner } from "react-bootstrap";
 import { FaBalanceScale, FaArrowLeft, FaSave } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import BASE_URL from "../../apiConfig";
 
 const CashReconciliation = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ const CashReconciliation = () => {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const { data } = await axios.get(
-        "http://localhost:5000/api/finance/cash-balance",
+        `${BASE_URL}/api/finance/cash-balance`,
         config
       );
       setSystemBalance(data.systemBalance);
@@ -54,7 +55,7 @@ const CashReconciliation = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
       await axios.post(
-        "http://localhost:5000/api/finance/reconcile",
+        `${BASE_URL}/api/finance/reconcile`,
         {
           systemBalance,
           physicalBalance: Number(physicalBalance),
