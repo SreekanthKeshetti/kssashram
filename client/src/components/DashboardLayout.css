@@ -107,3 +107,45 @@
   flex: 1;
   overflow-y: auto;
 }
+/* --- MOBILE RESPONSIVENESS --- */
+
+/* For Tablets and Mobile Phones (Width < 992px) */
+@media (max-width: 992px) {
+  /* 1. Hide Sidebar by default */
+  .sidebar {
+    left: -260px; /* Move it off-screen to the left */
+    transition: all 0.3s ease-in-out;
+  }
+
+  /* 2. Class to slide it back in */
+  .sidebar.show {
+    left: 0;
+  }
+
+  /* 3. Main Content takes full width */
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* 4. Adjust Top Header padding */
+  .top-header {
+    padding: 0 15px;
+  }
+
+  /* 5. Overlay Effect (Darkens background when sidebar is open) */
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999; /* Below sidebar (1000) but above content */
+    display: none;
+  }
+
+  .sidebar-overlay.show {
+    display: block;
+  }
+}

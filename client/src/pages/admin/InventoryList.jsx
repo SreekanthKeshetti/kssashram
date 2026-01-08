@@ -545,7 +545,7 @@ const InventoryList = () => {
                 <th>Stock Level</th>
                 <th>Status</th>
                 <th>Expiry</th>
-                <th className="text-end pe-4">Action</th>{" "}
+                <th className="text-end pe-4">Action</th>
                 {/* Added Action Column */}
               </tr>
             </thead>

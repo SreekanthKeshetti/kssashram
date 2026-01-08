@@ -492,7 +492,7 @@ const DonationList = () => {
               <thead className="bg-light">
                 <tr>
                   <th className="ps-4">Date</th>
-                  <th>Category</th> {/* New Col */}
+                  <th>Category</th>
                   <th>Donor Name</th>
                   <th>Scheme</th>
                   <th>Amount</th>
