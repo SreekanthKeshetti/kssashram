@@ -117,25 +117,45 @@ const Login = () => {
         },
       };
 
+      //   const { data } = await axios.post(
+      //     `${BASE_URL}/api/users/login`,
+      //     { email, password },
+      //     config
+      //   );
+
+      //   // 2. Save User Info (Token) to Browser Storage
+      //   localStorage.setItem("userInfo", JSON.stringify(data));
+
+      //   // 3. Redirect to Home
+      //   setLoading(false);
+      //   navigate("/");
+
+      //   // Optional: Reload page to update Navbar immediately (simple fix before we add Redux)
+      //   window.location.reload();
+      // } catch (err) {
+      //   setLoading(false);
+      //   // Show error message from backend (e.g., "Invalid password")
+      //   setError(err.response?.data?.message || "Login Failed");
+      // --- 2. USE BASE_URL HERE INSTEAD OF LOCALHOST ---
       const { data } = await axios.post(
         `${BASE_URL}/api/users/login`,
         { email, password },
         config
       );
 
-      // 2. Save User Info (Token) to Browser Storage
       localStorage.setItem("userInfo", JSON.stringify(data));
-
-      // 3. Redirect to Home
       setLoading(false);
       navigate("/");
-
-      // Optional: Reload page to update Navbar immediately (simple fix before we add Redux)
       window.location.reload();
     } catch (err) {
       setLoading(false);
-      // Show error message from backend (e.g., "Invalid password")
-      setError(err.response?.data?.message || "Login Failed");
+      // Detailed error handling
+      if (err.response && err.response.status === 404) {
+        setError("Server not found (404). Check API URL.");
+      } else {
+        setError(err.response?.data?.message || "Login Failed");
+      }
+      console.error("Login Error:", err);
     }
   };
 
