@@ -346,6 +346,8 @@
 
 // export default InventoryList;
 import React, { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
+import BASE_URL from "../../apiConfig";
 import {
   Table,
   Button,
@@ -367,8 +369,6 @@ import {
   FaListAlt,
 } from "react-icons/fa";
 import axios from "axios";
-import { Link } from "react-router-dom";
-import BASE_URL from "../../apiConfig";
 
 const InventoryList = () => {
   const [items, setItems] = useState([]);

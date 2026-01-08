@@ -1,5 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import BASE_URL from "../../apiConfig";
 import {
   Table,
   Button,
@@ -11,9 +13,7 @@ import {
   Alert,
 } from "react-bootstrap";
 import { FaClipboardCheck, FaHistory } from "react-icons/fa";
-import axios from "axios";
 import { useNavigate } from "react-router-dom"; // 1. Import this
-import BASE_URL from "../../apiConfig";
 
 const StockAudit = () => {
   const navigate = useNavigate(); // 2. Initialize hook

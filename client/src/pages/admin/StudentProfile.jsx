@@ -620,6 +620,8 @@
 
 // export default StudentProfile;
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import BASE_URL from "../../apiConfig";
 import { useParams, Link } from "react-router-dom";
 import {
   Row,
@@ -659,8 +661,6 @@ import {
   FaMedal,
   FaRunning,
 } from "react-icons/fa";
-import axios from "axios";
-import BASE_URL from "../../apiConfig";
 
 const StudentProfile = () => {
   const { id } = useParams();

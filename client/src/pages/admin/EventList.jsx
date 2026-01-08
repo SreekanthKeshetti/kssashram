@@ -1,5 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useCallback } from "react";
+import axios from "axios";
+import BASE_URL from "../../apiConfig";
 import {
   Table,
   Button,
@@ -20,8 +22,6 @@ import {
   FaFileDownload,
   FaBuilding,
 } from "react-icons/fa";
-import axios from "axios";
-import BASE_URL from "../../apiConfig";
 
 const EventList = () => {
   const [events, setEvents] = useState([]);

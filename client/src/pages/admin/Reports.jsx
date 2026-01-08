@@ -1,5 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import BASE_URL from "../../apiConfig";
 import {
   Row,
   Col,
@@ -23,8 +25,6 @@ import {
   FaChartPie,
   FaFilter,
 } from "react-icons/fa";
-import axios from "axios";
-import BASE_URL from "../../apiConfig";
 
 const Reports = () => {
   // Dashboard Stats State

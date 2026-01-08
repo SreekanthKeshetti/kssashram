@@ -165,6 +165,9 @@
 
 // export default AuditHistory;
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import BASE_URL from "../../apiConfig";
+
 import {
   Card,
   Table,
@@ -184,8 +187,6 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import axios from "axios";
-import BASE_URL from "../../apiConfig";
 
 const AuditHistory = () => {
   const [audits, setAudits] = useState([]);

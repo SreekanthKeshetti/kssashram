@@ -68,6 +68,8 @@
 // export default DashboardHome;
 
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import BASE_URL from "../../apiConfig";
 import { Row, Col, Card, Table, Spinner, Alert } from "react-bootstrap";
 import {
   FaRupeeSign,
@@ -77,8 +79,6 @@ import {
   FaArrowRight,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import axios from "axios";
-import BASE_URL from "../../apiConfig";
 
 const DashboardHome = () => {
   const [stats, setStats] = useState(null);

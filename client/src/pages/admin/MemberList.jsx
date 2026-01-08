@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import BASE_URL from "../../apiConfig";
+
 import {
   Table,
   Button,
@@ -17,8 +20,6 @@ import {
   FaTimesCircle,
   FaTasks,
 } from "react-icons/fa";
-import axios from "axios";
-import BASE_URL from "../../apiConfig";
 
 const MemberList = () => {
   const [members, setMembers] = useState([]);

@@ -1,6 +1,8 @@
 /* eslint-disable react-hooks/immutability */
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import BASE_URL from "../../apiConfig";
 import {
   Table,
   Button,
@@ -26,8 +28,6 @@ import {
   FaHistory,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import axios from "axios";
-import BASE_URL from "../../apiConfig";
 
 const StudentList = () => {
   const [students, setStudents] = useState([]);
