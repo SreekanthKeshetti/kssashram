@@ -31,20 +31,20 @@ const Activities = () => {
       ],
       img: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?q=80&w=800&auto=format&fit=crop",
     },
+    // {
+    //   id: 3,
+    //   title: "Go-Seva (Cow Protection)",
+    //   subtitle: "Animal Welfare",
+    //   desc: "The cow is considered a mother in our culture. Our Goshala houses over 50 cows that have been rescued or are too old to produce milk. We provide them with fodder, medical care, and a loving home.",
+    //   features: [
+    //     "Shelter for abandoned cows.",
+    //     "Daily Green Fodder & Medical checks.",
+    //     "Go-Puja performed daily.",
+    //   ],
+    //   img: "https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=800&auto=format&fit=crop",
+    // },
     {
       id: 3,
-      title: "Go-Seva (Cow Protection)",
-      subtitle: "Animal Welfare",
-      desc: "The cow is considered a mother in our culture. Our Goshala houses over 50 cows that have been rescued or are too old to produce milk. We provide them with fodder, medical care, and a loving home.",
-      features: [
-        "Shelter for abandoned cows.",
-        "Daily Green Fodder & Medical checks.",
-        "Go-Puja performed daily.",
-      ],
-      img: "https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=800&auto=format&fit=crop",
-    },
-    {
-      id: 4,
       title: "Ashram Maintenance",
       subtitle: "Divine Infrastructure",
       desc: "To facilitate all these activities, we maintain a clean and spiritual environment. This includes the prayer hall, the kitchen, and the guest house for pilgrims.",

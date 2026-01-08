@@ -22,30 +22,30 @@ const DonationSchemes = () => {
       desc: "Support the education, books, and uniform of a Ved pathshala student.",
       img: "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&auto=format&fit=crop",
     },
+    // {
+    //   id: 3,
+    //   title: "Go-Seva (Cow Care)",
+    //   desc: "Protect and feed our cows. Gauseva is the highest form of service.",
+    //   img: "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=600&auto=format&fit=crop",
+    // },
     {
       id: 3,
-      title: "Go-Seva (Cow Care)",
-      desc: "Protect and feed our cows. Gauseva is the highest form of service.",
-      img: "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=600&auto=format&fit=crop",
-    },
-    {
-      id: 4,
       title: "Ashram Construction",
       desc: "Donate bricks or cement for the new prayer hall construction.",
       img: "https://images.unsplash.com/photo-1548625361-ec8595edc29b?w=600&auto=format&fit=crop",
     },
     {
-      id: 5,
+      id: 4,
       title: "Medical Camp",
       desc: "Sponsor medicines for the free rural health checkup camps.",
       img: "https://images.unsplash.com/photo-1576091160550-2187d80a1b44?w=600&auto=format&fit=crop",
     },
-    {
-      id: 6,
-      title: "Festival Seva",
-      desc: "Contribute towards flowers and decorations for major festivals.",
-      img: "https://images.unsplash.com/photo-1561343754-0518747449a5?w=600&auto=format&fit=crop",
-    },
+    // {
+    //   id: 5,
+    //   title: "Festival Seva",
+    //   desc: "Contribute towards flowers and decorations for major festivals.",
+    //   img: "https://images.unsplash.com/photo-1561343754-0518747449a5?w=600&auto=format&fit=crop",
+    // },
   ];
 
   // Logic: If showAll is true, take the whole list. If false, take only first 3.

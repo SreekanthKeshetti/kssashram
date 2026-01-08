@@ -94,8 +94,8 @@ const Contact = () => {
               <div className="ms-3">
                 <h5 className="fw-bold">Our Location</h5>
                 <p className="text-muted">
-                  Plot No. 123, Temple Road, Saroornagar, Hyderabad, Telangana -
-                  500035
+                  Karunasri Seva Samithi / Karunya Sindhu 17-1-474, Krishna
+                  Nagar Colony, Saidabad, Hyderabad-500 060 Telangana State
                 </p>
               </div>
             </div>
@@ -106,8 +106,8 @@ const Contact = () => {
               </div>
               <div className="ms-3">
                 <h5 className="fw-bold">Phone Number</h5>
-                <p className="text-muted mb-0">+91 99220 03000</p>
-                <p className="text-muted">+91 40 2456 7890</p>
+                <p className="text-muted mb-0">+91 1234567890</p>
+                <p className="text-muted">+91 12 3456 7890</p>
               </div>
             </div>
 
@@ -208,7 +208,7 @@ const Contact = () => {
             >
               <iframe
                 title="Google Map"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3807.669661448982!2d78.53201431487616!3d17.37956498808331!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bcb98a1f5f5f5f5%3A0x5f5f5f5f5f5f5f5f!2sSaroornagar%2C%20Hyderabad%2C%20Telangana!5e0!3m2!1sen!2sin!4v1620000000000!5m2!1sen!2sin"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3807.953931677399!2d78.50604131435277!3d17.36581198809159!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bcb9850c9b0e3e9%3A0x6b80862100690000!2sKarunasri%20Seva%20Samithi!5e0!3m2!1sen!2sin"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}

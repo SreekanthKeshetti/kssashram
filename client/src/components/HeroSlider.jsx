@@ -15,17 +15,17 @@ const HeroSlider = () => {
       btnText: "Our Mission",
       link: "/about",
     },
+    // {
+    //   id: 2,
+    //   image:
+    //     "https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=1920&auto=format&fit=crop",
+    //   title: "Nitya Annadhana",
+    //   subtitle: "Feeding the hungry is the highest form of charity.",
+    //   btnText: "Donate a Meal",
+    //   link: "/donate",
+    // },
     {
       id: 2,
-      image:
-        "https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=1920&auto=format&fit=crop",
-      title: "Nitya Annadhana",
-      subtitle: "Feeding the hungry is the highest form of charity.",
-      btnText: "Donate a Meal",
-      link: "/donate",
-    },
-    {
-      id: 3,
       image: secondImage,
       title: "Vidyarthi Nidhi",
       subtitle: "Empowering the future through education and values.",
