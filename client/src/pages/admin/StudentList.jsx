@@ -312,7 +312,7 @@ const StudentList = () => {
 
   return (
     <div>
-      <Row className="mb-4 align-items-center">
+      {/* <Row className="mb-4 align-items-center">
         <Col md={5}>
           <h2
             className="text-maroon"
@@ -350,10 +350,65 @@ const StudentList = () => {
             <FaPlus /> New Admission
           </Button>
         </Col>
+      </Row> */}
+
+      {/* --- RESPONSIVE HEADER ROW --- */}
+      <Row className="mb-4 align-items-center">
+        {/* Title: Full width on mobile, 5 cols on laptop */}
+        <Col lg={5} xs={12} className="mb-3 mb-lg-0">
+          <h2
+            className="text-maroon m-0"
+            style={{ fontFamily: "Playfair Display" }}
+          >
+            Student Admissions
+          </h2>
+          <p className="text-muted m-0 small">Manage enrollments & alumni</p>
+        </Col>
+
+        {/* Buttons: Full width on mobile, 7 cols on laptop */}
+        <Col lg={7} xs={12}>
+          <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
+            <input
+              type="file"
+              id="csvInput"
+              accept=".csv"
+              style={{ display: "none" }}
+              onChange={handleImport}
+            />
+
+            {/* Import Button */}
+            <Button
+              variant="warning"
+              className="text-dark shadow-sm flex-grow-1 flex-lg-grow-0"
+              onClick={() => document.getElementById("csvInput").click()}
+            >
+              <FaFileUpload className="me-1" /> Import CSV
+            </Button>
+
+            {/* Export Button */}
+            <Button
+              variant="success"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              onClick={handleExport}
+            >
+              <FaFileDownload className="me-1" /> Export List
+            </Button>
+
+            {/* Add New Button */}
+            <Button
+              variant="primary"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              style={{ backgroundColor: "#581818", border: "none" }}
+              onClick={() => setShowAddModal(true)}
+            >
+              <FaPlus className="me-1" /> New Admission
+            </Button>
+          </div>
+        </Col>
       </Row>
 
       {/* --- FILTER TABS --- */}
-      <div className="mb-3">
+      {/* <div className="mb-3">
         <ButtonGroup>
           <Button
             variant={filterStatus === "Active" ? "dark" : "outline-dark"}
@@ -372,6 +427,34 @@ const StudentList = () => {
             onClick={() => setFilterStatus("All")}
           >
             All Records
+          </Button>
+        </ButtonGroup>
+      </div> */}
+      {/* --- RESPONSIVE FILTER TABS --- */}
+      <div className="mb-3">
+        <ButtonGroup className="d-flex flex-wrap shadow-sm">
+          <Button
+            variant={filterStatus === "Active" ? "dark" : "outline-dark"}
+            className="flex-grow-1"
+            onClick={() => setFilterStatus("Active")}
+          >
+            <FaUserFriends className="me-2" /> Current{" "}
+            <span className="d-none d-sm-inline">Students</span>
+          </Button>
+          <Button
+            variant={filterStatus === "Alumni" ? "info" : "outline-info"}
+            className="flex-grow-1"
+            onClick={() => setFilterStatus("Alumni")}
+          >
+            <FaHistory className="me-2" /> Alumni{" "}
+            <span className="d-none d-sm-inline">List</span>
+          </Button>
+          <Button
+            variant={filterStatus === "All" ? "secondary" : "outline-secondary"}
+            className="flex-grow-1"
+            onClick={() => setFilterStatus("All")}
+          >
+            All <span className="d-none d-sm-inline">Records</span>
           </Button>
         </ButtonGroup>
       </div>

@@ -219,7 +219,7 @@ const DailySeva = () => {
   return (
     <div className="daily-seva-container">
       {/* --- CONTROLS (Hidden when printing) --- */}
-      <Row className="mb-4 align-items-end d-print-none">
+      {/* <Row className="mb-4 align-items-end d-print-none">
         <Col md={8}>
           <h2
             className="text-maroon"
@@ -242,10 +242,47 @@ const DailySeva = () => {
             <FaPrint /> Print List
           </Button>
         </Col>
+      </Row> */}
+      <Row className="mb-4 align-items-center d-print-none">
+        {/* Title: Full width on mobile, 7 cols on laptop */}
+        <Col lg={7} xs={12} className="mb-3 mb-lg-0">
+          <h2
+            className="text-maroon m-0"
+            style={{ fontFamily: "Playfair Display" }}
+          >
+            Today's Donors List
+          </h2>
+          <p className="text-muted m-0 small">
+            Generate the announcement list for the notice board.
+          </p>
+        </Col>
+
+        {/* Controls: Full width on mobile, 5 cols on laptop */}
+        <Col lg={5} xs={12}>
+          <div className="d-flex gap-2">
+            {/* Date Input: Grows to fill space */}
+            <Form.Control
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="fw-bold border-maroon flex-grow-1"
+            />
+            {/* Print Button: Fixed width or grows slightly */}
+            <Button
+              variant="dark"
+              onClick={() => window.print()}
+              className="d-flex align-items-center"
+            >
+              <FaPrint className="me-2" />{" "}
+              <span className="d-none d-sm-inline">Print List</span>
+              <span className="d-inline d-sm-none">Print</span>
+            </Button>
+          </div>
+        </Col>
       </Row>
 
       {/* --- PRINTABLE NOTICE BOARD AREA --- */}
-      <div className="printable-area p-4 bg-white border shadow-sm">
+      <div className="printable-area p-3 p-lg-5 bg-white border shadow-sm">
         {/* Header for Print */}
         <div className="text-center mb-5 border-bottom pb-3">
           <h2

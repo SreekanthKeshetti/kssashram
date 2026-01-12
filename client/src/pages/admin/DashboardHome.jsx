@@ -129,7 +129,7 @@ const DashboardHome = () => {
       {/* --- Key Metrics Cards (Dynamic Data) --- */}
       <Row className="mb-4">
         {/* 1. TOTAL INCOME (Combined) */}
-        <Col md={4}>
+        <Col lg={4} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 mb-3 text-white shadow border-0"
             style={{ background: "linear-gradient(45deg, #11998e, #38ef7d)" }}
@@ -149,7 +149,7 @@ const DashboardHome = () => {
         </Col>
 
         {/* 2. KARUNYA SINDU INCOME */}
-        <Col md={4}>
+        <Col lg={4} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 mb-3 text-white shadow border-0"
             style={{ background: "linear-gradient(45deg, #FF8008, #FFC837)" }}
@@ -169,7 +169,7 @@ const DashboardHome = () => {
         </Col>
 
         {/* 3. KARUNYA BHARATHI INCOME */}
-        <Col md={4}>
+        <Col lg={4} md={12} xs={12} className="mb-3">
           <Card
             className="p-3 mb-3 text-white shadow border-0"
             style={{ background: "linear-gradient(45deg, #8E2DE2, #4A00E0)" }}
@@ -187,9 +187,12 @@ const DashboardHome = () => {
             </div>
           </Card>
         </Col>
+      </Row>
 
+      {/* --- Secondary Metrics --- */}
+      <Row className="mb-4">
         {/* 2. Expenses */}
-        <Col md={3}>
+        <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 mb-3 text-white shadow border-0"
             style={{ background: "linear-gradient(45deg, #ff416c, #ff4b2b)" }}
@@ -210,7 +213,7 @@ const DashboardHome = () => {
         </Col>
 
         {/* 3. Active Students */}
-        <Col md={3}>
+        <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 mb-3 text-white shadow border-0"
             style={{ background: "linear-gradient(45deg, #2193b0, #6dd5ed)" }}
@@ -229,7 +232,7 @@ const DashboardHome = () => {
         </Col>
 
         {/* 4. Low Stock Alerts */}
-        <Col md={3}>
+        <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 mb-3 text-white shadow border-0"
             style={{ background: "linear-gradient(45deg, #f7971e, #ffd200)" }}
@@ -250,7 +253,7 @@ const DashboardHome = () => {
 
       {/* --- Recent Activity Section --- */}
       <Row>
-        <Col md={8}>
+        <Col xs={12} sm={12} md={12} lg={9} className="mb-3">
           <Card className="shadow-sm border-0">
             <Card.Header className="bg-white py-3 d-flex justify-content-between align-items-center">
               <h5 className="mb-0 text-maroon">Recent Donations</h5>
@@ -300,7 +303,7 @@ const DashboardHome = () => {
           </Card>
         </Col>
 
-        <Col md={4}>
+        <Col lg={3} md={6} xs={12} className="mb-3">
           {/* Quick Actions Card */}
           <Card className="shadow-sm border-0 mb-4">
             <Card.Header className="bg-white py-3">

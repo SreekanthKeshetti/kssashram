@@ -413,7 +413,7 @@ const DonationList = () => {
 
   return (
     <div>
-      <Row className="mb-4 align-items-center">
+      {/* <Row className="mb-4 align-items-center">
         <Col md={5}>
           <h2
             className="text-maroon"
@@ -448,10 +448,75 @@ const DonationList = () => {
             <FaPlus /> Add Donation
           </Button>
         </Col>
+      </Row> */}
+      <Row className="mb-4 align-items-center">
+        {/* Title Column: Full width on mobile, 5 cols on laptop */}
+        <Col lg={5} xs={12} className="mb-3 mb-lg-0">
+          <h2
+            className="text-maroon m-0"
+            style={{ fontFamily: "Playfair Display" }}
+          >
+            Donations
+          </h2>
+          <p className="text-muted m-0 small">
+            Manage incoming funds & receipts
+          </p>
+        </Col>
+
+        {/* Buttons Column: Full width on mobile, 7 cols on laptop */}
+        <Col lg={7} xs={12}>
+          <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
+            {/* Hidden Input for Import */}
+            <input
+              type="file"
+              id="donateCsv"
+              accept=".csv"
+              style={{ display: "none" }}
+              onChange={handleImport}
+            />
+
+            {/* Import Button */}
+            <Button
+              variant="warning"
+              className="text-dark shadow-sm flex-grow-1 flex-lg-grow-0"
+              onClick={() => setShowImportModal(true)}
+            >
+              <FaFileUpload className="me-1" /> Import
+            </Button>
+
+            {/* Tax Cert Button */}
+            <Button
+              variant="info"
+              className="text-white shadow-sm flex-grow-1 flex-lg-grow-0"
+              onClick={() => setShowTaxModal(true)}
+            >
+              <FaCertificate className="me-1" /> Tax Cert
+            </Button>
+
+            {/* Export Button */}
+            <Button
+              variant="success"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              onClick={handleExport}
+            >
+              <FaFilePdf className="me-1" /> Export
+            </Button>
+
+            {/* Add Donation Button */}
+            <Button
+              variant="primary"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              style={{ backgroundColor: "#581818", border: "none" }}
+              onClick={() => setShowModal(true)}
+            >
+              <FaPlus className="me-1" /> Add New
+            </Button>
+          </div>
+        </Col>
       </Row>
 
       {/* --- TABS --- */}
-      <div className="mb-3">
+      {/* <div className="mb-3">
         <ButtonGroup>
           <Button
             variant={filterCategory === "Household" ? "dark" : "outline-dark"}
@@ -473,6 +538,39 @@ const DonationList = () => {
             variant={
               filterCategory === "All" ? "secondary" : "outline-secondary"
             }
+            onClick={() => setFilterCategory("All")}
+          >
+            <FaLayerGroup className="me-2" /> All Records
+          </Button>
+        </ButtonGroup>
+      </div> */}
+      <div className="mb-3">
+        <ButtonGroup className="d-flex flex-wrap shadow-sm">
+          <Button
+            variant={filterCategory === "Household" ? "dark" : "outline-dark"}
+            className="flex-grow-1"
+            onClick={() => setFilterCategory("Household")}
+          >
+            <FaUsers className="me-2" />{" "}
+            <span className="d-none d-sm-inline">Household</span> (Indv)
+          </Button>
+          <Button
+            variant={
+              filterCategory === "Organizational"
+                ? "warning"
+                : "outline-warning"
+            }
+            className="flex-grow-1"
+            onClick={() => setFilterCategory("Organizational")}
+          >
+            <FaBuilding className="me-2" />{" "}
+            <span className="d-none d-sm-inline">Org</span> (Trusts)
+          </Button>
+          <Button
+            variant={
+              filterCategory === "All" ? "secondary" : "outline-secondary"
+            }
+            className="flex-grow-1"
             onClick={() => setFilterCategory("All")}
           >
             <FaLayerGroup className="me-2" /> All Records

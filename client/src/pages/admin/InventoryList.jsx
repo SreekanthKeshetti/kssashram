@@ -481,7 +481,7 @@ const InventoryList = () => {
 
   return (
     <div>
-      <Row className="mb-4 align-items-center">
+      {/* <Row className="mb-4 align-items-center">
         <Col>
           <h2
             className="text-maroon"
@@ -514,23 +514,88 @@ const InventoryList = () => {
             <FaPlus /> Add / Update Stock
           </Button>
         </Col>
+      </Row> */}
+      {/* --- RESPONSIVE HEADER ROW --- */}
+      <Row className="mb-4 align-items-center">
+        {/* Title: Full width on mobile, 5 cols on laptop */}
+        <Col lg={5} xs={12} className="mb-3 mb-lg-0">
+          <h2
+            className="text-maroon m-0"
+            style={{ fontFamily: "Playfair Display" }}
+          >
+            Inventory & Stock
+          </h2>
+          <p className="text-muted m-0 small">
+            Manage Food, Non-Food, and Ashram Supplies
+          </p>
+        </Col>
+
+        {/* Buttons: Full width on mobile, 7 cols on laptop */}
+        <Col lg={7} xs={12}>
+          <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
+            {/* History Button */}
+            <Link
+              to="/dashboard/inventory/history"
+              className="btn btn-outline-secondary shadow-sm flex-grow-1 flex-lg-grow-0 text-decoration-none d-flex align-items-center justify-content-center"
+            >
+              <FaHistory className="me-2" /> Audit Logs
+            </Link>
+
+            {/* Stock Audit Button */}
+            <Link
+              to="/dashboard/inventory/audit"
+              className="btn btn-outline-dark shadow-sm flex-grow-1 flex-lg-grow-0 text-decoration-none d-flex align-items-center justify-content-center"
+            >
+              <FaClipboardList className="me-2" /> Stock Audit
+            </Link>
+
+            {/* Add Stock Button */}
+            <Button
+              variant="primary"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              style={{ backgroundColor: "#581818", border: "none" }}
+              onClick={() => setShowModal(true)}
+            >
+              <FaPlus className="me-2" /> Add / Update
+            </Button>
+          </div>
+        </Col>
       </Row>
 
       <Row className="mb-4">
-        <Col md={3}>
-          <Card className="p-3 text-center border-0 shadow-sm">
-            <h3 className="text-success">
+        {/* Card 1: Food Items */}
+        <Col lg={4} md={6} xs={12} className="mb-3">
+          <Card className="p-3 text-center border-0 shadow-sm h-100">
+            <h3 className="text-success fw-bold m-0">
               {items.filter((i) => i.category === "Food").length}
             </h3>
-            <small>Food Items</small>
+            <small className="text-muted text-uppercase">Food Items</small>
           </Card>
         </Col>
-        <Col md={3}>
-          <Card className="p-3 text-center border-0 shadow-sm">
-            <h3 className="text-primary">
+
+        {/* Card 2: Non-Food Items */}
+        <Col lg={4} md={6} xs={12} className="mb-3">
+          <Card className="p-3 text-center border-0 shadow-sm h-100">
+            <h3 className="text-primary fw-bold m-0">
               {items.filter((i) => i.category === "Non-Food").length}
             </h3>
-            <small>Non-Food Items</small>
+            <small className="text-muted text-uppercase">Non-Food Items</small>
+          </Card>
+        </Col>
+
+        {/* Card 3: Low Stock Alerts (NEW) */}
+        <Col lg={4} md={12} xs={12} className="mb-3">
+          <Card
+            className="p-3 text-center border-0 shadow-sm h-100"
+            style={{ borderLeft: "5px solid #dc3545" }}
+          >
+            <h3 className="text-danger fw-bold m-0">
+              <FaExclamationTriangle className="me-2 mb-1" size={20} />
+              {items.filter((i) => i.quantity < 10).length}
+            </h3>
+            <small className="text-muted text-uppercase">
+              Low Stock Alerts
+            </small>
           </Card>
         </Col>
       </Row>

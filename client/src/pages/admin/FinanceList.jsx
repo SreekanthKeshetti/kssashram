@@ -13,7 +13,14 @@ import {
   Modal,
   Form,
 } from "react-bootstrap";
-import { FaPlus, FaCheck, FaFilePdf, FaFileDownload } from "react-icons/fa";
+import {
+  FaPlus,
+  FaCheck,
+  FaFilePdf,
+  FaFileDownload,
+  FaBalanceScale,
+} from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const FinanceList = () => {
   const [vouchers, setVouchers] = useState([]);
@@ -153,7 +160,7 @@ const FinanceList = () => {
 
   return (
     <div>
-      <Row className="mb-4 align-items-center">
+      {/* <Row className="mb-4 align-items-center">
         <Col>
           <h2
             className="text-maroon"
@@ -173,6 +180,52 @@ const FinanceList = () => {
           >
             <FaPlus /> Create Voucher
           </Button>
+        </Col>
+      </Row> */}
+      <Row className="mb-4 align-items-center">
+        {/* Title: Full width on mobile, 5 cols on laptop */}
+        <Col lg={5} xs={12} className="mb-3 mb-lg-0">
+          <h2
+            className="text-maroon m-0"
+            style={{ fontFamily: "Playfair Display" }}
+          >
+            Finance & Accounts
+          </h2>
+          <p className="text-muted m-0 small">
+            Manage Vouchers (Debit/Credit) and Expenses
+          </p>
+        </Col>
+
+        {/* Buttons: Full width on mobile, 7 cols on laptop */}
+        <Col lg={7} xs={12}>
+          <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
+            {/* Reconcile Button */}
+            {/* <Link
+              to="/dashboard/finance/reconcile"
+              className="btn btn-outline-dark shadow-sm flex-grow-1 flex-lg-grow-0 text-decoration-none d-flex align-items-center justify-content-center"
+            >
+              <FaBalanceScale className="me-2" /> Reconcile Cash
+            </Link> */}
+
+            {/* Tally CSV Export */}
+            <Button
+              variant="success"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              onClick={handleExport}
+            >
+              <FaFileDownload className="me-2" /> Download Tally CSV
+            </Button>
+
+            {/* Create Voucher */}
+            <Button
+              variant="primary"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              style={{ backgroundColor: "#581818", border: "none" }}
+              onClick={() => setShowModal(true)}
+            >
+              <FaPlus className="me-2" /> Create Voucher
+            </Button>
+          </div>
         </Col>
       </Row>
 

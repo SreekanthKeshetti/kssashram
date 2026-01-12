@@ -195,7 +195,7 @@ const EventList = () => {
 
   return (
     <div>
-      <Row className="mb-4 align-items-center">
+      {/* <Row className="mb-4 align-items-center">
         <Col>
           <h2
             className="text-maroon"
@@ -215,6 +215,36 @@ const EventList = () => {
           >
             <FaPlus /> Create Event
           </Button>
+        </Col>
+      </Row> */}
+      {/* --- RESPONSIVE HEADER ROW --- */}
+      <Row className="mb-4 align-items-center">
+        {/* Title: Full width on mobile, 5 cols on laptop */}
+        <Col lg={6} xs={12} className="mb-3 mb-lg-0">
+          <h2
+            className="text-maroon m-0"
+            style={{ fontFamily: "Playfair Display" }}
+          >
+            Events & Trainings
+          </h2>
+          <p className="text-muted m-0 small">
+            Manage Tailoring, Computer Classes & Celebrations
+          </p>
+        </Col>
+
+        {/* Buttons: Full width on mobile, 6 cols on laptop */}
+        <Col lg={6} xs={12}>
+          <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
+            {/* Create Button */}
+            <Button
+              variant="primary"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              style={{ backgroundColor: "#581818", border: "none" }}
+              onClick={() => setShowModal(true)}
+            >
+              <FaPlus className="me-2" /> Create Training / Event
+            </Button>
+          </div>
         </Col>
       </Row>
 
