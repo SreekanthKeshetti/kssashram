@@ -78,6 +78,7 @@ import CashReconciliation from "./pages/admin/CashReconciliation";
 import UserProfile from "./pages/UserProfile";
 import DonationHistory from "./pages/DonationHistory";
 import DailySeva from "./pages/admin/DailySeva";
+import MemberProfile from "./pages/admin/MemberProfile";
 
 // --- Layout Wrapper for Public Pages ---
 // This ensures Header and Footer only appear on public pages, not the dashboard
@@ -123,6 +124,7 @@ function App() {
         <Route path="events" element={<EventList />} />
         <Route path="reports" element={<Reports />} />
         <Route path="members" element={<MemberList />} />
+        <Route path="members/:id" element={<MemberProfile />} />
         <Route path="inventory/audit" element={<StockAudit />} />{" "}
         <Route path="inventory/history" element={<AuditHistory />} />{" "}
         <Route path="settings" element={<SchemeManager />} />{" "}

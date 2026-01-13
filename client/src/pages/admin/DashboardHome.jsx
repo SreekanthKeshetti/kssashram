@@ -253,7 +253,7 @@ const DashboardHome = () => {
 
       {/* --- Recent Activity Section --- */}
       <Row>
-        <Col xs={12} sm={12} md={12} lg={9} className="mb-3">
+        <Col xs={12} sm={12} md={12} lg={8} className="mb-3">
           <Card className="shadow-sm border-0">
             <Card.Header className="bg-white py-3 d-flex justify-content-between align-items-center">
               <h5 className="mb-0 text-maroon">Recent Donations</h5>

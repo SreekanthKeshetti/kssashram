@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
+import { Link } from "react-router-dom"; // Ensure Link is imported
 
 import {
   Table,
@@ -43,6 +44,7 @@ const MemberList = () => {
     membershipType: "Annual",
     feeAmount: "1000",
     feeStatus: "Paid",
+    branch: "Karunya Sindu",
   });
 
   useEffect(() => {
@@ -176,7 +178,7 @@ const MemberList = () => {
                       </span>
                     )}
                   </td>
-                  <td>
+                  {/* <td>
                     <Button
                       size="sm"
                       variant="outline-dark"
@@ -185,6 +187,28 @@ const MemberList = () => {
                     >
                       <FaTasks /> Log Work
                     </Button>
+                  </td> */}
+                  <td>
+                    <div className="d-flex gap-2">
+                      {/* VIEW PROFILE BUTTON */}
+                      <Link
+                        to={`/dashboard/members/${m._id}`}
+                        className="btn btn-sm btn-outline-primary"
+                        title="View Profile"
+                      >
+                        <FaUserTie />
+                      </Link>
+
+                      {/* EXISTING LOG BUTTON */}
+                      <Button
+                        size="sm"
+                        variant="outline-dark"
+                        onClick={() => openActivityModal(m)}
+                        title="Log Activity"
+                      >
+                        <FaTasks /> Log Work
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -313,6 +337,14 @@ const MemberList = () => {
                   <option>Life</option>
                   <option>Patron</option>
                   <option>Volunteer</option>
+                </Form.Select>
+              </Col>
+              <Col md={4} className="mb-3">
+                <Form.Label>Branch</Form.Label>
+                <Form.Select name="branch" onChange={handleChange}>
+                  <option value="Headquarters">Headquarters</option>
+                  <option value="Karunya Sindu">Karunya Sindu</option>
+                  <option value="Karunya Bharathi">Karunya Bharathi</option>
                 </Form.Select>
               </Col>
               <Col md={4} className="mb-3">

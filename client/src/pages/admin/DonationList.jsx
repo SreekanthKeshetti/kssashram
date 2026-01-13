@@ -74,6 +74,7 @@ const DonationList = () => {
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
 
   useEffect(() => {
     const getSchemes = async () => {
@@ -109,11 +110,33 @@ const DonationList = () => {
   }, []);
 
   // --- FILTER LOGIC ---
+  // const filteredDonations = donations.filter((d) => {
+  //   if (filterCategory === "All") return true;
+  //   // Default legacy data (missing category) to Household
+  //   const cat = d.category || "Household";
+  //   return cat === filterCategory;
+  // });
   const filteredDonations = donations.filter((d) => {
-    if (filterCategory === "All") return true;
-    // Default legacy data (missing category) to Household
-    const cat = d.category || "Household";
-    return cat === filterCategory;
+    // 1. Category Filter
+    let matchesCategory = true;
+    if (filterCategory !== "All") {
+      const cat = d.category || "Household";
+      matchesCategory = cat === filterCategory;
+    }
+
+    // 2. Date Range Filter
+    let matchesDate = true;
+    if (dateFilter.start) {
+      matchesDate = new Date(d.createdAt) >= new Date(dateFilter.start);
+    }
+    if (matchesDate && dateFilter.end) {
+      // Set end date to end of day to include records from that day
+      const endDate = new Date(dateFilter.end);
+      endDate.setHours(23, 59, 59, 999);
+      matchesDate = new Date(d.createdAt) <= endDate;
+    }
+
+    return matchesCategory && matchesDate;
   });
 
   const handleChange = (e) => {
@@ -544,7 +567,9 @@ const DonationList = () => {
           </Button>
         </ButtonGroup>
       </div> */}
-      <div className="mb-3">
+
+      {/* updated group before custom */}
+      {/* <div className="mb-3">
         <ButtonGroup className="d-flex flex-wrap shadow-sm">
           <Button
             variant={filterCategory === "Household" ? "dark" : "outline-dark"}
@@ -576,7 +601,81 @@ const DonationList = () => {
             <FaLayerGroup className="me-2" /> All Records
           </Button>
         </ButtonGroup>
-      </div>
+      </div> */}
+      {/* --- FILTERS ROW (Tabs + Date Range) --- */}
+      <Row className="mb-3 g-2 align-items-center">
+        {/* Left: Category Tabs */}
+        <Col md={6}>
+          <ButtonGroup className="d-flex flex-wrap shadow-sm">
+            <Button
+              variant={filterCategory === "Household" ? "dark" : "outline-dark"}
+              className="flex-grow-1"
+              onClick={() => setFilterCategory("Household")}
+            >
+              <FaUsers className="me-2" />{" "}
+              <span className="d-none d-sm-inline">Household</span>
+            </Button>
+            <Button
+              variant={
+                filterCategory === "Organizational"
+                  ? "warning"
+                  : "outline-warning"
+              }
+              className="flex-grow-1"
+              onClick={() => setFilterCategory("Organizational")}
+            >
+              <FaBuilding className="me-2" />{" "}
+              <span className="d-none d-sm-inline">Org</span>
+            </Button>
+            <Button
+              variant={
+                filterCategory === "All" ? "secondary" : "outline-secondary"
+              }
+              className="flex-grow-1"
+              onClick={() => setFilterCategory("All")}
+            >
+              <FaLayerGroup className="me-2" /> All
+            </Button>
+          </ButtonGroup>
+        </Col>
+
+        {/* Right: Custom Date Filter */}
+        <Col md={6}>
+          <div className="d-flex gap-2 justify-content-md-end align-items-center bg-light p-2 rounded border">
+            <span className="fw-bold text-muted small">Filter Date:</span>
+            <Form.Control
+              type="date"
+              size="sm"
+              value={dateFilter.start}
+              onChange={(e) =>
+                setDateFilter({ ...dateFilter, start: e.target.value })
+              }
+              className="w-auto"
+            />
+            <span className="text-muted">-to-</span>
+            <Form.Control
+              type="date"
+              size="sm"
+              value={dateFilter.end}
+              onChange={(e) =>
+                setDateFilter({ ...dateFilter, end: e.target.value })
+              }
+              className="w-auto"
+            />
+            {/* Clear Button */}
+            {(dateFilter.start || dateFilter.end) && (
+              <Button
+                variant="link"
+                className="text-danger p-0 ms-1 text-decoration-none"
+                size="sm"
+                onClick={() => setDateFilter({ start: "", end: "" })}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </Col>
+      </Row>
 
       {error && <Alert variant="danger">{error}</Alert>}
 

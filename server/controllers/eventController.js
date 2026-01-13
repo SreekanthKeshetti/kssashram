@@ -1,140 +1,6 @@
-// const Event = require("../models/Event");
-
-// // @desc    Get all events
-// const getEvents = async (req, res) => {
-//   try {
-//     const events = await Event.find({}).sort({ date: 1 });
-//     res.json(events);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
-// // @desc    Create new event (Updated for Fees)
-// const createEvent = async (req, res) => {
-//   try {
-//     const {
-//       title,
-//       description,
-//       date,
-//       time,
-//       location,
-//       eventType,
-//       branch,
-//       isPaid,
-//       feeAmount,
-//     } = req.body;
-
-//     const event = await Event.create({
-//       title,
-//       description,
-//       date,
-//       time,
-//       location,
-//       eventType,
-//       // --- NEW FIELDS ---
-//       isPaid: isPaid || false,
-//       feeAmount: isPaid ? Number(feeAmount) : 0,
-//       // ------------------
-//       branch: branch || "Headquarters",
-//       createdBy: req.user._id,
-//     });
-
-//     res.status(201).json(event);
-//   } catch (error) {
-//     res.status(400).json({ message: error.message });
-//   }
-// };
-
-// // @desc    Register for event (Updated for Payment Status)
-// const registerForEvent = async (req, res) => {
-//   try {
-//     const event = await Event.findById(req.params.id);
-//     if (!event) return res.status(404).json({ message: "Event not found" });
-
-//     const { name, phone } = req.body;
-
-//     const alreadyRegistered = event.registrations.find(
-//       (r) => r.phone === phone
-//     );
-//     if (alreadyRegistered) {
-//       return res
-//         .status(400)
-//         .json({ message: "Phone number already registered." });
-//     }
-
-//     // Determine Status: If Paid Event -> 'Pending', else 'Free'
-//     const initialStatus = event.isPaid ? "Pending" : "Free";
-
-//     event.registrations.push({
-//       user: req.user ? req.user._id : null,
-//       name,
-//       phone,
-//       paymentStatus: initialStatus, // <--- Set Status
-//     });
-
-//     await event.save();
-//     res.json({ message: "Registration Successful" });
-//   } catch (error) {
-//     res.status(400).json({ message: error.message });
-//   }
-// };
-
-// // @desc    Mark Attendance
-// const markAttendance = async (req, res) => {
-//   try {
-//     const { registrationId, status } = req.body;
-//     const event = await Event.findById(req.params.id);
-//     if (!event) return res.status(404).json({ message: "Event not found" });
-
-//     const registration = event.registrations.id(registrationId);
-//     if (!registration)
-//       return res.status(404).json({ message: "Registration not found" });
-
-//     registration.attended = status;
-//     await event.save();
-
-//     res.json({
-//       message: "Attendance updated",
-//       registrations: event.registrations,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
-// // --- NEW: Mark Payment Status (Admin/Staff) ---
-// const updatePaymentStatus = async (req, res) => {
-//   try {
-//     const { registrationId, status } = req.body; // 'Paid' or 'Waived'
-//     const event = await Event.findById(req.params.id);
-//     if (!event) return res.status(404).json({ message: "Event not found" });
-
-//     const registration = event.registrations.id(registrationId);
-//     if (!registration)
-//       return res.status(404).json({ message: "Registration not found" });
-
-//     registration.paymentStatus = status;
-//     await event.save();
-
-//     res.json({
-//       message: "Payment status updated",
-//       registrations: event.registrations,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
-// module.exports = {
-//   getEvents,
-//   createEvent,
-//   registerForEvent,
-//   markAttendance,
-//   updatePaymentStatus,
-// };
-
 const Event = require("../models/Event");
+const Voucher = require("../models/Voucher"); // <--- Import Voucher
+const AccountHead = require("../models/AccountHead"); // <--- Import AccountHead
 
 // @desc    Get all events
 const getEvents = async (req, res) => {
@@ -216,7 +82,7 @@ const registerForEvent = async (req, res) => {
   }
 };
 
-// --- UPDATED: Mark Attendance for a SPECIFIC DATE ---
+// --- Mark Attendance for a SPECIFIC DATE ---
 const markAttendance = async (req, res) => {
   try {
     const { registrationId, date, status } = req.body; // status: true(Present) / false(Absent)
@@ -257,14 +123,50 @@ const markAttendance = async (req, res) => {
   }
 };
 
-// ... Keep updatePaymentStatus ...
+// --- UPDATED: Mark Payment & Auto-Journal ---
 const updatePaymentStatus = async (req, res) => {
   try {
     const { registrationId, status } = req.body;
     const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: "Event not found" });
+
     const registration = event.registrations.id(registrationId);
+    if (!registration)
+      return res.status(404).json({ message: "Registration not found" });
+
+    // Prevent duplicate vouchers if already paid
+    if (registration.paymentStatus === "Paid" && status === "Paid") {
+      return res.status(400).json({ message: "User already marked as Paid." });
+    }
+
     registration.paymentStatus = status;
     await event.save();
+
+    // --- AUTO-CREATE VOUCHER IF PAID ---
+    if (status === "Paid" && event.isPaid && event.feeAmount > 0) {
+      // 1. Find Account Code for Training (208)
+      // If 208 doesn't exist, fallback to any Credit code
+      let account = await AccountHead.findOne({ code: "208" });
+      if (!account) account = await AccountHead.findOne({ type: "Credit" });
+
+      if (account) {
+        await Voucher.create({
+          voucherType: "Credit",
+          voucherNo: "VCH-EVT-" + Date.now().toString().slice(-6), // Unique ID
+          accountHead: account._id,
+          amount: event.feeAmount,
+          description: `Training Fee: ${registration.name} for ${event.title}`,
+          paymentMode: "Cash", // Assuming Cash/UPI for counter payment
+          branch: event.branch || "Headquarters",
+          status: "Approved", // Auto-approve since money is collected
+          preparedBy: req.user._id,
+          approvedBy: [req.user._id], // Auto-sign
+        });
+        console.log("✅ Auto-Voucher created for Event Fee");
+      }
+    }
+    // -----------------------------------
+
     res.json({
       message: "Payment updated",
       registrations: event.registrations,

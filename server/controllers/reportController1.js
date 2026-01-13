@@ -1,56 +1,88 @@
+// const Donation = require("../models/Donation");
+// const Voucher = require("../models/Voucher");
+// const Student = require("../models/Student");
+// const Inventory = require("../models/Inventory");
+
+// // @desc    Get Dashboard Stats (Admin/Manager)
+// // @route   GET /api/reports/stats
+// const getDashboardStats = async (req, res) => {
+//   try {
+//     // 1. Calculate Total Donations (Income)
+//     const donations = await Donation.find({});
+//     const totalIncome = donations.reduce((acc, item) => acc + item.amount, 0);
+
+//     // 2. Calculate Total Expenses (Debit Vouchers)
+//     // We only count 'Approved' vouchers for accurate accounting
+//     const expenses = await Voucher.find({
+//       voucherType: "Debit",
+//       status: "Approved",
+//     });
+//     const totalExpense = expenses.reduce((acc, item) => acc + item.amount, 0);
+
+//     // 3. Counts
+//     const studentCount = await Student.countDocuments({
+//       admissionStatus: "Active",
+//     });
+//     const lowStockCount = await Inventory.countDocuments({
+//       quantity: { $lt: 10 },
+//     });
+
+//     // 4. Recent Transactions (Last 5 Donations)
+//     const recentDonations = await Donation.find({})
+//       .sort({ createdAt: -1 })
+//       .limit(5)
+//       .select("donorName amount scheme createdAt");
+
+//     res.json({
+//       financials: {
+//         income: totalIncome,
+//         expense: totalExpense,
+//         balance: totalIncome - totalExpense,
+//       },
+//       counts: {
+//         students: studentCount,
+//         lowStock: lowStockCount,
+//       },
+//       recentDonations,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// module.exports = { getDashboardStats };
 const Donation = require("../models/Donation");
 const Voucher = require("../models/Voucher");
 const Student = require("../models/Student");
 const Inventory = require("../models/Inventory");
 
-// @desc    Get Real-Time Dashboard Stats (Donations + Vouchers)
+// @desc    Get Real-Time Dashboard Stats
 // @route   GET /api/reports/stats
 const getDashboardStats = async (req, res) => {
   try {
-    // --- 1. INCOME FROM DONATIONS ---
+    // 1. Fetch All Donations
     const donations = await Donation.find({});
 
-    const totalDonations = donations.reduce(
-      (acc, item) => acc + item.amount,
-      0
-    );
+    // --- NEW LOGIC: Calculate Split ---
+    const totalIncome = donations.reduce((acc, item) => acc + item.amount, 0);
 
-    const donationSindu = donations
+    const incomeSindu = donations
       .filter((d) => d.branch === "Karunya Sindu")
       .reduce((acc, item) => acc + item.amount, 0);
 
-    const donationBharathi = donations
+    const incomeBharathi = donations
       .filter((d) => d.branch === "Karunya Bharathi")
       .reduce((acc, item) => acc + item.amount, 0);
+    // ----------------------------------
 
-    // --- 2. INCOME FROM VOUCHERS (Events, Fees, Misc) ---
-    // We only count "Credit" type vouchers that are "Approved"
-    const creditVouchers = await Voucher.find({
-      voucherType: "Credit",
-      status: "Approved",
-    });
-
-    const totalVoucherIncome = creditVouchers.reduce(
-      (acc, item) => acc + item.amount,
-      0
-    );
-
-    const voucherSindu = creditVouchers
-      .filter((v) => v.branch === "Karunya Sindu")
-      .reduce((acc, item) => acc + item.amount, 0);
-
-    const voucherBharathi = creditVouchers
-      .filter((v) => v.branch === "Karunya Bharathi")
-      .reduce((acc, item) => acc + item.amount, 0);
-
-    // --- 3. TOTAL EXPENSES (Debit Vouchers) ---
+    // 2. Calculate Total Expenses (Only Approved Debit Vouchers)
     const expenses = await Voucher.find({
       voucherType: "Debit",
       status: "Approved",
     });
     const totalExpense = expenses.reduce((acc, item) => acc + item.amount, 0);
 
-    // --- 4. COUNTS & RECENT ACTIVITY ---
+    // 3. Counts
     const studentCount = await Student.countDocuments({
       admissionStatus: "Active",
     });
@@ -58,25 +90,19 @@ const getDashboardStats = async (req, res) => {
       quantity: { $lt: 10 },
     });
 
+    // 4. Recent Donations
     const recentDonations = await Donation.find({})
       .sort({ createdAt: -1 })
       .limit(5)
-      .select("donorName amount scheme createdAt branch");
+      .select("donorName amount scheme createdAt branch"); // Added branch to select
 
-    // --- 5. SEND RESPONSE (Aggregated Totals) ---
     res.json({
       financials: {
-        // Grand Total = Donations + Voucher Income
-        income: totalDonations + totalVoucherIncome,
-
-        // Branch Totals = Branch Donation + Branch Voucher Income
-        incomeSindu: donationSindu + voucherSindu,
-        incomeBharathi: donationBharathi + voucherBharathi,
-
+        income: totalIncome,
+        incomeSindu, // <--- Sending to frontend
+        incomeBharathi, // <--- Sending to frontend
         expense: totalExpense,
-
-        // Net Balance = Total Income - Total Expense
-        balance: totalDonations + totalVoucherIncome - totalExpense,
+        balance: totalIncome - totalExpense,
       },
       counts: {
         students: studentCount,
@@ -89,7 +115,7 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-// --- Custom Finance Report (No Changes here) ---
+// --- NEW: Custom Finance Report (KSS_FIN_14) ---
 const getCustomFinanceReport = async (req, res) => {
   try {
     const { startDate, endDate, reportType } = req.query;
@@ -98,22 +124,27 @@ const getCustomFinanceReport = async (req, res) => {
       return res.status(400).json({ message: "Please select a date range" });
     }
 
+    // 1. Robust Date Handling
     const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0); // Start of day
 
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    end.setHours(23, 59, 59, 999); // End of day
 
-    console.log(`[REPORT QUERY] Range: ${start} to ${end}`);
+    console.log(`[REPORT QUERY] Range: ${start} to ${end}`); // <--- DEBUG LOG
 
     let incomeItems = [];
     let expenseItems = [];
 
+    // 2. Fetch Income (Donations + Credit Vouchers)
     if (reportType === "Income" || reportType === "All") {
       const donations = await Donation.find({
         createdAt: { $gte: start, $lte: end },
       }).populate("accountHead", "name code");
 
+      console.log(`[REPORT] Found ${donations.length} Donations`); // <--- DEBUG LOG
+
+      // Allow "Partially Approved" as well for easier testing
       const creditVouchers = await Voucher.find({
         voucherType: "Credit",
         status: { $in: ["Approved", "Partially Approved"] },
@@ -143,12 +174,16 @@ const getCustomFinanceReport = async (req, res) => {
       incomeItems = [...donationMapped, ...voucherMapped];
     }
 
+    // 3. Fetch Expense (Debit Vouchers)
     if (reportType === "Expense" || reportType === "All") {
+      // Allow "Partially Approved" here too
       const debitVouchers = await Voucher.find({
         voucherType: "Debit",
         status: { $in: ["Approved", "Partially Approved"] },
         createdAt: { $gte: start, $lte: end },
       }).populate("accountHead", "name code");
+
+      console.log(`[REPORT] Found ${debitVouchers.length} Debit Vouchers`); // <--- DEBUG LOG
 
       expenseItems = debitVouchers.map((v) => ({
         date: v.createdAt,

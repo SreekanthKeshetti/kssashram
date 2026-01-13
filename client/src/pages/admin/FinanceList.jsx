@@ -35,6 +35,7 @@ const FinanceList = () => {
     description: "",
     paymentMode: "Cash",
   });
+  const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("userInfo"));
@@ -85,7 +86,8 @@ const FinanceList = () => {
       "Status",
     ];
 
-    const rows = vouchers.map((v) => [
+    // changing the vouchers.map to filteredVouchers.map.
+    const rows = filteredVouchers.map((v) => [
       new Date(v.createdAt).toLocaleDateString(),
       v.voucherNo,
       v.voucherType,
@@ -158,6 +160,19 @@ const FinanceList = () => {
     (acc) => acc.type === formData.voucherType
   );
 
+  const filteredVouchers = vouchers.filter((v) => {
+    let matchesDate = true;
+    if (dateFilter.start) {
+      matchesDate = new Date(v.createdAt) >= new Date(dateFilter.start);
+    }
+    if (matchesDate && dateFilter.end) {
+      const endDate = new Date(dateFilter.end);
+      endDate.setHours(23, 59, 59, 999);
+      matchesDate = new Date(v.createdAt) <= endDate;
+    }
+    return matchesDate;
+  });
+
   return (
     <div>
       {/* <Row className="mb-4 align-items-center">
@@ -228,12 +243,54 @@ const FinanceList = () => {
           </div>
         </Col>
       </Row>
+      <Row className="mb-3">
+        <Col md={4} lg={3} className="mb-2 mb-md-0">
+          <Form.Label className="me-2 fw-bold">Filter by Date:</Form.Label>
+        </Col>
+
+        <Col md={8}>
+          <div className="d-flex gap-2 justify-content-md-end align-items-center bg-light p-2 rounded border">
+            <span className="fw-bold text-muted small">Filter Date:</span>
+            <Form.Control
+              type="date"
+              size="sm"
+              value={dateFilter.start}
+              onChange={(e) =>
+                setDateFilter({ ...dateFilter, start: e.target.value })
+              }
+              className="w-auto"
+            />
+            <span className="text-muted">-to-</span>
+            <Form.Control
+              type="date"
+              size="sm"
+              value={dateFilter.end}
+              onChange={(e) =>
+                setDateFilter({ ...dateFilter, end: e.target.value })
+              }
+              className="w-auto"
+            />
+            {/* Clear Button */}
+            {(dateFilter.start || dateFilter.end) && (
+              <Button
+                variant="link"
+                className="text-danger p-0 ms-1 text-decoration-none"
+                size="sm"
+                onClick={() => setDateFilter({ start: "", end: "" })}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </Col>
+      </Row>
 
       <Card className="shadow-sm border-0">
         <Card.Body className="p-0">
           <Table hover responsive className="align-middle mb-0">
             <thead className="bg-light">
               <tr>
+                <th className="ps-4">Date</th>
                 <th className="ps-4">Voucher No</th>
                 <th>Code</th>
                 <th>Ledger Name</th>
@@ -244,7 +301,8 @@ const FinanceList = () => {
               </tr>
             </thead>
             <tbody>
-              {vouchers.map((v) => {
+              {/* here am using the filtered vouchers instead of vouchers */}
+              {filteredVouchers.map((v) => {
                 // --- LOGIC MOVED INSIDE THE MAP FUNCTION ---
                 // Check if the current logged-in user has already approved this voucher
                 const hasApproved =
@@ -262,6 +320,22 @@ const FinanceList = () => {
 
                 return (
                   <tr key={v._id}>
+                    {/* --- NEW DATE CELL --- */}
+                    <td
+                      className="ps-4 text-muted"
+                      style={{ fontSize: "0.9rem" }}
+                    >
+                      {new Date(v.createdAt).toLocaleDateString()}
+                      <div
+                        className="small text-muted"
+                        style={{ fontSize: "0.75rem" }}
+                      >
+                        {new Date(v.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </td>
                     <td className="ps-4 text-muted small">{v.voucherNo}</td>
                     <td>
                       <Badge bg="secondary">{v.accountHead?.code}</Badge>
