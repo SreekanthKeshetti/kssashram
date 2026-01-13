@@ -72,7 +72,7 @@ import MemberList from "./pages/admin/MemberList";
 import StockAudit from "./pages/admin/StockAudit";
 import AuditHistory from "./pages/admin/AuditHistory";
 import StudentProfile from "./pages/admin/StudentProfile";
-import SchemeManager from "./pages/admin/SchemeManager";
+import Settings from "./pages/admin/Settings";
 import SystemAudit from "./pages/admin/SystemAudit";
 import CashReconciliation from "./pages/admin/CashReconciliation";
 import UserProfile from "./pages/UserProfile";
@@ -127,7 +127,7 @@ function App() {
         <Route path="members/:id" element={<MemberProfile />} />
         <Route path="inventory/audit" element={<StockAudit />} />{" "}
         <Route path="inventory/history" element={<AuditHistory />} />{" "}
-        <Route path="settings" element={<SchemeManager />} />{" "}
+        <Route path="settings" element={<Settings />} />{" "}
         <Route path="audit" element={<SystemAudit />} />
         <Route path="finance/reconcile" element={<CashReconciliation />} />{" "}
         <Route path="daily-seva" element={<DailySeva />} />

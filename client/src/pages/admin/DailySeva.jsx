@@ -186,7 +186,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
 import { Card, Row, Col, Form, Button, Alert, Spinner } from "react-bootstrap";
-import { FaCalendarAlt, FaPrint, FaOm } from "react-icons/fa";
+import { FaCalendarAlt, FaPrint, FaCircle } from "react-icons/fa";
 
 const DailySeva = () => {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Default Today
@@ -329,10 +329,10 @@ const DailySeva = () => {
               >
                 <div className="d-flex align-items-start">
                   <div
-                    className="me-3 mt-1 text-warning"
-                    style={{ fontSize: "1.5rem" }}
+                    className="me-3 mt-2 text-warning"
+                    style={{ fontSize: "0.6rem" }}
                   >
-                    <FaOm />
+                    <FaCircle />
                   </div>
                   <div>
                     {/* --- THE SENTENCE FORMAT --- */}

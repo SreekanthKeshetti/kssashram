@@ -250,6 +250,100 @@ const updateUserProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// @desc    Get All Users (Admin Only)
+const getUsers = async (req, res) => {
+  try {
+    const users = await User.find({}).select("-password"); // Don't send passwords back
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
+// @desc    Reset User Password (Admin Only)
+const resetUserPassword = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (user) {
+      if (req.body.password) {
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(req.body.password, salt);
+      }
+
+      // Update role/branch if needed
+      user.role = req.body.role || user.role;
+      user.branch = req.body.branch || user.branch;
+
+      await user.save();
+
+      res.json({ message: "User updated successfully" });
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete User (Admin Only)
+const deleteUser = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "User removed" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// @desc    Create User (Admin Only - Allows setting Role/Branch)
+// @route   POST /api/users
+const createUser = async (req, res) => {
+  try {
+    const { name, email, password, phone, role, branch } = req.body;
+
+    // 1. Check if user exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // 2. Hash Password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // 3. Create User with specific Role & Branch
+    const user = await User.create({
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+      role: role || "employee", // Use provided role
+      branch: branch || "Headquarters", // Use provided branch
+    });
+
+    if (user) {
+      res.status(201).json({
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        branch: user.branch,
+      });
+    } else {
+      res.status(400).json({ message: "Invalid user data" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 // Export new functions
-module.exports = { registerUser, loginUser, getUserProfile, updateUserProfile };
+module.exports = {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  getUsers,
+  resetUserPassword,
+  deleteUser,
+  createUser,
+};
