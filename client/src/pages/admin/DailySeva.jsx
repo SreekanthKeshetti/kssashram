@@ -1,202 +1,79 @@
-/* eslint-disable no-unused-vars */
-// import React, { useEffect, useState } from "react";
-// import {
-//   Card,
-//   Row,
-//   Col,
-//   Form,
-//   Button,
-//   Alert,
-//   Spinner,
-//   Badge,
-// } from "react-bootstrap";
-// import {
-//   FaCalendarAlt,
-//   FaBirthdayCake,
-//   FaPray,
-//   FaPrint,
-//   FaRing,
-//   FaHandHoldingHeart,
-// } from "react-icons/fa";
-// import axios from "axios";
-
-// const DailySeva = () => {
-//   const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Default Today
-//   const [sevas, setSevas] = useState([]);
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-//     fetchSevaList();
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [date]);
-
-//   const fetchSevaList = async () => {
-//     try {
-//       setLoading(true);
-//       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-//       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-
-//       const { data } = await axios.get(
-//         `http://localhost:5000/api/donations/daily-seva?date=${date}`,
-//         config
-//       );
-//       setSevas(data);
-//       setLoading(false);
-//     } catch (error) {
-//       console.error(error);
-//       setLoading(false);
-//     }
-//   };
-
-//   // Helper to get Icon and Color based on Occasion
-//   const getOccasionStyle = (occasion) => {
-//     const occ = occasion ? occasion.toLowerCase() : "";
-//     if (occ.includes("birthday"))
-//       return {
-//         icon: <FaBirthdayCake />,
-//         color: "success",
-//         text: "Happy Birthday",
-//       };
-//     if (occ.includes("death") || occ.includes("memory"))
-//       return { icon: <FaPray />, color: "secondary", text: "In Loving Memory" };
-//     if (occ.includes("marriage") || occ.includes("anniversary"))
-//       return { icon: <FaRing />, color: "info", text: "Happy Anniversary" };
-//     return {
-//       icon: <FaHandHoldingHeart />,
-//       color: "primary",
-//       text: "Special Seva",
-//     };
-//   };
-
-//   return (
-//     <div className="daily-seva-container">
-//       {/* Header & Controls */}
-//       <Row className="mb-4 align-items-end d-print-none">
-//         <Col md={8}>
-//           <h2
-//             className="text-maroon"
-//             style={{ fontFamily: "Playfair Display" }}
-//           >
-//             Daily Seva Schedule (Nitya Annadhana)
-//           </h2>
-//           <p className="text-muted">
-//             List of donors for prayers and wishes today.
-//           </p>
-//         </Col>
-//         <Col md={4} className="d-flex gap-2">
-//           <Form.Control
-//             type="date"
-//             value={date}
-//             onChange={(e) => setDate(e.target.value)}
-//             className="fw-bold border-maroon"
-//           />
-//           <Button variant="dark" onClick={() => window.print()}>
-//             <FaPrint /> Print
-//           </Button>
-//         </Col>
-//       </Row>
-
-//       {/* --- PRINTABLE SECTION --- */}
-//       <div className="printable-area">
-//         <div className="text-center mb-4 d-none d-print-block">
-//           <h3>KARUNASRI SEVA SAMITHI</h3>
-//           <h5>Daily Seva List - {new Date(date).toLocaleDateString()}</h5>
-//         </div>
-
-//         {loading ? (
-//           <div className="text-center py-5">
-//             <Spinner animation="border" />
-//           </div>
-//         ) : sevas.length === 0 ? (
-//           <Alert variant="light" className="text-center py-5 border shadow-sm">
-//             <h5 className="text-muted">
-//               No specific Sevas scheduled for this date.
-//             </h5>
-//             <p>Standard Ashram prayers will continue.</p>
-//           </Alert>
-//         ) : (
-//           <Row>
-//             {sevas.map((seva) => {
-//               const style = getOccasionStyle(seva.occasion);
-//               return (
-//                 <Col md={6} lg={4} key={seva._id} className="mb-4">
-//                   <Card
-//                     className={`h-100 border-${style.color} shadow-sm seva-card`}
-//                   >
-//                     <Card.Header
-//                       className={`bg-${style.color} text-white fw-bold d-flex justify-content-between align-items-center`}
-//                     >
-//                       <span>
-//                         {style.icon} {style.text}
-//                       </span>
-//                       <small>{seva.branch}</small>
-//                     </Card.Header>
-//                     <Card.Body className="text-center">
-//                       {/* Who is it for? */}
-//                       <h4
-//                         className="text-maroon mb-1"
-//                         style={{ fontFamily: "Playfair Display" }}
-//                       >
-//                         {seva.inNameOf || seva.donorName}
-//                       </h4>
-//                       <p className="text-muted small mb-3">
-//                         ({seva.occasion || "General Donation"})
-//                       </p>
-
-//                       <hr />
-
-//                       {/* Who Donated? */}
-//                       <p className="mb-0 text-muted small">Sponsored By:</p>
-//                       <h6 className="fw-bold">{seva.donorName}</h6>
-//                       <p className="mb-0 small">{seva.donorPhone}</p>
-
-//                       {/* Scheme */}
-//                       <div className="mt-3">
-//                         <Badge bg="light" text="dark" className="border">
-//                           {seva.scheme}
-//                         </Badge>
-//                       </div>
-//                     </Card.Body>
-//                   </Card>
-//                 </Col>
-//               );
-//             })}
-//           </Row>
-//         )}
-//       </div>
-
-//       <style>
-//         {`
-//           @media print {
-//             .d-print-none { display: none !important; }
-//             .d-print-block { display: block !important; }
-//             .dashboard-container { margin: 0; padding: 0; }
-//             .sidebar { display: none; }
-//             .main-content { margin-left: 0; width: 100%; }
-//             .seva-card { border: 1px solid #ccc !important; box-shadow: none !important; page-break-inside: avoid; }
-//           }
-//         `}
-//       </style>
-//     </div>
-//   );
-// };
-
-// export default DailySeva;
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
-import { Card, Row, Col, Form, Button, Alert, Spinner } from "react-bootstrap";
-import { FaCalendarAlt, FaPrint, FaCircle } from "react-icons/fa";
+import {
+  Card,
+  Row,
+  Col,
+  Form,
+  Button,
+  Alert,
+  Spinner,
+  Badge,
+} from "react-bootstrap";
+import {
+  FaCalendarAlt,
+  FaPrint,
+  FaCircle,
+  FaMoon,
+  FaSun,
+} from "react-icons/fa";
+
+// Constants for Dropdowns
+const TELUGU_MASAMS = [
+  "Chaitra",
+  "Vaishakha",
+  "Jyeshtha",
+  "Ashadha",
+  "Shravana",
+  "Bhadrapada",
+  "Ashwayuja",
+  "Kartika",
+  "Margashirsha",
+  "Pushya",
+  "Magha",
+  "Phalguna",
+];
+
+const TITHIS = [
+  "Padyami",
+  "Vidiya",
+  "Tadiya",
+  "Chavithi",
+  "Panchami",
+  "Shasthi",
+  "Saptami",
+  "Ashtami",
+  "Navami",
+  "Dashami",
+  "Ekadashi",
+  "Dwadashi",
+  "Trayodashi",
+  "Chaturdashi",
+  "Pournami",
+  "Amavasya",
+];
+
+const PAKSHAS = ["Shukla", "Krishna"];
 
 const DailySeva = () => {
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]); // Default Today
+  const [mode, setMode] = useState("Gregorian"); // 'Gregorian' or 'Telugu'
+
+  // Date State
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+
+  // Tithi State
+  const [selectedMasam, setSelectedMasam] = useState(TELUGU_MASAMS[0]);
+  const [selectedPaksha, setSelectedPaksha] = useState(PAKSHAS[0]);
+  const [selectedTithi, setSelectedTithi] = useState(TITHIS[0]);
+
   const [sevas, setSevas] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchSevaList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+  }, [date, mode, selectedMasam, selectedPaksha, selectedTithi]);
 
   const fetchSevaList = async () => {
     try {
@@ -204,10 +81,15 @@ const DailySeva = () => {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
-      const { data } = await axios.get(
-        `${BASE_URL}/api/donations/daily-seva?date=${date}`,
-        config
-      );
+      // Construct Query
+      let url = `${BASE_URL}/api/donations/daily-seva?date=${date}`;
+
+      if (mode === "Telugu") {
+        const tithiString = `${selectedMasam} ${selectedPaksha} ${selectedTithi}`;
+        url += `&tithi=${tithiString}`;
+      }
+
+      const { data } = await axios.get(url, config);
       setSevas(data);
       setLoading(false);
     } catch (error) {
@@ -218,68 +100,96 @@ const DailySeva = () => {
 
   return (
     <div className="daily-seva-container">
-      {/* --- CONTROLS (Hidden when printing) --- */}
-      {/* <Row className="mb-4 align-items-end d-print-none">
-        <Col md={8}>
-          <h2
-            className="text-maroon"
-            style={{ fontFamily: "Playfair Display" }}
-          >
-            Today's Donors List
-          </h2>
-          <p className="text-muted">
-            Generate the announcement list for the notice board.
-          </p>
-        </Col>
-        <Col md={4} className="d-flex gap-2">
-          <Form.Control
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="fw-bold border-maroon"
-          />
-          <Button variant="dark" onClick={() => window.print()}>
-            <FaPrint /> Print List
-          </Button>
-        </Col>
-      </Row> */}
-      <Row className="mb-4 align-items-center d-print-none">
-        {/* Title: Full width on mobile, 7 cols on laptop */}
-        <Col lg={7} xs={12} className="mb-3 mb-lg-0">
-          <h2
-            className="text-maroon m-0"
-            style={{ fontFamily: "Playfair Display" }}
-          >
-            Today's Donors List
-          </h2>
-          <p className="text-muted m-0 small">
-            Generate the announcement list for the notice board.
-          </p>
-        </Col>
-
-        {/* Controls: Full width on mobile, 5 cols on laptop */}
-        <Col lg={5} xs={12}>
-          <div className="d-flex gap-2">
-            {/* Date Input: Grows to fill space */}
-            <Form.Control
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="fw-bold border-maroon flex-grow-1"
-            />
-            {/* Print Button: Fixed width or grows slightly */}
-            <Button
-              variant="dark"
-              onClick={() => window.print()}
-              className="d-flex align-items-center"
+      {/* --- HEADER --- */}
+      <div className="d-print-none mb-4">
+        <Row className="align-items-center">
+          <Col md={6}>
+            <h2
+              className="text-maroon m-0"
+              style={{ fontFamily: "Playfair Display" }}
             >
-              <FaPrint className="me-2" />{" "}
-              <span className="d-none d-sm-inline">Print List</span>
-              <span className="d-inline d-sm-none">Print</span>
+              Daily Seva List
+            </h2>
+            <p className="text-muted m-0 small">Donors to be announced today</p>
+          </Col>
+          <Col md={6} className="text-end">
+            <Button variant="dark" onClick={() => window.print()}>
+              <FaPrint className="me-2" /> Print List
             </Button>
-          </div>
-        </Col>
-      </Row>
+          </Col>
+        </Row>
+
+        {/* --- CONTROLS CARD --- */}
+        <Card className="mt-3 bg-light border-0">
+          <Card.Body>
+            <div className="d-flex gap-3 mb-3">
+              <Button
+                variant={mode === "Gregorian" ? "primary" : "outline-primary"}
+                size="sm"
+                onClick={() => setMode("Gregorian")}
+              >
+                <FaSun className="me-2" /> English Date
+              </Button>
+              <Button
+                variant={mode === "Telugu" ? "warning" : "outline-warning"}
+                size="sm"
+                onClick={() => setMode("Telugu")}
+              >
+                <FaMoon className="me-2" /> Telugu Tithi
+              </Button>
+            </div>
+
+            <Row className="g-2 align-items-center">
+              {mode === "Gregorian" ? (
+                <Col md={4}>
+                  <Form.Label className="small fw-bold">Select Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                </Col>
+              ) : (
+                <>
+                  <Col md={3}>
+                    <Form.Label className="small fw-bold">Masam</Form.Label>
+                    <Form.Select
+                      value={selectedMasam}
+                      onChange={(e) => setSelectedMasam(e.target.value)}
+                    >
+                      {TELUGU_MASAMS.map((m) => (
+                        <option key={m}>{m}</option>
+                      ))}
+                    </Form.Select>
+                  </Col>
+                  <Col md={3}>
+                    <Form.Label className="small fw-bold">Paksha</Form.Label>
+                    <Form.Select
+                      value={selectedPaksha}
+                      onChange={(e) => setSelectedPaksha(e.target.value)}
+                    >
+                      {PAKSHAS.map((p) => (
+                        <option key={p}>{p}</option>
+                      ))}
+                    </Form.Select>
+                  </Col>
+                  <Col md={3}>
+                    <Form.Label className="small fw-bold">Tithi</Form.Label>
+                    <Form.Select
+                      value={selectedTithi}
+                      onChange={(e) => setSelectedTithi(e.target.value)}
+                    >
+                      {TITHIS.map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </Form.Select>
+                  </Col>
+                </>
+              )}
+            </Row>
+          </Card.Body>
+        </Card>
+      </div>
 
       {/* --- PRINTABLE NOTICE BOARD AREA --- */}
       <div className="printable-area p-3 p-lg-5 bg-white border shadow-sm">
@@ -291,17 +201,21 @@ const DailySeva = () => {
           >
             KARUNASRI SEVA SAMITHI
           </h2>
-          <h5 className="text-uppercase text-muted mt-2">
-            Donors & Sponsors List
-          </h5>
+          <h5 className="text-uppercase text-muted mt-2">Daily Seva List</h5>
           <div className="mt-2 fw-bold text-dark">
             <FaCalendarAlt className="me-2" />
-            {new Date(date).toLocaleDateString("en-IN", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            {mode === "Gregorian" ? (
+              new Date(date).toLocaleDateString("en-IN", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
+            ) : (
+              <span className="text-warning text-dark bg-warning px-2 rounded">
+                {selectedMasam} {selectedPaksha} {selectedTithi}
+              </span>
+            )}
           </div>
         </div>
 
@@ -312,13 +226,13 @@ const DailySeva = () => {
         ) : sevas.length === 0 ? (
           <Alert variant="light" className="text-center py-5">
             <h5 className="text-muted">
-              No specific Sevas scheduled for this date.
+              No specific Sevas scheduled for this selection.
             </h5>
             <p>Regular Ashram activities will continue as usual.</p>
           </Alert>
         ) : (
           <div className="seva-list">
-            {sevas.map((seva, index) => (
+            {sevas.map((seva) => (
               <div
                 key={seva._id}
                 className="seva-item mb-4 p-3 rounded"
@@ -343,14 +257,11 @@ const DailySeva = () => {
                         fontFamily: "Georgia, serif",
                       }}
                     >
-                      Today's{" "}
-                      <span className="text-primary fw-bold">
+                      <Badge bg="secondary" className="me-2 mb-1">
                         {seva.scheme}
-                      </span>{" "}
-                      is sponsored by
-                      <br className="d-block d-md-none" />{" "}
-                      {/* Break line on mobile */}
-                      <span className="text-maroon fw-bold fs-4 mx-1">
+                      </Badge>
+                      sponsored by
+                      <span className="text-maroon fw-bold fs-4 mx-2">
                         {" "}
                         Sri {seva.donorName} garu
                       </span>
@@ -392,19 +303,12 @@ const DailySeva = () => {
 
       <style>
         {`
-          /* Custom Styles for "Notice Board" feel */
           .text-maroon { color: #581818; }
-          
           @media print {
             .d-print-none { display: none !important; }
             .d-print-block { display: block !important; }
-            
-            /* Hide Sidebar & Header */
             .sidebar, .top-header { display: none; }
             .main-content { margin: 0; padding: 0; width: 100%; }
-            .dashboard-container { display: block; }
-            
-            /* Clean Print Layout */
             body { background: white; }
             .printable-area { border: none !important; shadow: none !important; padding: 0 !important; }
             .seva-item { border: 1px solid #eee; page-break-inside: avoid; }

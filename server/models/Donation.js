@@ -79,6 +79,11 @@ const donationSchema = mongoose.Schema(
     // --- NEW: SPECIAL OCCASION FIELDS (Tithi/Seva) ---
     occasion: { type: String }, // e.g. "Birthday", "Wedding Anniversary", "In Memory Of"
     inNameOf: { type: String }, // e.g. "Sairam" or "Late Father Name"
+    calendarType: {
+      type: String,
+      enum: ["Gregorian", "Telugu"],
+      default: "Gregorian",
+    },
     programDate: { type: Date }, // The actual date to perform the seva (e.g., Feb 14)
     // -------------------------------------------
 

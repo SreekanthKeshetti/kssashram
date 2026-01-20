@@ -581,26 +581,96 @@ const generateTaxCertificate = async (req, res) => {
   }
 };
 // --- NEW: Get Daily Seva List (Today's Sponsors) ---
+// const getDailySevaList = async (req, res) => {
+//   try {
+//     const { date } = req.query; // Format: YYYY-MM-DD
+
+//     if (!date) return res.status(400).json({ message: "Date is required" });
+
+//     // Construct Start and End of the selected day
+//     const start = new Date(date);
+//     start.setHours(0, 0, 0, 0);
+
+//     const end = new Date(date);
+//     end.setHours(23, 59, 59, 999);
+
+//     // Find donations scheduled for this PROGRAM DATE
+//     const donations = await Donation.find({
+//       programDate: { $gte: start, $lte: end },
+//     }).sort({ createdAt: 1 });
+
+//     res.json(donations);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+// @desc    Get Daily Seva List (Complex Logic: Date vs Tithi + Expiry)
 const getDailySevaList = async (req, res) => {
   try {
-    const { date } = req.query; // Format: YYYY-MM-DD
+    const { date, tithi } = req.query; // date = YYYY-MM-DD, tithi = "Magha Shukla Ekadashi"
 
     if (!date) return res.status(400).json({ message: "Date is required" });
 
-    // Construct Start and End of the selected day
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
+    // 1. Prepare English Date variables
+    const targetDate = new Date(date);
+    const day = targetDate.getDate();
+    const month = targetDate.getMonth() + 1; // 0-indexed in JS
 
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
+    // 2. Build the Query Conditions
+    const conditions = [
+      // Case A: English One-time Seva (Specific Date)
+      {
+        calendarType: "Gregorian",
+        isRecurring: false,
+        programDate: {
+          $gte: new Date(new Date(date).setHours(0, 0, 0, 0)),
+          $lte: new Date(new Date(date).setHours(23, 59, 59, 999)),
+        },
+      },
+      // Case B: English Annual Recurring (Same Day & Month, Any Year)
+      {
+        calendarType: "Gregorian",
+        isRecurring: true,
+        $expr: {
+          $and: [
+            { $eq: [{ $dayOfMonth: "$programDate" }, day] },
+            { $eq: [{ $month: "$programDate" }, month] },
+          ],
+        },
+      },
+    ];
 
-    // Find donations scheduled for this PROGRAM DATE
-    const donations = await Donation.find({
-      programDate: { $gte: start, $lte: end },
-    }).sort({ createdAt: 1 });
+    // Case C: Telugu Tithi Match (Only if tithi param is sent)
+    if (tithi) {
+      conditions.push({
+        calendarType: "Telugu",
+        tithi: tithi, // Matches exact string from dropdowns
+      });
+    }
+
+    // 3. Execute Database Query
+    let donations = await Donation.find({ $or: conditions }).sort({
+      createdAt: 1,
+    });
+
+    // 4. Filter Expiry (10 Years for Permanent Schemes)
+    const today = new Date();
+    donations = donations.filter((d) => {
+      // If it's a specific "Shasvitha" (Permanent) scheme, check 10-year expiry
+      if (d.scheme.includes("Shasvitha") || d.scheme.includes("Permanent")) {
+        const donationDate = new Date(d.createdAt);
+        const expiryDate = new Date(donationDate);
+        expiryDate.setFullYear(donationDate.getFullYear() + 10);
+
+        // If today is past expiry, exclude it
+        if (today > expiryDate) return false;
+      }
+      return true;
+    });
 
     res.json(donations);
   } catch (error) {
+    console.error("Daily Seva Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
