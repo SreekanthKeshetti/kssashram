@@ -4,7 +4,6 @@ const csv = require("csv-parser");
 const Student = require("../models/Student");
 const { buildProgressPDF } = require("../utils/generateProgressPDF");
 const nodemailer = require("nodemailer");
-const { logAudit } = require("../utils/auditLogger"); // Added for tracking transfers
 
 // @desc    Register a new Student (Employee)
 // @route   POST /api/students
@@ -124,7 +123,7 @@ const getStudentById = async (req, res) => {
   }
 };
 
-// @desc    Update Student Details (Profile, Alumni Request, Transfer, etc.)
+// @desc    Update Student Details (Profile, Alumni Request, etc.)
 // @route   PUT /api/students/:id
 const updateStudent = async (req, res) => {
   try {
@@ -135,7 +134,7 @@ const updateStudent = async (req, res) => {
     }
 
     // =========================================================
-    // 1. ALUMNI EXIT REQUEST (Starts 3-Tier Flow)
+    // 1. NEW LOGIC: ALUMNI EXIT REQUEST (Starts 3-Tier Flow)
     // =========================================================
     if (req.body.action === "request_exit") {
       if (student.admissionStatus !== "Active") {
@@ -144,6 +143,7 @@ const updateStudent = async (req, res) => {
           .json({ message: "Only Active students can be marked for exit." });
       }
 
+      // Change status to Pending and initialize the approval object
       student.admissionStatus = "Exit_Pending";
       student.exitRequest = {
         requestedDate: req.body.exitDate || Date.now(),
@@ -155,40 +155,20 @@ const updateStudent = async (req, res) => {
         },
       };
 
+      // Save initial alumni contact details if provided
       if (req.body.alumniDetails) {
         student.alumniDetails = req.body.alumniDetails;
       }
 
       await student.save();
-      return res.json(student);
+      return res.json(student); // Return immediately
     }
 
     // =========================================================
-    // 2. TRANSFER REQUEST LOGIC (New)
-    // =========================================================
-    if (req.body.action === "request_transfer") {
-      if (student.admissionStatus !== "Active") {
-        return res
-          .status(400)
-          .json({ message: "Only Active students can be transferred." });
-      }
-
-      student.transferRequest = {
-        targetBranch: req.body.targetBranch,
-        reason: req.body.reason,
-        initiatedBy: req.user._id,
-        status: "Pending",
-        date: Date.now(),
-      };
-
-      await student.save();
-      return res.json(student);
-    }
-
-    // =========================================================
-    // 3. STANDARD UPDATES
+    // 2. EXISTING LOGIC: STANDARD UPDATES
     // =========================================================
 
+    // Update Arrays (Education & Health)
     if (req.body.educationHistory) {
       student.educationHistory = req.body.educationHistory;
     }
@@ -196,6 +176,7 @@ const updateStudent = async (req, res) => {
       student.healthRecords = req.body.healthRecords;
     }
 
+    // Update Activities
     if (req.body.activities) {
       student.activities = req.body.activities;
     }
@@ -203,11 +184,12 @@ const updateStudent = async (req, res) => {
       student.activities.push(req.body.newActivityEntry);
     }
 
+    // Update Sponsor
     if (req.body.sponsor !== undefined) {
       student.sponsor = req.body.sponsor;
     }
 
-    // Profile Updates
+    // Update Basic Profile Info
     student.firstName = req.body.firstName || student.firstName;
     student.lastName = req.body.lastName || student.lastName;
     student.guardianName = req.body.guardianName || student.guardianName;
@@ -215,6 +197,7 @@ const updateStudent = async (req, res) => {
     student.address = req.body.address || student.address;
     student.dob = req.body.dob || student.dob;
 
+    // Update Official Schema Fields
     student.admissionNumber =
       req.body.admissionNumber || student.admissionNumber;
     student.caseNumber = req.body.caseNumber || student.caseNumber;
@@ -223,10 +206,12 @@ const updateStudent = async (req, res) => {
       req.body.alternateContact || student.alternateContact;
     student.currentClass = req.body.currentClass || student.currentClass;
 
+    // Update Expenses
     if (req.body.newExpense) {
       student.expenses.push(req.body.newExpense);
     }
 
+    // Direct Status Update (Manual Override)
     if (req.body.admissionStatus) {
       student.admissionStatus = req.body.admissionStatus;
     }
@@ -249,8 +234,9 @@ const approveAlumniExit = async (req, res) => {
     if (!student) return res.status(404).json({ message: "Student not found" });
 
     const { role } = req.user;
-    const { status } = req.body;
+    const { status } = req.body; // 'Approved' or 'Rejected'
 
+    // Update specific approval slot
     if (role === "president" || role === "admin") {
       student.exitRequest.approvals.president = { status, date: Date.now() };
     } else if (role === "secretary") {
@@ -261,55 +247,15 @@ const approveAlumniExit = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
+    // Check if ALL 3 Approved
     const p = student.exitRequest.approvals.president.status === "Approved";
     const s = student.exitRequest.approvals.secretary.status === "Approved";
     const t = student.exitRequest.approvals.treasurer.status === "Approved";
 
     if (p && s && t) {
-      student.admissionStatus = "Alumni";
+      student.admissionStatus = "Alumni"; // Final Conversion
     } else if (status === "Rejected") {
-      student.admissionStatus = "Active";
-    }
-
-    await student.save();
-    res.json(student);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Approve Branch Transfer (President/Admin Only)
-// @route   PUT /api/students/:id/approve-transfer
-const approveTransfer = async (req, res) => {
-  try {
-    const student = await Student.findById(req.params.id);
-    if (!student) return res.status(404).json({ message: "Student not found" });
-
-    const { status } = req.body; // 'Approved' or 'Rejected'
-
-    // Only President or Admin can approve transfers
-    if (req.user.role !== "president" && req.user.role !== "admin") {
-      return res
-        .status(403)
-        .json({ message: "Only President can approve transfers." });
-    }
-
-    if (status === "Approved") {
-      // Execute Transfer
-      student.branch = student.transferRequest.targetBranch; // Update Branch
-      student.transferRequest.status = "Approved";
-      student.transferRequest.approvedBy = req.user._id;
-
-      // Log it
-      await logAudit(
-        req,
-        "UPDATE",
-        "Student",
-        student._id,
-        `Transferred to ${student.branch}`,
-      );
-    } else {
-      student.transferRequest.status = "Rejected";
+      student.admissionStatus = "Active"; // Revert to Active if rejected
     }
 
     await student.save();
@@ -622,9 +568,8 @@ module.exports = {
   getStudents,
   approveStudent,
   getStudentById,
-  updateStudent,
-  approveAlumniExit,
-  approveTransfer, // <--- EXPORTING NEW FUNCTION
+  updateStudent, // <--- MERGED VERSION
+  approveAlumniExit, // <--- NEW FUNCTION
   deleteStudent,
   uploadDocuments,
   deleteDocument,

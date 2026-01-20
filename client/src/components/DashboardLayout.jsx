@@ -297,6 +297,9 @@ const DashboardLayout = () => {
       "president",
       "secretary",
       "treasurer",
+      "warden",
+      "accountant",
+      "clerk",
     ];
 
     if (!userInfo || !allowedRoles.includes(userInfo.role)) {
@@ -348,7 +351,7 @@ const DashboardLayout = () => {
           </button>
         </div>
 
-        <ul className="sidebar-menu">
+        {/* <ul className="sidebar-menu">
           <li>
             <Link
               to="/dashboard"
@@ -434,6 +437,184 @@ const DashboardLayout = () => {
               </Link>
             </li>
           )}
+          {user.role === "admin" && (
+            <li>
+              <Link
+                to="/dashboard/audit"
+                className={`menu-item ${isActive("audit")}`}
+              >
+                <FaShieldAlt /> Audit Trail
+              </Link>
+            </li>
+          )}
+
+          <li style={{ marginTop: "auto" }}>
+            <button
+              onClick={handleLogout}
+              className="menu-item"
+              style={{
+                background: "transparent",
+                border: "none",
+                width: "100%",
+              }}
+            >
+              <FaSignOutAlt /> Logout
+            </button>
+          </li>
+        </ul> */}
+        <ul className="sidebar-menu">
+          {/* 1. OVERVIEW (Visible to ALL) */}
+          <li>
+            <Link
+              to="/dashboard"
+              className={`menu-item ${location.pathname === "/dashboard" ? "active" : ""}`}
+            >
+              <FaTachometerAlt /> Overview
+            </Link>
+          </li>
+
+          {/* 2. DONATIONS (Visible to ALL Staff) */}
+          <li>
+            <Link
+              to="/dashboard/donations"
+              className={`menu-item ${isActive("donations")}`}
+            >
+              <FaHandHoldingHeart /> Donations
+            </Link>
+          </li>
+
+          {/* 3. STUDENTS (Warden, Clerk, Admin, Committee) */}
+          {[
+            "admin",
+            "president",
+            "secretary",
+            "treasurer",
+            "warden",
+            "clerk",
+            "employee",
+          ].includes(user.role) && (
+            <li>
+              <Link
+                to="/dashboard/students"
+                className={`menu-item ${isActive("students")}`}
+              >
+                <FaUserGraduate /> Students
+              </Link>
+            </li>
+          )}
+
+          {/* 4. INVENTORY (Warden, Clerk, Admin, Committee) */}
+          {[
+            "admin",
+            "president",
+            "secretary",
+            "treasurer",
+            "warden",
+            "clerk",
+            "employee",
+          ].includes(user.role) && (
+            <li>
+              <Link
+                to="/dashboard/inventory"
+                className={`menu-item ${isActive("inventory")}`}
+              >
+                <FaBoxOpen /> Inventory
+              </Link>
+            </li>
+          )}
+
+          {/* 5. FINANCE (Accountant, Admin, Committee ONLY) - Hidden from Warden/Clerk */}
+          {[
+            "admin",
+            "president",
+            "secretary",
+            "treasurer",
+            "accountant",
+            "employee",
+          ].includes(user.role) && (
+            <li>
+              <Link
+                to="/dashboard/finance"
+                className={`menu-item ${isActive("finance")}`}
+              >
+                <FaRupeeSign /> Finance
+              </Link>
+            </li>
+          )}
+
+          {/* 6. EVENTS (All Staff) */}
+          <li>
+            <Link
+              to="/dashboard/events"
+              className={`menu-item ${isActive("events")}`}
+            >
+              <FaCalendarAlt /> Events
+            </Link>
+          </li>
+
+          {/* 7. DAILY SEVA (All Staff) */}
+          <li>
+            <Link
+              to="/dashboard/daily-seva"
+              className={`menu-item ${isActive("daily-seva")}`}
+            >
+              <FaCalendarAlt /> Today's Donors
+            </Link>
+          </li>
+
+          {/* 8. MEMBERS (Clerk, Admin, Committee) */}
+          {[
+            "admin",
+            "president",
+            "secretary",
+            "treasurer",
+            "clerk",
+            "employee",
+          ].includes(user.role) && (
+            <li>
+              <Link
+                to="/dashboard/members"
+                className={`menu-item ${isActive("members")}`}
+              >
+                <FaUsers /> Members
+              </Link>
+            </li>
+          )}
+
+          {/* 9. REPORTS (Accountant, Admin, Committee) */}
+          {[
+            "admin",
+            "president",
+            "secretary",
+            "treasurer",
+            "accountant",
+            "employee",
+          ].includes(user.role) && (
+            <li>
+              <Link
+                to="/dashboard/reports"
+                className={`menu-item ${isActive("reports")}`}
+              >
+                <FaChartBar /> Reports
+              </Link>
+            </li>
+          )}
+
+          {/* 10. SETTINGS (Admin & Committee Only) */}
+          {["admin", "president", "secretary", "treasurer"].includes(
+            user.role,
+          ) && (
+            <li>
+              <Link
+                to="/dashboard/settings"
+                className={`menu-item ${isActive("settings")}`}
+              >
+                <FaCogs /> Settings
+              </Link>
+            </li>
+          )}
+
+          {/* 11. AUDIT (Admin Only) */}
           {user.role === "admin" && (
             <li>
               <Link

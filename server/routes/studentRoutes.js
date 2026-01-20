@@ -17,6 +17,8 @@ const {
   emailProgressReport,
   updateStatutoryInfo,
   importStudents,
+  approveAlumniExit,
+  approveTransfer,
 } = require("../controllers/studentController");
 const { protect, admin, staff } = require("../middleware/authMiddleware");
 // --- MULTER CONFIG (Same as Donation) ---
@@ -84,5 +86,7 @@ router.put("/:id/statutory", protect, staff, updateStatutoryInfo);
 // NEW: Import Route (Admin Only)
 // Note: 'upload' is the multer middleware defined in your file
 router.post("/import", protect, admin, upload.single("file"), importStudents);
+router.route("/:id/approve-exit").put(protect, approveAlumniExit);
+router.route("/:id/approve-transfer").put(protect, approveTransfer);
 
 module.exports = router;

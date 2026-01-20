@@ -183,6 +183,12 @@ const createDonation = async (req, res) => {
       programDate,
       category,
       address,
+      // NEW FIELDS
+      paymentDetails, // Object { chequeNo, bankName, etc. }
+      manualReceiptNo,
+      manualReceiptDate,
+      calendarType,
+      tithi,
     } = req.body;
 
     // Calculate Next Reminder Date (If Recurring)
@@ -209,21 +215,26 @@ const createDonation = async (req, res) => {
       scheme,
       accountHead: accountHeadId,
       paymentMode,
+      paymentDetails,
       paymentReference,
       branch: branch || "Headquarters",
       collectedBy: req.user._id,
       occasion,
       inNameOf,
       programDate: programDate || null,
+      manualReceiptNo,
+      manualReceiptDate,
       category: category || "Household", // Default to Household if not selected
       address,
+      calendarType: calendarType || "Gregorian",
+      tithi: tithi || "", // Save Telugu Tithi string if provided
     });
     await logAudit(
       req,
       "CREATE",
       "Donation",
       donation._id,
-      `Created donation of Rs.${amount} for ${donorName}`
+      `Created donation of Rs.${amount} for ${donorName}`,
     );
 
     res.status(201).json(donation);
@@ -282,7 +293,7 @@ const downloadReceipt = async (req, res) => {
     buildReceipt(
       donation,
       (chunk) => res.write(chunk),
-      () => res.end()
+      () => res.end(),
     );
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -304,7 +315,7 @@ const emailReceipt = async (req, res) => {
       buildReceipt(
         donation,
         (chunk) => buffers.push(chunk),
-        () => resolve(Buffer.concat(buffers))
+        () => resolve(Buffer.concat(buffers)),
       );
     });
 
@@ -408,7 +419,7 @@ const uploadMedia = async (req, res) => {
 
     // Get paths of uploaded files
     const filePaths = req.files.map(
-      (file) => `/${file.path.replace(/\\/g, "/")}`
+      (file) => `/${file.path.replace(/\\/g, "/")}`,
     ); // Fix windows slashes
 
     // Add to existing media array
@@ -562,7 +573,7 @@ const generateTaxCertificate = async (req, res) => {
       donations,
       `April ${year} - March ${parseInt(year) + 1}`,
       (chunk) => res.write(chunk),
-      () => res.end()
+      () => res.end(),
     );
   } catch (error) {
     console.error("Certificate Error:", error);
@@ -619,7 +630,7 @@ const importDonations = async (req, res) => {
         const getValue = (keywords) => {
           const rowKeys = Object.keys(row);
           const match = rowKeys.find((key) =>
-            keywords.some((k) => key.toLowerCase() === k.toLowerCase())
+            keywords.some((k) => key.toLowerCase() === k.toLowerCase()),
           );
           if (row[keywords[0]]) return row[keywords[0]];
           return match ? row[match] : "";

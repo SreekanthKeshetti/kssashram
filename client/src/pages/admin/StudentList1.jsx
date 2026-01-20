@@ -36,7 +36,8 @@ const StudentList = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // --- FILTER STATE ---
+  // --- NEW: FILTER STATE ---
+  // Default to "Active" so they see current students first
   const [filterStatus, setFilterStatus] = useState("Active");
 
   const [formData, setFormData] = useState({
@@ -64,6 +65,10 @@ const StudentList = () => {
   const fetchStudents = async (user) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      // const { data } = await axios.get(
+      //   "http://localhost:5000/api/students",
+      //   config
+      // );
       const { data } = await axios.get(`${BASE_URL}/api/students`, config);
       setStudents(data);
     } catch (error) {
@@ -71,9 +76,11 @@ const StudentList = () => {
     }
   };
 
+  // --- FILTER LOGIC ---
   const filteredStudents = students.filter((s) => {
     if (filterStatus === "All") return true;
     if (filterStatus === "Alumni") return s.admissionStatus === "Alumni";
+    // For "Active", we usually want Active + In Review + Draft (Everything except Alumni/Rejected)
     if (filterStatus === "Active")
       return (
         s.admissionStatus === "Active" ||
@@ -83,6 +90,7 @@ const StudentList = () => {
     return true;
   });
 
+  // --- UPDATED EXPORT FUNCTION (Exports ONLY what is currently visible) ---
   const handleExport = () => {
     if (filteredStudents.length === 0)
       return alert("No data to export in current view");
@@ -107,6 +115,7 @@ const StudentList = () => {
       "Treasurer Approval",
     ];
 
+    // Use filteredStudents instead of students
     const rows = filteredStudents.map((s) => [
       s.admissionNumber || "-",
       s.caseNumber || "-",
@@ -136,6 +145,7 @@ const StudentList = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
+    // Dynamic Filename based on filter
     const dateStr = new Date().toISOString().split("T")[0];
     link.setAttribute(
       "download",
@@ -242,6 +252,35 @@ const StudentList = () => {
     );
   };
 
+  const renderOverallStatus = (status) => {
+    switch (status) {
+      case "Active":
+        return (
+          <Badge bg="success" style={{ fontSize: "0.9rem" }}>
+            ADMITTED
+          </Badge>
+        );
+      case "Alumni":
+        return (
+          <Badge bg="info" style={{ fontSize: "0.9rem" }}>
+            ALUMNI
+          </Badge>
+        );
+      case "Rejected":
+        return (
+          <Badge bg="danger" style={{ fontSize: "0.9rem" }}>
+            REJECTED
+          </Badge>
+        );
+      default:
+        return (
+          <Badge bg="secondary" style={{ fontSize: "0.9rem" }}>
+            IN REVIEW
+          </Badge>
+        );
+    }
+  };
+
   const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -273,8 +312,49 @@ const StudentList = () => {
 
   return (
     <div>
-      {/* HEADER */}
+      {/* <Row className="mb-4 align-items-center">
+        <Col md={5}>
+          <h2
+            className="text-maroon"
+            style={{ fontFamily: "Playfair Display" }}
+          >
+            Student Admissions
+          </h2>
+        </Col>
+        <Col md={7} className="text-end">
+          <input
+            type="file"
+            id="csvInput"
+            accept=".csv"
+            style={{ display: "none" }}
+            onChange={handleImport}
+          />
+
+          <Button
+            variant="warning"
+            className="me-2 text-dark"
+            onClick={() => document.getElementById("csvInput").click()}
+          >
+            <FaFileUpload /> Import CSV
+          </Button>
+
+          <Button variant="success" className="me-2" onClick={handleExport}>
+            <FaFileDownload /> Export List
+          </Button>
+
+          <Button
+            variant="primary"
+            style={{ backgroundColor: "#581818", border: "none" }}
+            onClick={() => setShowAddModal(true)}
+          >
+            <FaPlus /> New Admission
+          </Button>
+        </Col>
+      </Row> */}
+
+      {/* --- RESPONSIVE HEADER ROW --- */}
       <Row className="mb-4 align-items-center">
+        {/* Title: Full width on mobile, 5 cols on laptop */}
         <Col lg={5} xs={12} className="mb-3 mb-lg-0">
           <h2
             className="text-maroon m-0"
@@ -285,6 +365,7 @@ const StudentList = () => {
           <p className="text-muted m-0 small">Manage enrollments & alumni</p>
         </Col>
 
+        {/* Buttons: Full width on mobile, 7 cols on laptop */}
         <Col lg={7} xs={12}>
           <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
             <input
@@ -295,6 +376,7 @@ const StudentList = () => {
               onChange={handleImport}
             />
 
+            {/* Import Button */}
             <Button
               variant="warning"
               className="text-dark shadow-sm flex-grow-1 flex-lg-grow-0"
@@ -303,6 +385,7 @@ const StudentList = () => {
               <FaFileUpload className="me-1" /> Import CSV
             </Button>
 
+            {/* Export Button */}
             <Button
               variant="success"
               className="shadow-sm flex-grow-1 flex-lg-grow-0"
@@ -311,6 +394,7 @@ const StudentList = () => {
               <FaFileDownload className="me-1" /> Export List
             </Button>
 
+            {/* Add New Button */}
             <Button
               variant="primary"
               className="shadow-sm flex-grow-1 flex-lg-grow-0"
@@ -323,7 +407,30 @@ const StudentList = () => {
         </Col>
       </Row>
 
-      {/* FILTER TABS */}
+      {/* --- FILTER TABS --- */}
+      {/* <div className="mb-3">
+        <ButtonGroup>
+          <Button
+            variant={filterStatus === "Active" ? "dark" : "outline-dark"}
+            onClick={() => setFilterStatus("Active")}
+          >
+            <FaUserFriends className="me-2" /> Current Students
+          </Button>
+          <Button
+            variant={filterStatus === "Alumni" ? "info" : "outline-info"}
+            onClick={() => setFilterStatus("Alumni")}
+          >
+            <FaHistory className="me-2" /> Alumni List
+          </Button>
+          <Button
+            variant={filterStatus === "All" ? "secondary" : "outline-secondary"}
+            onClick={() => setFilterStatus("All")}
+          >
+            All Records
+          </Button>
+        </ButtonGroup>
+      </div> */}
+      {/* --- RESPONSIVE FILTER TABS --- */}
       <div className="mb-3">
         <ButtonGroup className="d-flex flex-wrap shadow-sm">
           <Button
@@ -374,6 +481,7 @@ const StudentList = () => {
                 <th>Action</th>
               </tr>
             </thead>
+            {/* USE FILTERED STUDENTS HERE */}
             <tbody>
               {filteredStudents.map((s) => (
                 <tr key={s._id}>
@@ -510,12 +618,13 @@ const StudentList = () => {
         </Card.Body>
       </Card>
 
-      {/* VIEW MODAL */}
+      {/* Keep the MODALS exactly as they are */}
       <Modal
         show={showViewModal}
         onHide={() => setShowViewModal(false)}
         size="lg"
       >
+        {/* ... (View Modal Content) ... */}
         <Modal.Header closeButton>
           <Modal.Title>Application Details</Modal.Title>
         </Modal.Header>
@@ -526,7 +635,7 @@ const StudentList = () => {
                 {selectedStudent.firstName} {selectedStudent.lastName}
               </h4>
               <p className="text-muted">
-                Parent/Guardian: {selectedStudent.guardianName}
+                Guardian: {selectedStudent.guardianName}
               </p>
               <hr />
               <h5 className="mb-3">Approval Workflow</h5>
@@ -631,12 +740,12 @@ const StudentList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* ADD MODAL */}
       <Modal
         show={showAddModal}
         onHide={() => setShowAddModal(false)}
         size="lg"
       >
+        {/* ... (Add Modal Content) ... */}
         <Modal.Header closeButton>
           <Modal.Title>New Student Admission</Modal.Title>
         </Modal.Header>
@@ -723,10 +832,6 @@ const StudentList = () => {
                   <option value="Headquarters">Headquarters</option>
                   <option value="Karunya Sindhu">Karunya Sindhu</option>
                   <option value="Karunya Bharathi">Karunya Bharathi</option>
-                  <option value="Karunya Jyothi">Karunya Jyothi</option>
-                  <option value="Karuna Sree Seva Samithi">
-                    Karuna Sree Seva Samithi
-                  </option>
                 </Form.Select>
               </Col>
               <Col md={6} className="mb-3">

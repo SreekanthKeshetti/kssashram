@@ -53,30 +53,63 @@ const createEvent = async (req, res) => {
 };
 
 // @desc    Register (Logic same, but mapping 'date' for legacy safety)
+// @desc    Register (Supports Single OR Bulk)
 const registerForEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ message: "Event not found" });
 
-    const { name, phone } = req.body;
-    const alreadyRegistered = event.registrations.find(
-      (r) => r.phone === phone
-    );
-    if (alreadyRegistered)
-      return res.status(400).json({ message: "Already registered." });
+    // CHECK: Is this a Bulk Registration?
+    if (req.body.attendees && Array.isArray(req.body.attendees)) {
+      // BULK LOGIC
+      // 1. Safety Filter: Remove any entries missing name or phone
+      const validList = req.body.attendees.filter(
+        (p) => p.name && p.name.trim() !== "" && p.phone,
+      );
 
-    const initialStatus = event.isPaid ? "Pending" : "Free";
+      if (validList.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "No valid attendees provided." });
+      }
 
-    event.registrations.push({
-      user: req.user ? req.user._id : null,
-      name,
-      phone,
-      paymentStatus: initialStatus,
-      attendanceLog: [], // Initialize empty log
-    });
+      const newRegistrations = validList.map((person) => ({
+        user: req.user ? req.user._id : null,
+        name: person.name,
+        phone: person.phone,
+        paymentStatus: event.isPaid ? "Pending" : "Free",
+        attendanceLog: [],
+      }));
+
+      event.registrations.push(...newRegistrations);
+    } else {
+      // SINGLE LOGIC
+      const { name, phone } = req.body;
+      if (!name || !phone)
+        return res.status(400).json({ message: "Name and Phone are required" });
+
+      const alreadyRegistered = event.registrations.find(
+        (r) => r.phone === phone,
+      );
+      if (alreadyRegistered)
+        return res
+          .status(400)
+          .json({ message: "This phone number is already registered." });
+
+      event.registrations.push({
+        user: req.user ? req.user._id : null,
+        name,
+        phone,
+        paymentStatus: event.isPaid ? "Pending" : "Free",
+        attendanceLog: [],
+      });
+    }
 
     await event.save();
-    res.json({ message: "Registration Successful" });
+    res.json({
+      message: "Registration Successful",
+      registrations: event.registrations,
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -101,7 +134,7 @@ const markAttendance = async (req, res) => {
     if (status) {
       // MARK PRESENT: Add date if not exists
       const exists = registration.attendanceLog.some(
-        (d) => new Date(d).getTime() === targetDate.getTime()
+        (d) => new Date(d).getTime() === targetDate.getTime(),
       );
       if (!exists) {
         registration.attendanceLog.push(targetDate);
@@ -109,7 +142,7 @@ const markAttendance = async (req, res) => {
     } else {
       // MARK ABSENT: Remove date
       registration.attendanceLog = registration.attendanceLog.filter(
-        (d) => new Date(d).getTime() !== targetDate.getTime()
+        (d) => new Date(d).getTime() !== targetDate.getTime(),
       );
     }
 

@@ -12,15 +12,9 @@ import {
   Col,
   Modal,
   Form,
+  Alert,
 } from "react-bootstrap";
-import {
-  FaPlus,
-  FaCheck,
-  FaFilePdf,
-  FaFileDownload,
-  FaBalanceScale,
-} from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { FaPlus, FaCheck, FaFilePdf, FaFileDownload } from "react-icons/fa";
 
 const FinanceList = () => {
   const [vouchers, setVouchers] = useState([]);
@@ -34,6 +28,13 @@ const FinanceList = () => {
     amount: "",
     description: "",
     paymentMode: "Cash",
+    recipientName: "", // New Field
+    paymentDetails: {
+      chequeNo: "",
+      chequeDate: "",
+      bankName: "",
+      transactionId: "",
+    },
   });
   const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
 
@@ -69,52 +70,20 @@ const FinanceList = () => {
     }
   };
 
-  // --- TALLY EXPORT ---
-  const handleExport = () => {
-    if (vouchers.length === 0) return alert("No vouchers to export.");
-
-    const headers = [
-      "Date",
-      "Voucher No",
-      "Type",
-      "Account Code",
-      "Ledger Name",
-      "Amount",
-      "Mode",
-      "Narration",
-      "Prepared By",
-      "Status",
-    ];
-
-    // changing the vouchers.map to filteredVouchers.map.
-    const rows = filteredVouchers.map((v) => [
-      new Date(v.createdAt).toLocaleDateString(),
-      v.voucherNo,
-      v.voucherType,
-      v.accountHead?.code || "N/A",
-      `"${v.accountHead?.name || "Unknown"}"`,
-      v.amount,
-      v.paymentMode,
-      `"${v.description || ""}"`,
-      v.preparedBy?.name || "System",
-      v.status,
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      headers.join(",") +
-      "\n" +
-      rows.map((e) => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `Tally_Export_${new Date().toISOString().split("T")[0]}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleApprove = async (id) => {
+    if (!window.confirm("Confirm signature for this voucher?")) return;
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.put(
+        `${BASE_URL}/api/finance/vouchers/${id}/approve`,
+        {},
+        config
+      );
+      fetchVouchers(userInfo);
+      alert("Approval Recorded!");
+    } catch (error) {
+      alert(error.response?.data?.message || "Error approving");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -131,291 +100,205 @@ const FinanceList = () => {
         amount: "",
         description: "",
         paymentMode: "Cash",
+        recipientName: "",
+        paymentDetails: {
+          chequeNo: "",
+          chequeDate: "",
+          bankName: "",
+          transactionId: "",
+        },
       });
     } catch (error) {
       alert("Error creating voucher");
     }
   };
 
-  const handleApprove = async (id) => {
-    try {
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.put(
-        `${BASE_URL}/api/finance/vouchers/${id}/approve`,
-        {},
-        config
-      );
-      fetchVouchers(userInfo);
-      alert("Approval Recorded!");
-    } catch (error) {
-      alert(error.response?.data?.message || "Error approving");
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (
+      ["chequeNo", "chequeDate", "bankName", "transactionId"].includes(name)
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        paymentDetails: { ...prev.paymentDetails, [name]: value },
+      }));
+    } else {
+      setFormData({ ...formData, [name]: value });
     }
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // Helper for Payment Fields
+  const renderPaymentFields = () => {
+    const mode = formData.paymentMode;
+    if (mode === "Cheque" || mode === "DD") {
+      return (
+        <Row className="bg-light p-2 rounded mb-3 border">
+          <Col md={4}>
+            <Form.Control
+              size="sm"
+              placeholder="Cheque/DD No"
+              name="chequeNo"
+              value={formData.paymentDetails.chequeNo}
+              onChange={handleChange}
+            />
+          </Col>
+          <Col md={4}>
+            <Form.Control
+              size="sm"
+              type="date"
+              name="chequeDate"
+              value={formData.paymentDetails.chequeDate}
+              onChange={handleChange}
+            />
+          </Col>
+          <Col md={4}>
+            <Form.Control
+              size="sm"
+              placeholder="Bank Name"
+              name="bankName"
+              value={formData.paymentDetails.bankName}
+              onChange={handleChange}
+            />
+          </Col>
+        </Row>
+      );
+    }
+    if (mode === "UPI" || mode === "Bank Transfer") {
+      return (
+        <Form.Control
+          size="sm"
+          className="mb-3"
+          placeholder="Txn ID"
+          name="transactionId"
+          value={formData.paymentDetails.transactionId}
+          onChange={handleChange}
+        />
+      );
+    }
+    return null;
   };
-
-  const filteredAccounts = accountHeads.filter(
-    (acc) => acc.type === formData.voucherType
-  );
 
   const filteredVouchers = vouchers.filter((v) => {
-    let matchesDate = true;
-    if (dateFilter.start) {
-      matchesDate = new Date(v.createdAt) >= new Date(dateFilter.start);
-    }
-    if (matchesDate && dateFilter.end) {
-      const endDate = new Date(dateFilter.end);
-      endDate.setHours(23, 59, 59, 999);
-      matchesDate = new Date(v.createdAt) <= endDate;
-    }
-    return matchesDate;
+    if (!dateFilter.start) return true;
+    const vDate = new Date(v.createdAt);
+    const start = new Date(dateFilter.start);
+    const end = dateFilter.end ? new Date(dateFilter.end) : new Date();
+    end.setHours(23, 59, 59);
+    return vDate >= start && vDate <= end;
   });
 
   return (
     <div>
-      {/* <Row className="mb-4 align-items-center">
-        <Col>
-          <h2
-            className="text-maroon"
-            style={{ fontFamily: "Playfair Display" }}
-          >
-            Finance & Accounts
-          </h2>
-        </Col>
-        <Col className="text-end">
-          <Button variant="success" className="me-2" onClick={handleExport}>
-            <FaFileDownload /> Tally CSV
-          </Button>
-          <Button
-            variant="primary"
-            style={{ backgroundColor: "#581818", border: "none" }}
-            onClick={() => setShowModal(true)}
-          >
-            <FaPlus /> Create Voucher
-          </Button>
-        </Col>
-      </Row> */}
       <Row className="mb-4 align-items-center">
-        {/* Title: Full width on mobile, 5 cols on laptop */}
-        <Col lg={5} xs={12} className="mb-3 mb-lg-0">
+        <Col lg={6}>
           <h2
             className="text-maroon m-0"
             style={{ fontFamily: "Playfair Display" }}
           >
-            Finance & Accounts
+            Vouchers & Expenses
           </h2>
-          <p className="text-muted m-0 small">
-            Manage Vouchers (Debit/Credit) and Expenses
-          </p>
         </Col>
-
-        {/* Buttons: Full width on mobile, 7 cols on laptop */}
-        <Col lg={7} xs={12}>
-          <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
-            {/* Reconcile Button */}
-            {/* <Link
-              to="/dashboard/finance/reconcile"
-              className="btn btn-outline-dark shadow-sm flex-grow-1 flex-lg-grow-0 text-decoration-none d-flex align-items-center justify-content-center"
-            >
-              <FaBalanceScale className="me-2" /> Reconcile Cash
-            </Link> */}
-
-            {/* Tally CSV Export */}
-            <Button
-              variant="success"
-              className="shadow-sm flex-grow-1 flex-lg-grow-0"
-              onClick={handleExport}
-            >
-              <FaFileDownload className="me-2" /> Download Tally CSV
-            </Button>
-
-            {/* Create Voucher */}
-            <Button
-              variant="primary"
-              className="shadow-sm flex-grow-1 flex-lg-grow-0"
-              style={{ backgroundColor: "#581818", border: "none" }}
-              onClick={() => setShowModal(true)}
-            >
-              <FaPlus className="me-2" /> Create Voucher
-            </Button>
-          </div>
-        </Col>
-      </Row>
-      <Row className="mb-3">
-        <Col md={4} lg={3} className="mb-2 mb-md-0">
-          <Form.Label className="me-2 fw-bold">Filter by Date:</Form.Label>
-        </Col>
-
-        <Col md={8}>
-          <div className="d-flex gap-2 justify-content-md-end align-items-center bg-light p-2 rounded border">
-            <span className="fw-bold text-muted small">Filter Date:</span>
-            <Form.Control
-              type="date"
-              size="sm"
-              value={dateFilter.start}
-              onChange={(e) =>
-                setDateFilter({ ...dateFilter, start: e.target.value })
-              }
-              className="w-auto"
-            />
-            <span className="text-muted">-to-</span>
-            <Form.Control
-              type="date"
-              size="sm"
-              value={dateFilter.end}
-              onChange={(e) =>
-                setDateFilter({ ...dateFilter, end: e.target.value })
-              }
-              className="w-auto"
-            />
-            {/* Clear Button */}
-            {(dateFilter.start || dateFilter.end) && (
-              <Button
-                variant="link"
-                className="text-danger p-0 ms-1 text-decoration-none"
-                size="sm"
-                onClick={() => setDateFilter({ start: "", end: "" })}
-              >
-                Clear
-              </Button>
-            )}
-          </div>
+        <Col lg={6} className="text-end">
+          <Button
+            variant="primary"
+            style={{ backgroundColor: "#581818" }}
+            onClick={() => setShowModal(true)}
+          >
+            <FaPlus className="me-2" /> Create Voucher
+          </Button>
         </Col>
       </Row>
 
       <Card className="shadow-sm border-0">
         <Card.Body className="p-0">
-          <Table hover responsive className="align-middle mb-0">
+          <Table hover responsive className="align-middle mb-0 text-nowrap">
             <thead className="bg-light">
               <tr>
-                <th className="ps-4">Date</th>
-                <th className="ps-4">Voucher No</th>
-                <th>Code</th>
-                <th>Ledger Name</th>
+                <th className="ps-3">Date</th>
+                <th>Voucher No</th>
+                <th>Payee / Recipient</th>
                 <th>Amount</th>
-                <th>Prepared By</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {/* here am using the filtered vouchers instead of vouchers */}
               {filteredVouchers.map((v) => {
-                // --- LOGIC MOVED INSIDE THE MAP FUNCTION ---
-                // Check if the current logged-in user has already approved this voucher
-                const hasApproved =
-                  v.approvedBy &&
-                  v.approvedBy.some((u) => u._id === userInfo?._id);
-
-                // Check if user is a committee member authorized to approve
-                const isCommittee = [
-                  "admin",
-                  "president",
-                  "secretary",
-                  "treasurer",
-                ].includes(userInfo?.role);
-                // -------------------------------------------
+                // Determine Approval Rights
+                const role = userInfo?.role;
+                const canApproveL1 =
+                  (role === "secretary" ||
+                    role === "president" ||
+                    role === "admin") &&
+                  v.approvals?.level1?.status !== "Approved";
+                const canApproveL2 =
+                  role === "treasurer" &&
+                  v.approvals?.level1?.status === "Approved" &&
+                  v.approvals?.level2?.status !== "Approved";
 
                 return (
                   <tr key={v._id}>
-                    {/* --- NEW DATE CELL --- */}
-                    <td
-                      className="ps-4 text-muted"
-                      style={{ fontSize: "0.9rem" }}
-                    >
+                    <td className="ps-3 small text-muted">
                       {new Date(v.createdAt).toLocaleDateString()}
-                      <div
-                        className="small text-muted"
-                        style={{ fontSize: "0.75rem" }}
-                      >
-                        {new Date(v.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                    </td>
+                    <td className="fw-bold">{v.voucherNo}</td>
+                    <td>
+                      {v.recipientName || "-"}
+                      <div className="small text-muted">
+                        {v.accountHead?.name}
                       </div>
                     </td>
-                    <td className="ps-4 text-muted small">{v.voucherNo}</td>
-                    <td>
-                      <Badge bg="secondary">{v.accountHead?.code}</Badge>
+                    <td className="fw-bold text-danger">
+                      ₹{v.amount.toLocaleString()}
                     </td>
-                    <td className="fw-bold">{v.accountHead?.name}</td>
-                    <td>₹{v.amount.toLocaleString()}</td>
-                    <td className="small text-muted">{v.preparedBy?.name}</td>
 
-                    {/* Status Column */}
+                    {/* STATUS BADGE LOGIC */}
                     <td>
-                      {v.status === "Approved" ? (
-                        <Badge bg="success">Approved</Badge>
-                      ) : (
-                        <Badge bg="warning" text="dark">
-                          {v.status === "Partially Approved"
-                            ? "1/2 Approvals"
-                            : "Pending (0/2)"}
+                      <div
+                        className="d-flex flex-column gap-1"
+                        style={{ fontSize: "0.7rem" }}
+                      >
+                        <Badge
+                          bg={
+                            v.approvals?.level1?.status === "Approved"
+                              ? "success"
+                              : "warning"
+                          }
+                        >
+                          L1:{" "}
+                          {v.approvals?.level1?.status === "Approved"
+                            ? "Signed"
+                            : "Pending"}
                         </Badge>
-                      )}
+                        <Badge
+                          bg={
+                            v.approvals?.level2?.status === "Approved"
+                              ? "success"
+                              : "secondary"
+                          }
+                        >
+                          L2:{" "}
+                          {v.approvals?.level2?.status === "Approved"
+                            ? "Signed"
+                            : "Waiting"}
+                        </Badge>
+                      </div>
                     </td>
 
-                    {/* Action Column */}
                     <td>
-                      <div className="d-flex gap-2">
-                        {/* Approve Button Logic:
-                            Show ONLY if:
-                            1. Voucher is NOT fully approved yet
-                            2. User is a Committee Member
-                            3. User has NOT already approved it
-                        */}
-                        {v.status !== "Approved" &&
-                        isCommittee &&
-                        !hasApproved ? (
-                          <Button
-                            size="sm"
-                            variant="outline-success"
-                            onClick={() => handleApprove(v._id)}
-                            title="Click to Sign"
-                          >
-                            <FaCheck /> Sign
-                          </Button>
-                        ) : null}
-
-                        {/* Download PDF Button */}
+                      {(canApproveL1 || canApproveL2) && (
                         <Button
                           size="sm"
-                          variant="outline-danger"
-                          title="Download Voucher"
-                          onClick={async () => {
-                            try {
-                              const config = {
-                                headers: {
-                                  Authorization: `Bearer ${userInfo.token}`,
-                                },
-                                responseType: "blob",
-                              };
-                              const response = await axios.get(
-                                `${BASE_URL}/api/finance/vouchers/${v._id}/pdf`,
-                                config
-                              );
-
-                              const url = window.URL.createObjectURL(
-                                new Blob([response.data])
-                              );
-                              const link = document.createElement("a");
-                              link.href = url;
-                              link.setAttribute(
-                                "download",
-                                `${v.voucherNo}.pdf`
-                              );
-                              document.body.appendChild(link);
-                              link.click();
-                            } catch (err) {
-                              alert("Error downloading voucher");
-                            }
-                          }}
+                          variant="outline-success"
+                          className="me-2"
+                          onClick={() => handleApprove(v._id)}
                         >
-                          <FaFilePdf />
+                          <FaCheck /> Sign
                         </Button>
-                      </div>
+                      )}
+                      <Button size="sm" variant="outline-danger">
+                        <FaFilePdf />
+                      </Button>
                     </td>
                   </tr>
                 );
@@ -425,71 +308,94 @@ const FinanceList = () => {
         </Card.Body>
       </Card>
 
-      {/* Create Voucher Modal */}
+      {/* Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Create Voucher</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3">
-              <Form.Label>Voucher Type</Form.Label>
-              <Form.Select
-                name="voucherType"
-                onChange={handleChange}
-                value={formData.voucherType}
-              >
-                <option value="Debit">Debit (Expense)</option>
-                <option value="Credit">Credit (Income)</option>
-              </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Account Head (Ledger)</Form.Label>
-              <Form.Select name="accountHead" onChange={handleChange} required>
-                <option value="">-- Select Account Code --</option>
-                {filteredAccounts.map((acc) => (
-                  <option key={acc._id} value={acc._id}>
-                    {acc.code} - {acc.name}
-                  </option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-
-            <Row>
+            <Row className="g-2 mb-2">
               <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Amount (₹)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="amount"
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
+                <Form.Label className="small">Voucher Type</Form.Label>
+                <Form.Select
+                  name="voucherType"
+                  value={formData.voucherType}
+                  onChange={handleChange}
+                >
+                  <option value="Debit">Debit (Payment)</option>
+                  <option value="Credit">Credit (Receipt)</option>
+                </Form.Select>
               </Col>
               <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Payment Mode</Form.Label>
-                  <Form.Select name="paymentMode" onChange={handleChange}>
-                    <option>Cash</option>
-                    <option>Bank Transfer</option>
-                    <option>Cheque</option>
-                  </Form.Select>
-                </Form.Group>
+                <Form.Label className="small">Account Head</Form.Label>
+                <Form.Select
+                  name="accountHead"
+                  value={formData.accountHead}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">-- Select --</option>
+                  {accountHeads
+                    .filter((a) => a.type === formData.voucherType)
+                    .map((acc) => (
+                      <option key={acc._id} value={acc._id}>
+                        {acc.name}
+                      </option>
+                    ))}
+                </Form.Select>
               </Col>
             </Row>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Narration</Form.Label>
+            <Form.Group className="mb-2">
+              <Form.Label className="small">Recipient / Payee Name</Form.Label>
               <Form.Control
-                as="textarea"
-                name="description"
+                name="recipientName"
+                value={formData.recipientName}
                 onChange={handleChange}
+                required
+                placeholder="Who is receiving money?"
               />
             </Form.Group>
 
-            <Button type="submit" className="w-100 btn-ashram">
+            <Row className="g-2 mb-2">
+              <Col md={6}>
+                <Form.Label className="small">Amount</Form.Label>
+                <Form.Control
+                  type="number"
+                  name="amount"
+                  value={formData.amount}
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Label className="small">Mode</Form.Label>
+                <Form.Select
+                  name="paymentMode"
+                  value={formData.paymentMode}
+                  onChange={handleChange}
+                >
+                  <option>Cash</option>
+                  <option>Cheque</option>
+                  <option>Bank Transfer</option>
+                  <option>UPI</option>
+                </Form.Select>
+              </Col>
+            </Row>
+
+            {renderPaymentFields()}
+
+            <Form.Control
+              as="textarea"
+              name="description"
+              placeholder="Narration / Description"
+              value={formData.description}
+              onChange={handleChange}
+              className="mb-3"
+            />
+
+            <Button type="submit" variant="dark" className="w-100">
               Generate Voucher
             </Button>
           </Form>

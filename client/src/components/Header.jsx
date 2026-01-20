@@ -33,6 +33,9 @@ const Header = () => {
     "president",
     "secretary",
     "treasurer",
+    "warden",
+    "accountant",
+    "clerk",
   ];
 
   return (
@@ -116,7 +119,7 @@ const Header = () => {
                   >
                     {item}
                   </Nav.Link>
-                )
+                ),
               )}
 
               {/* AUTH CHECK */}
@@ -151,8 +154,8 @@ const Header = () => {
                           {userInfo.role === "admin"
                             ? "Admin Dashboard"
                             : userInfo.role === "employee"
-                            ? "Employee Portal"
-                            : "Committee Dashboard"}
+                              ? "Employee Portal"
+                              : "Committee Dashboard"}
                         </Dropdown.Item>
                       </>
                     )}

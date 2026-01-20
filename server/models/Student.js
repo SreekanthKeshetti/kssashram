@@ -47,6 +47,19 @@ const studentSchema = mongoose.Schema(
 
     schoolName: { type: String },
     currentClass: { type: String }, // Maps to class
+    // UPDATED: Education History (Added Marks/Percentage)
+    educationHistory: [
+      {
+        year: String,
+        class: String,
+        school: String,
+        examName: String, // e.g. "Finals", "Half-Yearly"
+        maxMarks: Number,
+        marksObtained: Number,
+        percentage: String,
+        remarks: String,
+      },
+    ],
     healthIssues: { type: String },
 
     approvals: {
@@ -69,8 +82,26 @@ const studentSchema = mongoose.Schema(
 
     admissionStatus: {
       type: String,
-      enum: ["Draft", "In Review", "Active", "Rejected", "Alumni"],
+      enum: [
+        "Draft",
+        "In Review",
+        "Active",
+        "Rejected",
+        "Exit_Pending",
+        "Alumni",
+        "Transferred",
+      ],
       default: "In Review",
+    },
+    // NEW: ALUMNI EXIT APPROVAL (3-Tier)
+    exitRequest: {
+      requestedDate: Date,
+      reason: String, // e.g. "Job", "Higher Studies"
+      approvals: {
+        president: { status: { type: String, default: "Pending" }, date: Date },
+        secretary: { status: { type: String, default: "Pending" }, date: Date },
+        treasurer: { status: { type: String, default: "Pending" }, date: Date },
+      },
     },
 
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -125,6 +156,19 @@ const studentSchema = mongoose.Schema(
       email: String,
       phone: String,
     },
+    // NEW: BRANCH TRANSFER REQUEST
+    transferRequest: {
+      targetBranch: String,
+      reason: String,
+      initiatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      status: {
+        type: String,
+        enum: ["Pending", "Approved", "Rejected"],
+        // default: "Pending",
+      },
+      approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Usually President
+      date: Date,
+    },
     documents: [{ type: String }],
     leaves: [
       {
@@ -136,7 +180,7 @@ const studentSchema = mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Student", studentSchema);

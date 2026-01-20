@@ -44,7 +44,10 @@ const MemberList = () => {
     membershipType: "Annual",
     feeAmount: "1000",
     feeStatus: "Paid",
-    branch: "Karunya Sindu",
+    branch: "Karunya Sindhu",
+    pan: "",
+    aadhaar: "",
+    category: "Ordinary",
   });
 
   useEffect(() => {
@@ -73,7 +76,7 @@ const MemberList = () => {
       await axios.post(
         `${BASE_URL}/api/members/${selectedMember._id}/activity`,
         activityData,
-        config
+        config,
       );
 
       alert("Activity Logged Successfully!");
@@ -144,7 +147,7 @@ const MemberList = () => {
               <tr>
                 <th className="ps-4">Name</th>
                 <th>Contact</th>
-                <th>Type</th>
+                <th>Category / Plan</th> {/* UPDATED HEADER */}
                 <th>Joined Date</th>
                 <th>Fee Status</th>
                 <th>Action</th>
@@ -153,44 +156,70 @@ const MemberList = () => {
             <tbody>
               {members.map((m) => (
                 <tr key={m._id}>
-                  <td className="ps-4 fw-bold">
-                    <FaUserTie className="me-2 text-secondary" />
-                    {m.firstName} {m.lastName}
+                  <td className="ps-4">
+                    <div className="fw-bold">
+                      <FaUserTie className="me-2 text-secondary" />
+                      {m.firstName} {m.lastName}
+                    </div>
+                    {/* Show ID Proofs if available */}
+                    {(m.pan || m.aadhaar) && (
+                      <div
+                        style={{ fontSize: "0.7rem" }}
+                        className="text-muted ms-4"
+                      >
+                        {m.pan && <span className="me-2">PAN: {m.pan}</span>}
+                      </div>
+                    )}
                   </td>
                   <td>
                     <div>{m.phone}</div>
                     <small className="text-muted">{m.email}</small>
                   </td>
+
+                  {/* --- NEW COLUMN LOGIC --- */}
                   <td>
-                    <Badge bg="info" text="dark">
-                      {m.membershipType}
-                    </Badge>
+                    <div className="d-flex flex-column gap-1 align-items-start">
+                      {/* 1. The Role Category */}
+                      <Badge
+                        bg={
+                          m.category === "EC"
+                            ? "danger"
+                            : m.category === "Permanent"
+                              ? "success"
+                              : "secondary"
+                        }
+                      >
+                        {m.category || "Ordinary"}
+                      </Badge>
+
+                      {/* 2. The Subscription Plan */}
+                      <Badge bg="light" text="dark" className="border">
+                        Plan: {m.membershipType}
+                      </Badge>
+                    </div>
                   </td>
+                  {/* ------------------------ */}
+
                   <td>{new Date(m.joinDate).toLocaleDateString()}</td>
                   <td>
                     {m.feeStatus === "Paid" ? (
-                      <span className="text-success">
-                        <FaCheckCircle /> Paid
+                      <span
+                        className="text-success fw-bold"
+                        style={{ fontSize: "0.85rem" }}
+                      >
+                        <FaCheckCircle className="me-1" /> Paid
                       </span>
                     ) : (
-                      <span className="text-danger">
-                        <FaTimesCircle /> Pending
+                      <span
+                        className="text-danger fw-bold"
+                        style={{ fontSize: "0.85rem" }}
+                      >
+                        <FaTimesCircle className="me-1" /> Pending
                       </span>
                     )}
                   </td>
-                  {/* <td>
-                    <Button
-                      size="sm"
-                      variant="outline-dark"
-                      onClick={() => openActivityModal(m)}
-                      title="Log Activity"
-                    >
-                      <FaTasks /> Log Work
-                    </Button>
-                  </td> */}
                   <td>
                     <div className="d-flex gap-2">
-                      {/* VIEW PROFILE BUTTON */}
                       <Link
                         to={`/dashboard/members/${m._id}`}
                         className="btn btn-sm btn-outline-primary"
@@ -199,14 +228,13 @@ const MemberList = () => {
                         <FaUserTie />
                       </Link>
 
-                      {/* EXISTING LOG BUTTON */}
                       <Button
                         size="sm"
                         variant="outline-dark"
                         onClick={() => openActivityModal(m)}
                         title="Log Activity"
                       >
-                        <FaTasks /> Log Work
+                        <FaTasks />
                       </Button>
                     </div>
                   </td>
@@ -214,7 +242,7 @@ const MemberList = () => {
               ))}
               {members.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="text-center py-5">
+                  <td colSpan="6" className="text-center py-5">
                     No members found
                   </td>
                 </tr>
@@ -288,7 +316,7 @@ const MemberList = () => {
           <Modal.Title>New Member Registration</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form onSubmit={handleSubmit}>
+          {/* <Form onSubmit={handleSubmit}>
             <Row>
               <Col md={6} className="mb-3">
                 <Form.Label>First Name</Form.Label>
@@ -367,6 +395,121 @@ const MemberList = () => {
             </Row>
 
             <Button type="submit" className="w-100 btn-ashram">
+              Register Member
+            </Button>
+          </Form> */}
+          <Form onSubmit={handleSubmit}>
+            <Row>
+              <Col md={6} className="mb-3">
+                <Form.Label>First Name *</Form.Label>
+                <Form.Control
+                  name="firstName"
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={6} className="mb-3">
+                <Form.Label>Last Name *</Form.Label>
+                <Form.Control
+                  name="lastName"
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+            </Row>
+
+            {/* NEW ROW: IDs */}
+            <Row>
+              <Col md={6} className="mb-3">
+                <Form.Label>Aadhaar Number</Form.Label>
+                <Form.Control
+                  name="aadhaar"
+                  onChange={handleChange}
+                  placeholder="12 Digit UID"
+                />
+              </Col>
+              <Col md={6} className="mb-3">
+                <Form.Label>PAN Number</Form.Label>
+                <Form.Control
+                  name="pan"
+                  onChange={handleChange}
+                  placeholder="Permanent Account No"
+                />
+              </Col>
+            </Row>
+
+            <Row>
+              <Col md={6} className="mb-3">
+                <Form.Label>Phone *</Form.Label>
+                <Form.Control name="phone" onChange={handleChange} required />
+              </Col>
+              <Col md={6} className="mb-3">
+                <Form.Label>Email</Form.Label>
+                <Form.Control name="email" onChange={handleChange} />
+              </Col>
+            </Row>
+            <Form.Group className="mb-3">
+              <Form.Label>Address</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                name="address"
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
+
+            <hr />
+
+            <Row>
+              <Col md={4} className="mb-3">
+                <Form.Label>Role Category</Form.Label>
+                <Form.Select name="category" onChange={handleChange}>
+                  <option value="Ordinary">Ordinary</option>
+                  <option value="Permanent">Permanent</option>
+                  <option value="EC">Executive Committee (EC)</option>
+                </Form.Select>
+              </Col>
+              <Col md={4} className="mb-3">
+                <Form.Label>Plan Type</Form.Label>
+                <Form.Select name="membershipType" onChange={handleChange}>
+                  <option>Annual</option>
+                  <option>Life</option>
+                  <option>Patron</option>
+                  <option>Volunteer</option>
+                </Form.Select>
+              </Col>
+              <Col md={4} className="mb-3">
+                <Form.Label>Branch</Form.Label>
+                <Form.Select name="branch" onChange={handleChange}>
+                  <option value="Headquarters">Headquarters</option>
+                  <option value="Karunya Sindhu">Karunya Sindhu</option>
+                  <option value="Karunya Bharathi">Karunya Bharathi</option>
+                </Form.Select>
+              </Col>
+            </Row>
+
+            <Row>
+              <Col md={6}>
+                <Form.Label>Fee Amount (₹)</Form.Label>
+                <Form.Control
+                  type="number"
+                  name="feeAmount"
+                  value={formData.feeAmount}
+                  onChange={handleChange}
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Label>Status</Form.Label>
+                <Form.Select name="feeStatus" onChange={handleChange}>
+                  <option>Paid</option>
+                  <option>Pending</option>
+                  <option>Waived</option>
+                </Form.Select>
+              </Col>
+            </Row>
+
+            <Button type="submit" className="w-100 btn-ashram mt-3">
               Register Member
             </Button>
           </Form>

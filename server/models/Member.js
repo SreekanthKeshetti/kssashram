@@ -8,6 +8,13 @@ const memberSchema = mongoose.Schema(
     phone: { type: String, required: true, unique: true },
     email: { type: String },
     address: { type: String, required: true },
+    pan: { type: String },
+    aadhaar: { type: String },
+    category: {
+      type: String,
+      enum: ["Permanent", "Ordinary", "EC"], // Executive Committee
+      default: "Ordinary",
+    },
 
     // Membership Details
     membershipType: {
@@ -41,7 +48,7 @@ const memberSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("Member", memberSchema);

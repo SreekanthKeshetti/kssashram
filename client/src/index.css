@@ -13,6 +13,7 @@
   /* --- Fonts --- */
   --font-heading: "Playfair Display", serif; /* Divine Look */
   --font-body: "Lato", sans-serif; /* Clean Readability */
+  font-size: 18px;
 }
 
 body {
@@ -35,4 +36,21 @@ h6 {
 
 a {
   text-decoration: none;
+}
+/* Make the layout wider (approx 90-95% of screen) */
+@media (min-width: 1200px) {
+  .container,
+  .container-lg,
+  .container-md,
+  .container-sm,
+  .container-xl {
+    max-width: 1400px !important;
+  }
+}
+
+/* Ensure inputs are readable */
+.form-control,
+.form-select,
+.btn {
+  font-size: 1rem !important;
 }

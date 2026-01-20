@@ -159,7 +159,7 @@ const DashboardHome = () => {
                 <h3 className="mb-0 fw-bold">
                   ₹ {stats.financials.incomeSindu?.toLocaleString() || 0}
                 </h3>
-                <small>Karunya Sindu</small>
+                <small>Karunya Sindhu</small>
               </div>
               <div style={{ fontSize: "2rem", opacity: 0.5 }}>
                 <FaRupeeSign />

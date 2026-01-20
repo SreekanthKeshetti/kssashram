@@ -31,11 +31,29 @@ const donationSchema = mongoose.Schema(
     // ------------------------------------
 
     // Payment Details (KSS_DON_1)
+    // paymentMode: {
+    //   type: String,
+    //   enum: ["Cash", "Online", "Cheque", "DD", "Foreign Currency"],
+    //   required: true,
+    // },
+    // UPDATED: Payment Logic
     paymentMode: {
       type: String,
-      enum: ["Cash", "Online", "Cheque", "DD", "Foreign Currency"],
+      enum: ["Cash", "Online", "Cheque", "DD", "UPI", "Foreign Currency"],
       required: true,
     },
+    // NEW: Detailed Payment Info (For Cheque/DD/UPI)
+    paymentDetails: {
+      chequeNo: String,
+      chequeDate: Date,
+      bankName: String,
+      ddNo: String,
+      ddDate: Date,
+      transactionId: String, // For UPI/Online
+    },
+    // NEW: Manual Receipt Logging (Legacy Sync)
+    manualReceiptNo: { type: String },
+    manualReceiptDate: { type: Date },
     paymentReference: { type: String }, // Cheque No or Transaction ID
 
     // --- NEW FIELD: DONATION CATEGORY ---
@@ -55,14 +73,32 @@ const donationSchema = mongoose.Schema(
     },
     nextReminderDate: { type: Date }, // The date of the NEXT donation (e.g. Next Year)
     // -------------------------------------------
+
+    // NEW: Expiry for Permanent Schemes (10 Years)
+    schemeExpiryDate: { type: Date },
     // --- NEW: SPECIAL OCCASION FIELDS (Tithi/Seva) ---
     occasion: { type: String }, // e.g. "Birthday", "Wedding Anniversary", "In Memory Of"
     inNameOf: { type: String }, // e.g. "Sairam" or "Late Father Name"
     programDate: { type: Date }, // The actual date to perform the seva (e.g., Feb 14)
     // -------------------------------------------
 
+    tithi: { type: String }, // Used if Telugu (e.g. "Magha Shuddha Ekadashi")
+
     // System Details
-    branch: { type: String, required: true, default: "Headquarters" }, // KSS_GEN_2
+    // branch: { type: String, required: true, default: "Headquarters" }, // KSS_GEN_2
+
+    branch: {
+      type: String,
+      required: true,
+      enum: [
+        "Headquarters",
+        "Karunya Sindhu", // Corrected Spelling
+        "Karunya Bharathi",
+        "Karunya Jyothi", // New
+        "Karuna Sree Seva Samithi", // New
+      ],
+      default: "Headquarters",
+    },
     receiptStatus: {
       type: String,
       enum: ["Generated", "Sent", "Pending"],
@@ -82,7 +118,7 @@ const donationSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("Donation", donationSchema);

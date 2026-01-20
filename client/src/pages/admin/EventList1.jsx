@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
@@ -16,12 +15,12 @@ import {
 } from "react-bootstrap";
 import {
   FaPlus,
+  FaMapMarkerAlt,
   FaClipboardList,
   FaUsers,
   FaCalendarCheck,
   FaFileDownload,
-  FaTrash,
-  FaUserPlus,
+  FaBuilding,
 } from "react-icons/fa";
 
 const EventList = () => {
@@ -30,11 +29,10 @@ const EventList = () => {
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [attendanceDate, setAttendanceDate] = useState(
-    new Date().toISOString().split("T")[0],
+    new Date().toISOString().split("T")[0]
   );
   const [error, setError] = useState("");
 
-  // Create Event Form Data
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -45,12 +43,8 @@ const EventList = () => {
     eventType: "Training",
     isPaid: false,
     feeAmount: "",
-    branch: "Karunya Sindhu",
+    branch: "Karunya Sindu", // Default Branch
   });
-
-  // --- NEW: BULK REGISTRATION STATE ---
-  const [showRegModal, setShowRegModal] = useState(false); // New Modal for adding people
-  const [attendees, setAttendees] = useState([{ name: "", phone: "" }]); // List of people
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -63,60 +57,54 @@ const EventList = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEvents();
   }, [fetchEvents]);
 
-  // --- HANDLERS ---
+  // --- NEW: DOWNLOAD PARTICIPANTS FUNCTION ---
+  const handleDownloadParticipants = () => {
+    if (!selectedEvent || selectedEvent.registrations.length === 0)
+      return alert("No participants to export.");
 
-  // 1. Bulk Registration Handlers
-  const openRegistrationModal = (evt) => {
-    setSelectedEvent(evt);
-    setAttendees([{ name: "", phone: "" }]); // Reset to 1 empty row
-    setShowRegModal(true);
-  };
+    const headers = [
+      "Name",
+      "Phone",
+      "Registration Date",
+      "Payment Status",
+      "Days Attended",
+    ];
 
-  const handleAttendeeChange = (index, field, value) => {
-    const updated = [...attendees];
-    updated[index][field] = value;
-    setAttendees(updated);
-  };
+    const rows = selectedEvent.registrations.map((r) => [
+      `"${r.name}"`, // Quote name to handle commas
+      `"${r.phone}"`,
+      new Date(r.registeredAt).toLocaleDateString(),
+      r.paymentStatus,
+      r.attendanceLog ? r.attendanceLog.length : 0,
+    ]);
 
-  const addAttendeeRow = () => {
-    setAttendees([...attendees, { name: "", phone: "" }]);
-  };
-
-  const removeAttendeeRow = (index) => {
-    const updated = attendees.filter((_, i) => i !== index);
-    setAttendees(updated);
-  };
-
-  const submitRegistration = async () => {
-    // FIX: Filter out empty rows AND rows with just whitespace
-    const validAttendees = attendees.filter(
-      (a) => a.name && a.name.trim() !== "" && a.phone && a.phone.trim() !== "",
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      headers.join(",") +
+      "\n" +
+      rows.map((e) => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Participants_${selectedEvent.title.replace(/\s+/g, "_")}.csv`
     );
-
-    if (validAttendees.length === 0)
-      return alert("Please add at least one person with valid Name and Phone.");
-
-    try {
-      await axios.post(`${BASE_URL}/api/events/${selectedEvent._id}/register`, {
-        attendees: validAttendees,
-      });
-      alert(`Successfully registered ${validAttendees.length} people!`);
-      setShowRegModal(false);
-      fetchEvents();
-    } catch (err) {
-      alert(err.response?.data?.message || "Registration Failed");
-    }
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
+  // ------------------------------------------
 
-  // 2. Attendance & Payment Handlers
   const toggleAttendance = async (regId, currentLog) => {
     try {
       const targetDateStr = new Date(attendanceDate).toDateString();
       const isPresent = currentLog.some(
-        (d) => new Date(d).toDateString() === targetDateStr,
+        (d) => new Date(d).toDateString() === targetDateStr
       );
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
@@ -124,7 +112,7 @@ const EventList = () => {
       const { data } = await axios.put(
         `${BASE_URL}/api/events/${selectedEvent._id}/attendance`,
         { registrationId: regId, date: attendanceDate, status: !isPresent },
-        config,
+        config
       );
       setSelectedEvent((prev) => ({
         ...prev,
@@ -145,7 +133,7 @@ const EventList = () => {
       const { data } = await axios.put(
         `${BASE_URL}/api/events/${selectedEvent._id}/payment`,
         { registrationId: regId, status: "Paid" },
-        config,
+        config
       );
       setSelectedEvent((prev) => ({
         ...prev,
@@ -163,7 +151,6 @@ const EventList = () => {
     setShowAttendanceModal(true);
   };
 
-  // 3. Create Event Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -186,7 +173,7 @@ const EventList = () => {
         eventType: "Training",
         isPaid: false,
         feeAmount: "",
-        branch: "Karunya Sindhu",
+        branch: "Karunya Sindu",
       });
       alert("Event Created Successfully!");
     } catch (error) {
@@ -206,45 +193,33 @@ const EventList = () => {
     return log.some((d) => new Date(d).toDateString() === target);
   };
 
-  const handleDownloadParticipants = () => {
-    if (!selectedEvent || selectedEvent.registrations.length === 0)
-      return alert("No participants to export.");
-
-    const headers = [
-      "Name",
-      "Phone",
-      "Registration Date",
-      "Payment Status",
-      "Days Attended",
-    ];
-    const rows = selectedEvent.registrations.map((r) => [
-      `"${r.name}"`,
-      `"${r.phone}"`,
-      new Date(r.registeredAt).toLocaleDateString(),
-      r.paymentStatus,
-      r.attendanceLog ? r.attendanceLog.length : 0,
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      headers.join(",") +
-      "\n" +
-      rows.map((e) => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `Participants_${selectedEvent.title.replace(/\s+/g, "_")}.csv`,
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <div>
+      {/* <Row className="mb-4 align-items-center">
+        <Col>
+          <h2
+            className="text-maroon"
+            style={{ fontFamily: "Playfair Display" }}
+          >
+            Events & Trainings
+          </h2>
+          <p className="text-muted">
+            Manage Tailoring, Computer Classes & Celebrations
+          </p>
+        </Col>
+        <Col className="text-end">
+          <Button
+            variant="primary"
+            style={{ backgroundColor: "#581818", border: "none" }}
+            onClick={() => setShowModal(true)}
+          >
+            <FaPlus /> Create Event
+          </Button>
+        </Col>
+      </Row> */}
+      {/* --- RESPONSIVE HEADER ROW --- */}
       <Row className="mb-4 align-items-center">
+        {/* Title: Full width on mobile, 5 cols on laptop */}
         <Col lg={6} xs={12} className="mb-3 mb-lg-0">
           <h2
             className="text-maroon m-0"
@@ -256,8 +231,11 @@ const EventList = () => {
             Manage Tailoring, Computer Classes & Celebrations
           </p>
         </Col>
+
+        {/* Buttons: Full width on mobile, 6 cols on laptop */}
         <Col lg={6} xs={12}>
           <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
+            {/* Create Button */}
             <Button
               variant="primary"
               className="shadow-sm flex-grow-1 flex-lg-grow-0"
@@ -321,21 +299,9 @@ const EventList = () => {
                       )}
                     </td>
                     <td>
-                      <div className="d-flex align-items-center gap-2">
-                        <Badge bg="secondary">
-                          <FaUsers className="me-1" /> {e.registrations.length}
-                        </Badge>
-                        {/* NEW: REGISTER BUTTON */}
-                        <Button
-                          size="sm"
-                          variant="outline-primary"
-                          className="py-0 px-2"
-                          onClick={() => openRegistrationModal(e)}
-                          title="Add Attendees"
-                        >
-                          <FaUserPlus size={12} />
-                        </Button>
-                      </div>
+                      <Badge bg="secondary">
+                        <FaUsers className="me-1" /> {e.registrations.length}
+                      </Badge>
                     </td>
                     <td>
                       <Button
@@ -361,77 +327,7 @@ const EventList = () => {
         </Card.Body>
       </Card>
 
-      {/* --- NEW: BULK REGISTRATION MODAL --- */}
-      <Modal
-        show={showRegModal}
-        onHide={() => setShowRegModal(false)}
-        size="lg"
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Register Attendees: {selectedEvent?.title}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Table bordered size="sm">
-            <thead>
-              <tr>
-                <th style={{ width: "45%" }}>Name</th>
-                <th style={{ width: "45%" }}>Phone</th>
-                <th style={{ width: "10%" }}>Remove</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendees.map((person, index) => (
-                <tr key={index}>
-                  <td>
-                    <Form.Control
-                      size="sm"
-                      placeholder="Full Name"
-                      value={person.name}
-                      onChange={(e) =>
-                        handleAttendeeChange(index, "name", e.target.value)
-                      }
-                    />
-                  </td>
-                  <td>
-                    <Form.Control
-                      size="sm"
-                      placeholder="Phone Number"
-                      value={person.phone}
-                      onChange={(e) =>
-                        handleAttendeeChange(index, "phone", e.target.value)
-                      }
-                    />
-                  </td>
-                  <td className="text-center">
-                    {attendees.length > 1 && (
-                      <Button
-                        variant="link"
-                        className="text-danger p-0"
-                        onClick={() => removeAttendeeRow(index)}
-                      >
-                        <FaTrash />
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-          <Button variant="outline-primary" size="sm" onClick={addAttendeeRow}>
-            <FaPlus /> Add Another Row
-          </Button>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowRegModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="success" onClick={submitRegistration}>
-            Register All
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* ATTENDANCE & PAYMENT MODAL */}
+      {/* --- ATTENDANCE & PAYMENT MODAL --- */}
       <Modal
         show={showAttendanceModal}
         onHide={() => setShowAttendanceModal(false)}
@@ -451,6 +347,7 @@ const EventList = () => {
                 onChange={(e) => setAttendanceDate(e.target.value)}
               />
             </div>
+            {/* --- DOWNLOAD BUTTON --- */}
             <Button
               variant="success"
               size="sm"
@@ -526,7 +423,7 @@ const EventList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* CREATE EVENT MODAL */}
+      {/* Create Event Modal */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Create New Training / Event</Modal.Title>
@@ -543,6 +440,7 @@ const EventList = () => {
                   required
                 />
               </Col>
+
               <Col md={6} className="mb-3">
                 <Form.Label>Type</Form.Label>
                 <Form.Select
@@ -558,17 +456,18 @@ const EventList = () => {
                 </Form.Select>
               </Col>
               <Col md={6} className="mb-3">
-                <Form.Label>Branch</Form.Label>
+                <Form.Label>Branch (Organizer)</Form.Label>
                 <Form.Select
                   name="branch"
                   value={formData.branch}
                   onChange={handleChange}
                 >
-                  <option value="Karunya Sindhu">Karunya Sindhu</option>
+                  <option value="Karunya Sindu">Karunya Sindu</option>
                   <option value="Karunya Bharathi">Karunya Bharathi</option>
                   <option value="Headquarters">Headquarters</option>
                 </Form.Select>
               </Col>
+
               <Col md={6} className="mb-3">
                 <Form.Label>Start Date</Form.Label>
                 <Form.Control
@@ -588,8 +487,9 @@ const EventList = () => {
                   onChange={handleChange}
                 />
               </Col>
+
               <Col md={6} className="mb-3">
-                <Form.Label>Time</Form.Label>
+                <Form.Label>Time / Schedule</Form.Label>
                 <Form.Control
                   type="text"
                   name="time"
@@ -600,7 +500,7 @@ const EventList = () => {
                 />
               </Col>
               <Col md={6} className="mb-3">
-                <Form.Label>Venue</Form.Label>
+                <Form.Label>Physical Venue / Location</Form.Label>
                 <Form.Control
                   name="location"
                   value={formData.location}
@@ -609,6 +509,7 @@ const EventList = () => {
                   required
                 />
               </Col>
+
               <Col md={12} className="mb-3">
                 <Form.Label>Description</Form.Label>
                 <Form.Control
@@ -620,10 +521,11 @@ const EventList = () => {
                   required
                 />
               </Col>
+
               <Col md={6}>
                 <Form.Check
                   type="switch"
-                  label="Is Paid?"
+                  label="Is Paid Training?"
                   name="isPaid"
                   checked={formData.isPaid}
                   onChange={handleChange}
@@ -646,7 +548,7 @@ const EventList = () => {
               )}
             </Row>
             <Button type="submit" className="w-100 btn-ashram">
-              Create
+              Create Training
             </Button>
           </Form>
         </Modal.Body>

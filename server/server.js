@@ -46,6 +46,7 @@ const schemeRoutes = require("./routes/schemeRoutes"); // Import
 const auditRoutes = require("./routes/auditRoutes"); // Import
 const accountRoutes = require("./routes/accountRoutes"); // Import
 const runScheduler = require("./utils/reminderScheduler"); // <--- Import
+const occasionRoutes = require("./routes/occasionRoutes");
 
 dotenv.config();
 connectDB();
@@ -71,6 +72,7 @@ app.use("/api/reports", reportRoutes); // <--- Add this
 app.use("/api/members", memberRoutes); // <--- Add this
 app.use("/api/audit", auditRoutes); // Add this
 app.use("/api/accounts", accountRoutes); // Add this
+app.use("/api/occasions", occasionRoutes);
 app.get("/", (req, res) => {
   res.send("Karunasri Backend is Running...");
 });

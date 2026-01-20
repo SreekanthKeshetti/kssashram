@@ -13,6 +13,8 @@ const createVoucher = async (req, res) => {
       description,
       paymentMode,
       branch,
+      recipientName,
+      paymentDetails,
     } = req.body;
 
     // Auto-generate Voucher Number (VCH + Timestamp)
@@ -43,7 +45,8 @@ const getVouchers = async (req, res) => {
     const vouchers = await Voucher.find({})
       .populate("accountHead", "code name") // Get Code & Name
       .populate("preparedBy", "name") // Get Warden Name
-      .populate("approvedBy", "name") // Get Approver Name
+      .populate("approvals.level1.approver", "name") // Populate new fields
+      .populate("approvals.level2.approver", "name")
       .sort({ createdAt: -1 });
     res.json(vouchers);
   } catch (error) {
@@ -55,44 +58,109 @@ const getVouchers = async (req, res) => {
 // @route   PUT /api/finance/vouchers/:id/approve
 // @desc    Approve Voucher (Multi-Signature)
 // @route   PUT /api/finance/vouchers/:id/approve
+// const approveVoucher = async (req, res) => {
+//   try {
+//     const voucher = await Voucher.findById(req.params.id);
+
+//     if (!voucher) {
+//       return res.status(404).json({ message: "Voucher not found" });
+//     }
+
+//     // Check if this user already approved it
+//     if (voucher.approvedBy.includes(req.user._id)) {
+//       return res
+//         .status(400)
+//         .json({ message: "You have already approved this voucher" });
+//     }
+
+//     // Add current user to approval list
+//     voucher.approvedBy.push(req.user._id);
+
+//     // LOGIC: If 2 or more approvals, mark as Approved. Else, Partially Approved.
+//     if (voucher.approvedBy.length >= 2) {
+//       voucher.status = "Approved";
+//     } else {
+//       voucher.status = "Partially Approved";
+//     }
+
+//     await voucher.save();
+
+//     // Return populated data so frontend updates immediately
+//     const updatedVoucher = await Voucher.findById(req.params.id)
+//       .populate("accountHead", "code name")
+//       .populate("preparedBy", "name")
+//       .populate("approvedBy", "name");
+
+//     res.json(updatedVoucher);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// @desc    Approve Voucher (Strict Hierarchy)
+// Route: PUT /api/finance/vouchers/:id/approve
 const approveVoucher = async (req, res) => {
   try {
     const voucher = await Voucher.findById(req.params.id);
+    if (!voucher) return res.status(404).json({ message: "Voucher not found" });
 
-    if (!voucher) {
-      return res.status(404).json({ message: "Voucher not found" });
+    const { role } = req.user;
+
+    // --- LEVEL 1 APPROVAL (Secretary OR President) ---
+    if (role === "secretary" || role === "president" || role === "admin") {
+      // Check if already approved at Level 1
+      if (voucher.approvals.level1.status === "Approved") {
+        return res.status(400).json({ message: "Level 1 already approved." });
+      }
+
+      voucher.approvals.level1 = {
+        approver: req.user._id,
+        date: Date.now(),
+        status: "Approved",
+      };
+
+      voucher.status = "Partially Approved"; // Waiting for Treasurer
     }
 
-    // Check if this user already approved it
-    if (voucher.approvedBy.includes(req.user._id)) {
-      return res
-        .status(400)
-        .json({ message: "You have already approved this voucher" });
-    }
+    // --- LEVEL 2 APPROVAL (Treasurer) ---
+    else if (role === "treasurer") {
+      // Check Prerequisite: Level 1 MUST be done
+      if (voucher.approvals.level1.status !== "Approved") {
+        return res.status(400).json({
+          message:
+            "Cannot approve: Waiting for President/Secretary approval first.",
+        });
+      }
 
-    // Add current user to approval list
-    voucher.approvedBy.push(req.user._id);
+      // Approve Level 2
+      voucher.approvals.level2 = {
+        approver: req.user._id,
+        date: Date.now(),
+        status: "Approved",
+      };
 
-    // LOGIC: If 2 or more approvals, mark as Approved. Else, Partially Approved.
-    if (voucher.approvedBy.length >= 2) {
-      voucher.status = "Approved";
+      voucher.status = "Approved"; // Fully Approved
     } else {
-      voucher.status = "Partially Approved";
+      return res
+        .status(403)
+        .json({ message: "Not authorized to approve vouchers." });
     }
 
     await voucher.save();
 
-    // Return populated data so frontend updates immediately
+    // Populate for frontend update
     const updatedVoucher = await Voucher.findById(req.params.id)
       .populate("accountHead", "code name")
       .populate("preparedBy", "name")
-      .populate("approvedBy", "name");
+      .populate("approvals.level1.approver", "name")
+      .populate("approvals.level2.approver", "name");
 
     res.json(updatedVoucher);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 // @desc    Download Voucher PDF
 // @route   GET /api/finance/vouchers/:id/pdf
 // @desc    Download Voucher PDF
@@ -114,7 +182,7 @@ const downloadVoucherPDF = async (req, res) => {
     buildVoucherPDF(
       voucher,
       (chunk) => res.write(chunk),
-      () => res.end()
+      () => res.end(),
     );
   } catch (error) {
     console.error("PDF Error:", error);
@@ -130,7 +198,7 @@ const getCashBalance = async (req, res) => {
     const donations = await Donation.find({ paymentMode: "Cash" });
     const totalDonationCash = donations.reduce(
       (acc, item) => acc + item.amount,
-      0
+      0,
     );
 
     // 2. Finance Vouchers (Cash Only)

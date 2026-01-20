@@ -27,6 +27,9 @@ const createMember = async (req, res) => {
       feeAmount,
       feeStatus,
       branch, // <--- Destructure Branch
+      pan,
+      aadhaar,
+      category,
     } = req.body;
 
     // Calculate Validity (e.g., 1 year for Annual)
@@ -48,6 +51,9 @@ const createMember = async (req, res) => {
       feeStatus,
       validUntil,
       branch: branch || "Headquarters", // <--- Save Branch
+      pan,
+      aadhaar,
+      category, // Save new fields
       createdBy: req.user._id,
     });
 

@@ -1,5 +1,195 @@
-/* eslint-disable react-hooks/immutability */
 /* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/immutability */
+// /* eslint-disable react-hooks/immutability */
+// /* eslint-disable no-unused-vars */
+// import React, { useEffect, useState } from "react";
+// import axios from "axios";
+// import BASE_URL from "../../apiConfig";
+// import {
+//   Table,
+//   Button,
+//   Form,
+//   Card,
+//   Row,
+//   Col,
+//   Alert,
+//   Badge,
+// } from "react-bootstrap";
+// import { FaTrash, FaPlus } from "react-icons/fa";
+
+// const SchemeManager = () => {
+//   const [schemes, setSchemes] = useState([]);
+//   const [accountHeads, setAccountHeads] = useState([]); // Store Credit Codes
+
+//   // Form State
+//   const [newSchemeName, setNewSchemeName] = useState("");
+//   const [selectedAccount, setSelectedAccount] = useState("");
+
+//   const [userInfo, setUserInfo] = useState(null);
+
+//   useEffect(() => {
+//     const user = JSON.parse(localStorage.getItem("userInfo"));
+//     setUserInfo(user);
+//     if (user) {
+//       fetchSchemes(user);
+//       fetchAccountHeads(user);
+//     }
+//   }, []);
+
+//   const fetchSchemes = async (user) => {
+//     try {
+//       const config = { headers: { Authorization: `Bearer ${user.token}` } };
+//       const { data } = await axios.get(`${BASE_URL}/api/schemes`, config);
+//       setSchemes(data);
+//     } catch (error) {
+//       console.error(error);
+//     }
+//   };
+
+//   // Fetch Account Codes (Credit Side Only)
+//   const fetchAccountHeads = async (user) => {
+//     try {
+//       const config = { headers: { Authorization: `Bearer ${user.token}` } };
+//       const { data } = await axios.get(`${BASE_URL}/api/accounts`, config);
+//       // Filter only CREDIT (Income) codes
+//       const creditAccounts = data.filter((acc) => acc.type === "Credit");
+//       setAccountHeads(creditAccounts);
+//     } catch (error) {
+//       console.error(error);
+//     }
+//   };
+
+//   const handleAdd = async (e) => {
+//     e.preventDefault();
+//     if (!newSchemeName || !selectedAccount)
+//       return alert("Please enter name and select account code");
+
+//     try {
+//       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+//       await axios.post(
+//         `${BASE_URL}/api/schemes`,
+//         {
+//           name: newSchemeName,
+//           accountHead: selectedAccount,
+//         },
+//         config
+//       );
+
+//       setNewSchemeName("");
+//       setSelectedAccount("");
+//       fetchSchemes(userInfo);
+//     } catch (error) {
+//       alert("Error adding scheme");
+//     }
+//   };
+
+//   const handleDelete = async (id) => {
+//     if (!window.confirm("Delete this scheme?")) return;
+//     try {
+//       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+//       await axios.delete(`${BASE_URL}/api/schemes/${id}`, config);
+//       fetchSchemes(userInfo);
+//     } catch (error) {
+//       alert("Error deleting scheme");
+//     }
+//   };
+
+//   return (
+//     <div>
+//       <h2
+//         className="text-maroon mb-4"
+//         style={{ fontFamily: "Playfair Display" }}
+//       >
+//         Manage Donation Schemes
+//       </h2>
+
+//       <Row>
+//         <Col md={5}>
+//           <Card className="shadow-sm border-0 p-3 mb-4">
+//             <h5 className="mb-3">Add New Scheme</h5>
+//             <Form onSubmit={handleAdd}>
+//               <Form.Group className="mb-2">
+//                 <Form.Label>Scheme Name</Form.Label>
+//                 <Form.Control
+//                   placeholder="e.g. Nitya Annadhana"
+//                   value={newSchemeName}
+//                   onChange={(e) => setNewSchemeName(e.target.value)}
+//                 />
+//               </Form.Group>
+
+//               <Form.Group className="mb-3">
+//                 <Form.Label>Link to Account Code (Credit)</Form.Label>
+//                 <Form.Select
+//                   value={selectedAccount}
+//                   onChange={(e) => setSelectedAccount(e.target.value)}
+//                 >
+//                   <option value="">-- Select Account --</option>
+//                   {accountHeads.map((acc) => (
+//                     <option key={acc._id} value={acc._id}>
+//                       {acc.code} - {acc.name}
+//                     </option>
+//                   ))}
+//                 </Form.Select>
+//               </Form.Group>
+
+//               <Button type="submit" variant="success" className="w-100">
+//                 <FaPlus /> Add Scheme
+//               </Button>
+//             </Form>
+//           </Card>
+//         </Col>
+
+//         <Col md={7}>
+//           <Card className="shadow-sm border-0">
+//             <Table hover className="mb-0 align-middle">
+//               <thead className="bg-light">
+//                 <tr>
+//                   <th>Scheme Name</th>
+//                   <th>Account Code</th>
+//                   <th className="text-end">Action</th>
+//                 </tr>
+//               </thead>
+//               <tbody>
+//                 {schemes.map((s) => (
+//                   <tr key={s._id}>
+//                     <td className="fw-bold">{s.name}</td>
+//                     <td>
+//                       {s.accountHead ? (
+//                         <Badge bg="info" text="dark">
+//                           {s.accountHead.code} - {s.accountHead.name}
+//                         </Badge>
+//                       ) : (
+//                         <Badge bg="danger">Unmapped</Badge>
+//                       )}
+//                     </td>
+//                     <td className="text-end">
+//                       <Button
+//                         size="sm"
+//                         variant="outline-danger"
+//                         onClick={() => handleDelete(s._id)}
+//                       >
+//                         <FaTrash />
+//                       </Button>
+//                     </td>
+//                   </tr>
+//                 ))}
+//                 {schemes.length === 0 && (
+//                   <tr>
+//                     <td colSpan="3" className="text-center">
+//                       No schemes found.
+//                     </td>
+//                   </tr>
+//                 )}
+//               </tbody>
+//             </Table>
+//           </Card>
+//         </Col>
+//       </Row>
+//     </div>
+//   );
+// };
+
+// export default SchemeManager;
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -20,13 +210,12 @@ import {
   FaUserShield,
   FaKey,
   FaLayerGroup,
-  FaCalendarDay, // Icon for Occasion
 } from "react-icons/fa";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
 
 const Settings = () => {
-  const [key, setKey] = useState("users");
+  const [key, setKey] = useState("users"); // Default Tab
   const [userInfo, setUserInfo] = useState(null);
 
   // --- SCHEME STATE ---
@@ -34,10 +223,6 @@ const Settings = () => {
   const [newSchemeName, setNewSchemeName] = useState("");
   const [accountHeads, setAccountHeads] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState("");
-
-  // --- OCCASION STATE (NEW) ---
-  const [occasions, setOccasions] = useState([]);
-  const [newOccasionName, setNewOccasionName] = useState("");
 
   // --- USER STATE ---
   const [users, setUsers] = useState([]);
@@ -58,12 +243,13 @@ const Settings = () => {
     if (user) {
       fetchSchemes(user);
       fetchAccountHeads(user);
-      fetchOccasions(user); // <--- Fetch Occasions
       fetchUsers(user);
     }
   }, []);
 
+  // ==========================
   // 1. SCHEME LOGIC
+  // ==========================
   const fetchSchemes = async (user) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
@@ -113,48 +299,11 @@ const Settings = () => {
     }
   };
 
-  // 2. OCCASION LOGIC (NEW)
-  const fetchOccasions = async (user) => {
-    try {
-      const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get(`${BASE_URL}/api/occasions`, config);
-      setOccasions(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleAddOccasion = async (e) => {
-    e.preventDefault();
-    if (!newOccasionName) return alert("Enter name");
-    try {
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.post(
-        `${BASE_URL}/api/occasions`,
-        { name: newOccasionName },
-        config,
-      );
-      setNewOccasionName("");
-      fetchOccasions(userInfo);
-    } catch (error) {
-      alert("Error adding occasion");
-    }
-  };
-
-  const handleDeleteOccasion = async (id) => {
-    if (!window.confirm("Delete occasion?")) return;
-    try {
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.delete(`${BASE_URL}/api/occasions/${id}`, config);
-      fetchOccasions(userInfo);
-    } catch (error) {
-      alert("Error deleting");
-    }
-  };
-
-  // 3. USER LOGIC
+  // ==========================
+  // 2. USER MANAGEMENT LOGIC
+  // ==========================
   const fetchUsers = async (user) => {
-    if (user.role !== "admin") return;
+    if (user.role !== "admin") return; // Only admin can fetch
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       const { data } = await axios.get(`${BASE_URL}/api/users`, config);
@@ -167,40 +316,43 @@ const Settings = () => {
   const handleUserSubmit = async (e) => {
     e.preventDefault();
     const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+
     try {
       if (selectedUser) {
+        // UPDATE / RESET PASSWORD
         await axios.put(
           `${BASE_URL}/api/users/${selectedUser._id}`,
           userForm,
           config,
         );
-        alert("User Updated");
+        alert("User Updated Successfully");
       } else {
+        // CREATE NEW USER
         await axios.post(`${BASE_URL}/api/users`, userForm, config);
         alert("New User Created");
       }
       setShowUserModal(false);
       fetchUsers(userInfo);
     } catch (error) {
-      alert(error.response?.data?.message || "Error");
+      alert(error.response?.data?.message || "Error saving user");
     }
   };
 
   const handleDeleteUser = async (id) => {
-    if (!window.confirm("Delete user?")) return;
+    if (!window.confirm("Delete this user?")) return;
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       await axios.delete(`${BASE_URL}/api/users/${id}`, config);
       fetchUsers(userInfo);
     } catch (error) {
-      alert("Error deleting");
+      alert("Error deleting user");
     }
   };
 
   const openUserModal = (user = null) => {
     if (user) {
       setSelectedUser(user);
-      setUserForm({ ...user, password: "" });
+      setUserForm({ ...user, password: "" }); // Clear password for security
     } else {
       setSelectedUser(null);
       setUserForm({
@@ -250,7 +402,7 @@ const Settings = () => {
                   <thead className="bg-light">
                     <tr>
                       <th>Name</th>
-                      <th>Email</th>
+                      <th>Email / Login</th>
                       <th>Role</th>
                       <th>Branch</th>
                       <th className="text-end">Action</th>
@@ -273,6 +425,7 @@ const Settings = () => {
                             variant="outline-dark"
                             className="me-2"
                             onClick={() => openUserModal(u)}
+                            title="Edit / Reset Password"
                           >
                             <FaKey />
                           </Button>
@@ -280,6 +433,7 @@ const Settings = () => {
                             size="sm"
                             variant="outline-danger"
                             onClick={() => handleDeleteUser(u._id)}
+                            title="Delete User"
                           >
                             <FaTrash />
                           </Button>
@@ -295,7 +449,7 @@ const Settings = () => {
           )}
         </Tab>
 
-        {/* TAB 2: SCHEMES */}
+        {/* TAB 2: SCHEMES (Your Old Code) */}
         <Tab
           eventKey="schemes"
           title={
@@ -317,7 +471,7 @@ const Settings = () => {
                     />
                   </Form.Group>
                   <Form.Group className="mb-3">
-                    <Form.Label>Account Code</Form.Label>
+                    <Form.Label>Link to Account Code</Form.Label>
                     <Form.Select
                       value={selectedAccount}
                       onChange={(e) => setSelectedAccount(e.target.value)}
@@ -374,79 +528,13 @@ const Settings = () => {
             </Col>
           </Row>
         </Tab>
-
-        {/* TAB 3: OCCASIONS (NEW) */}
-        <Tab
-          eventKey="occasions"
-          title={
-            <span>
-              <FaCalendarDay /> Occasions
-            </span>
-          }
-        >
-          <Row>
-            <Col md={5}>
-              <Card className="shadow-sm border-0 p-3 mb-4">
-                <h5 className="mb-3">Add New Occasion</h5>
-                <Form onSubmit={handleAddOccasion}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Occasion Name</Form.Label>
-                    <Form.Control
-                      placeholder="e.g. House Warming, Graduation"
-                      value={newOccasionName}
-                      onChange={(e) => setNewOccasionName(e.target.value)}
-                    />
-                  </Form.Group>
-                  <Button type="submit" variant="success" className="w-100">
-                    <FaPlus /> Add Occasion
-                  </Button>
-                </Form>
-              </Card>
-            </Col>
-            <Col md={7}>
-              <Card className="shadow-sm border-0">
-                <Table hover className="mb-0 align-middle">
-                  <thead className="bg-light">
-                    <tr>
-                      <th>Occasion Name</th>
-                      <th className="text-end">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {occasions.map((o) => (
-                      <tr key={o._id}>
-                        <td className="fw-bold">{o.name}</td>
-                        <td className="text-end">
-                          <Button
-                            size="sm"
-                            variant="outline-danger"
-                            onClick={() => handleDeleteOccasion(o._id)}
-                          >
-                            <FaTrash />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                    {occasions.length === 0 && (
-                      <tr>
-                        <td colSpan="2" className="text-center">
-                          No occasions found. Add one!
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </Table>
-              </Card>
-            </Col>
-          </Row>
-        </Tab>
       </Tabs>
 
       {/* USER MODAL */}
       <Modal show={showUserModal} onHide={() => setShowUserModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>
-            {selectedUser ? "Update User" : "Add New User"}
+            {selectedUser ? "Update User & Password" : "Add New User"}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -461,8 +549,10 @@ const Settings = () => {
                 required
               />
             </Form.Group>
+
+            {/* Don't allow changing email for existing users (it's the ID) */}
             <Form.Group className="mb-3">
-              <Form.Label>Email</Form.Label>
+              <Form.Label>Email (Login ID)</Form.Label>
               <Form.Control
                 value={userForm.email}
                 onChange={(e) =>
@@ -472,6 +562,7 @@ const Settings = () => {
                 required
               />
             </Form.Group>
+
             <Form.Group className="mb-3">
               <Form.Label>Phone</Form.Label>
               <Form.Control
@@ -482,47 +573,26 @@ const Settings = () => {
                 required
               />
             </Form.Group>
+
             <Row>
               <Col>
                 <Form.Group className="mb-3">
                   <Form.Label>Role</Form.Label>
-                  {/* <Form.Select
-                    value={userForm.role}
-                    onChange={(e) =>
-                      setUserForm({ ...userForm, role: e.target.value })
-                    }
-                  >
-                    <option value="employee">Employee</option>
-                    <option value="warden">Warden</option>
-                    <option value="accountant">Accountant</option>
-                    <option value="clerk">Clerk</option>
-                    <option disabled>--- Committee ---</option>
-                    <option value="president">President</option>
-                    <option value="secretary">Secretary</option>
-                    <option value="treasurer">Treasurer</option>
-                    <option disabled>--- Admin ---</option>
-                    <option value="admin">System Admin</option>
-                  </Form.Select> */}
                   <Form.Select
                     value={userForm.role}
                     onChange={(e) =>
                       setUserForm({ ...userForm, role: e.target.value })
                     }
                   >
-                    <option value="employee">Standard Employee</option>
-
-                    <option disabled>--- Staff Roles ---</option>
-                    <option value="warden">Warden</option>
-                    <option value="accountant">Accountant</option>
-                    <option value="clerk">Clerk</option>
-
-                    <option disabled>--- Committee ---</option>
+                    <option value="employee">Employee</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
                     <option value="president">President</option>
                     <option value="secretary">Secretary</option>
                     <option value="treasurer">Treasurer</option>
-
-                    <option disabled>--- Admin ---</option>
-                    <option value="admin">System Admin</option>
+                    <option value="warden">Warden</option>
+                    <option value="accountant">Accountant</option>
+                    <option value="clerk">Clerk</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -536,25 +606,32 @@ const Settings = () => {
                     }
                   >
                     <option value="Headquarters">Headquarters</option>
-                    <option value="Karunya Sindhu">Karunya Sindhu</option>
+                    <option value="Karunya Sindu">Karunya Sindu</option>
                     <option value="Karunya Bharathi">Karunya Bharathi</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
             </Row>
+
+            <hr />
+            <h6 className="text-danger">Reset Password</h6>
             <Form.Group className="mb-3">
-              <Form.Label>Password</Form.Label>
+              <Form.Label>
+                New Password {selectedUser && "(Leave blank to keep current)"}
+              </Form.Label>
               <Form.Control
                 type="password"
                 value={userForm.password}
                 onChange={(e) =>
                   setUserForm({ ...userForm, password: e.target.value })
                 }
+                placeholder="******"
                 required={!selectedUser}
               />
             </Form.Group>
+
             <Button type="submit" variant="dark" className="w-100">
-              {selectedUser ? "Update" : "Create"}
+              {selectedUser ? "Update User" : "Create User"}
             </Button>
           </Form>
         </Modal.Body>

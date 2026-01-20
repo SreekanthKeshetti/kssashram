@@ -24,12 +24,15 @@ const userSchema = mongoose.Schema(
       type: String,
       // enum: ["user", "employee", "admin"],
       enum: [
-        "user",
+        "admin", // IT Admin / Super User
+        "president", // Core Committee
+        "secretary", // Core Committee
+        "treasurer", // Core Committee
+        "warden", // Staff (Data Entry)
+        "accountant", // Staff (Finance Entry)
+        "clerk", // Staff (General Entry)
+        "user", // Guest / Donor
         "employee",
-        "admin",
-        "president",
-        "secretary",
-        "treasurer",
       ],
       default: "user", // Everyone starts as a guest user
     },
@@ -41,7 +44,7 @@ const userSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("User", userSchema);
