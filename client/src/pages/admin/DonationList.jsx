@@ -969,6 +969,17 @@ const DonationList = () => {
                 <option>Foreign Currency</option>
               </Form.Select>
             </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Check
+                type="switch"
+                id="recurring-switch"
+                label="Is Recurring? (Send Annual Reminder)"
+                name="isRecurring"
+                checked={formData.isRecurring}
+                onChange={handleChange}
+                className="fw-bold text-primary"
+              />
+            </Form.Group>
             {renderPaymentFields()}
 
             <div className="bg-light p-2 rounded mb-3 border">

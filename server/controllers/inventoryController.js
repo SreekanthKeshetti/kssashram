@@ -74,7 +74,7 @@ const addInventoryItem = async (req, res) => {
         item._id,
         `Added ${qtyNum} ${unit} to ${itemName} via ${
           sourceType || "Adjustment"
-        }`
+        }`,
       );
       return res.status(200).json(item);
     }
@@ -99,7 +99,14 @@ const addInventoryItem = async (req, res) => {
       "CREATE",
       "Inventory",
       newItem._id,
-      `Created Item: ${itemName} (${qtyNum} ${unit})`
+      `Created Item: ${itemName} (${qtyNum} ${unit})`,
+    );
+    await logAudit(
+      req,
+      "CREATE",
+      "Inventory",
+      newItem._id,
+      `Created Item: ${itemName} (${qtyNum} ${unit})`,
     );
 
     res.status(201).json(newItem);

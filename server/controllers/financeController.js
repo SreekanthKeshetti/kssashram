@@ -1,6 +1,7 @@
 const Voucher = require("../models/Voucher");
 const Donation = require("../models/Donation"); // Import Donation model
 const { buildVoucherPDF } = require("../utils/generateVoucherPDF"); // Import utility
+const { logAudit } = require("../utils/auditLogger");
 
 // @desc    Create a new Voucher (Employee/Admin)
 // @route   POST /api/finance/vouchers
@@ -31,6 +32,13 @@ const createVoucher = async (req, res) => {
       preparedBy: req.user._id, // The Warden/Employee logging in
       status: "Pending", // Always starts as Pending
     });
+    await logAudit(
+      req,
+      "CREATE",
+      "Finance",
+      voucher._id,
+      `Created Voucher ${voucherNo} for Rs.${amount}`,
+    );
 
     res.status(201).json(voucher);
   } catch (error) {
@@ -145,6 +153,13 @@ const approveVoucher = async (req, res) => {
         .status(403)
         .json({ message: "Not authorized to approve vouchers." });
     }
+    await logAudit(
+      req,
+      "APPROVE",
+      "Finance",
+      voucher._id,
+      `Voucher Signed by ${role} (${req.user.name})`,
+    );
 
     await voucher.save();
 

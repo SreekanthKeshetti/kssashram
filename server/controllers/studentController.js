@@ -46,6 +46,13 @@ const createStudent = async (req, res) => {
       alternateContact,
       currentClass,
     });
+    await logAudit(
+      req,
+      "CREATE",
+      "Student",
+      student._id,
+      `New Admission: ${firstName} ${lastName}`,
+    );
 
     res.status(201).json(student);
   } catch (error) {
@@ -98,6 +105,13 @@ const approveStudent = async (req, res) => {
     } else if (status === "Rejected") {
       student.admissionStatus = "Rejected";
     }
+    await logAudit(
+      req,
+      "APPROVE",
+      "Student",
+      student._id,
+      `Approval by ${role} (${status})`,
+    );
 
     await student.save();
     res.json(student);

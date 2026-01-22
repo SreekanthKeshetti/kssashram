@@ -1124,6 +1124,196 @@ const StudentProfile = () => {
                     </Row>
                   </div>
                 </Tab>
+                {/* RESTORED: EXPENSES TAB */}
+                <Tab
+                  eventKey="expenses"
+                  title={
+                    <span>
+                      <FaRupeeSign /> Expenses
+                    </span>
+                  }
+                >
+                  <Table striped bordered hover size="sm">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th className="text-end">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {student.expenses && student.expenses.length > 0 ? (
+                        student.expenses.map((exp, idx) => (
+                          <tr key={idx}>
+                            <td>{new Date(exp.date).toLocaleDateString()}</td>
+                            <td>{exp.description}</td>
+                            <td className="text-end fw-bold">₹{exp.amount}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="3" className="text-center text-muted">
+                            No specific expenses recorded.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
+
+                  {/* Add Expense Form */}
+                  <div className="p-3 bg-light rounded mt-3 border">
+                    <h6 className="text-maroon fw-bold">Record New Expense</h6>
+                    <Row className="g-2">
+                      <Col md={7}>
+                        <Form.Control
+                          placeholder="Description (e.g. Uniform, Medical)"
+                          value={newExpense.description}
+                          onChange={(e) =>
+                            setNewExpense({
+                              ...newExpense,
+                              description: e.target.value,
+                            })
+                          }
+                        />
+                      </Col>
+                      <Col md={3}>
+                        <Form.Control
+                          type="number"
+                          placeholder="Amount (₹)"
+                          value={newExpense.amount}
+                          onChange={(e) =>
+                            setNewExpense({
+                              ...newExpense,
+                              amount: e.target.value,
+                            })
+                          }
+                        />
+                      </Col>
+                      <Col md={2}>
+                        <Button
+                          variant="danger"
+                          className="w-100"
+                          onClick={addExpense}
+                        >
+                          Add
+                        </Button>
+                      </Col>
+                    </Row>
+                  </div>
+                </Tab>
+
+                {/* RESTORED: EXTRA-CURRICULAR TAB */}
+                <Tab
+                  eventKey="activities"
+                  title={
+                    <span>
+                      <FaRunning /> Activities
+                    </span>
+                  }
+                >
+                  {/* 1. Activity List Table */}
+                  <Table striped bordered hover size="sm" className="mt-3">
+                    <thead className="bg-light">
+                      <tr>
+                        <th>Category</th>
+                        <th>Activity Name</th>
+                        <th>Level</th>
+                        <th>Achievement</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {student.activities && student.activities.length > 0 ? (
+                        student.activities.map((act, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <Badge bg="info" text="dark">
+                                {act.activityType}
+                              </Badge>
+                            </td>
+                            <td className="fw-bold">{act.name}</td>
+                            <td>{act.participationLevel}</td>
+                            <td>{act.achievement || "-"}</td>
+                            <td className="small text-muted">
+                              {new Date(act.date).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="5" className="text-center text-muted">
+                            No activities recorded.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
+
+                  {/* 2. Add Activity Form */}
+                  <div className="p-3 bg-light rounded mt-3 border">
+                    <h6 className="text-maroon fw-bold">Add New Activity</h6>
+                    <Row className="g-2">
+                      <Col md={3}>
+                        <Form.Select
+                          value={newActivity.activityType}
+                          onChange={(e) =>
+                            setNewActivity({
+                              ...newActivity,
+                              activityType: e.target.value,
+                            })
+                          }
+                        >
+                          <option>Sports</option>
+                          <option>Arts</option>
+                          <option>Vedic/Spiritual</option>
+                          <option>Vocational</option>
+                          <option>Other</option>
+                        </Form.Select>
+                      </Col>
+                      <Col md={3}>
+                        <Form.Control
+                          placeholder="Activity Name"
+                          value={newActivity.name}
+                          onChange={(e) =>
+                            setNewActivity({
+                              ...newActivity,
+                              name: e.target.value,
+                            })
+                          }
+                        />
+                      </Col>
+                      <Col md={3}>
+                        <Form.Control
+                          placeholder="Level (e.g. District)"
+                          value={newActivity.participationLevel}
+                          onChange={(e) =>
+                            setNewActivity({
+                              ...newActivity,
+                              participationLevel: e.target.value,
+                            })
+                          }
+                        />
+                      </Col>
+                      <Col md={3}>
+                        <Form.Control
+                          placeholder="Achievement (Optional)"
+                          value={newActivity.achievement}
+                          onChange={(e) =>
+                            setNewActivity({
+                              ...newActivity,
+                              achievement: e.target.value,
+                            })
+                          }
+                        />
+                      </Col>
+                      <Col md={12} className="text-end mt-2">
+                        <Button size="sm" variant="dark" onClick={addActivity}>
+                          <FaPlus className="me-1" /> Add Record
+                        </Button>
+                      </Col>
+                    </Row>
+                  </div>
+                </Tab>
               </Tabs>
             </Card.Body>
           </Card>

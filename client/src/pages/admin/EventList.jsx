@@ -566,7 +566,10 @@ const EventList = () => {
                 >
                   <option value="Karunya Sindhu">Karunya Sindhu</option>
                   <option value="Karunya Bharathi">Karunya Bharathi</option>
-                  <option value="Headquarters">Headquarters</option>
+                  <option value="Karunya Jyothi">Karunya Jyothi</option>
+                  <option value="Karuna Sree Seva Samithi">
+                    Karuna Sree Seva Samithi
+                  </option>
                 </Form.Select>
               </Col>
               <Col md={6} className="mb-3">
