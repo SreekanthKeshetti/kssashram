@@ -71,6 +71,7 @@ const createMember = async (req, res) => {
           accountHead: account._id,
           amount: Number(feeAmount),
           description: `Membership Fee: ${firstName} ${lastName} (${membershipType})`,
+
           paymentMode: "Cash", // Assuming Cash collection at counter
           branch: branch || "Headquarters",
           status: "Approved", // Auto-approve since money is collected

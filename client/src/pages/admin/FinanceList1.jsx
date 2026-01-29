@@ -51,7 +51,7 @@ const FinanceList = () => {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       const { data } = await axios.get(
         `${BASE_URL}/api/finance/vouchers`,
-        config
+        config,
       );
       setVouchers(data);
     } catch (error) {
@@ -110,7 +110,7 @@ const FinanceList = () => {
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `Tally_Export_${new Date().toISOString().split("T")[0]}.csv`
+      `Tally_Export_${new Date().toISOString().split("T")[0]}.csv`,
     );
     document.body.appendChild(link);
     link.click();
@@ -143,7 +143,7 @@ const FinanceList = () => {
       await axios.put(
         `${BASE_URL}/api/finance/vouchers/${id}/approve`,
         {},
-        config
+        config,
       );
       fetchVouchers(userInfo);
       alert("Approval Recorded!");
@@ -157,7 +157,7 @@ const FinanceList = () => {
   };
 
   const filteredAccounts = accountHeads.filter(
-    (acc) => acc.type === formData.voucherType
+    (acc) => acc.type === formData.voucherType,
   );
 
   const filteredVouchers = vouchers.filter((v) => {
@@ -394,17 +394,17 @@ const FinanceList = () => {
                               };
                               const response = await axios.get(
                                 `${BASE_URL}/api/finance/vouchers/${v._id}/pdf`,
-                                config
+                                config,
                               );
 
                               const url = window.URL.createObjectURL(
-                                new Blob([response.data])
+                                new Blob([response.data]),
                               );
                               const link = document.createElement("a");
                               link.href = url;
                               link.setAttribute(
                                 "download",
-                                `${v.voucherNo}.pdf`
+                                `${v.voucherNo}.pdf`,
                               );
                               document.body.appendChild(link);
                               link.click();

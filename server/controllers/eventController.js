@@ -189,6 +189,7 @@ const updatePaymentStatus = async (req, res) => {
           accountHead: account._id,
           amount: event.feeAmount,
           description: `Training Fee: ${registration.name} for ${event.title}`,
+
           paymentMode: "Cash", // Assuming Cash/UPI for counter payment
           branch: event.branch || "Headquarters",
           status: "Approved", // Auto-approve since money is collected

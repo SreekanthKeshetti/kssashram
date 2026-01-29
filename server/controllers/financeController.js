@@ -29,6 +29,7 @@ const createVoucher = async (req, res) => {
       description,
       paymentMode,
       branch: branch || "Headquarters",
+      recipientName,
       preparedBy: req.user._id, // The Warden/Employee logging in
       status: "Pending", // Always starts as Pending
     });

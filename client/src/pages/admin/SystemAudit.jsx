@@ -32,7 +32,7 @@ const SystemAudit = () => {
     (log) =>
       log.userName.toLowerCase().includes(filter.toLowerCase()) ||
       log.module.toLowerCase().includes(filter.toLowerCase()) ||
-      log.action.toLowerCase().includes(filter.toLowerCase())
+      log.action.toLowerCase().includes(filter.toLowerCase()),
   );
 
   const getActionBadge = (action) => {
@@ -101,6 +101,7 @@ const SystemAudit = () => {
               <tr>
                 <th className="ps-4">Time</th>
                 <th>User</th>
+                <th>IP Address</th>
                 <th>Module</th>
                 <th>Action</th>
                 <th>Details</th>
@@ -113,6 +114,11 @@ const SystemAudit = () => {
                     {new Date(log.createdAt).toLocaleString()}
                   </td>
                   <td className="fw-bold text-primary">{log.userName}</td>
+                  <td>
+                    <code className="text-dark bg-light px-2 py-1 rounded">
+                      {log.ipAddress || "Unknown"}
+                    </code>
+                  </td>
                   <td>{log.module}</td>
                   <td>{getActionBadge(log.action)}</td>
                   <td className="text-muted">{log.details}</td>

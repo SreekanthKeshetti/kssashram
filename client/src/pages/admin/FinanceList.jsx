@@ -422,7 +422,14 @@ import {
   Form,
   Alert,
 } from "react-bootstrap";
-import { FaPlus, FaCheck, FaFilePdf, FaFileDownload } from "react-icons/fa";
+import {
+  FaPlus,
+  FaCheck,
+  FaFilePdf,
+  FaFileDownload,
+  FaBalanceScale,
+} from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const FinanceList = () => {
   const [vouchers, setVouchers] = useState([]);
@@ -680,6 +687,14 @@ const FinanceList = () => {
         </Col>
         <Col lg={7}>
           <div className="d-flex flex-wrap gap-2 justify-content-lg-end">
+            {/* Reconcile Button */}
+            {/* <Link
+              to="/dashboard/finance/reconcile"
+              className="btn btn-outline-dark shadow-sm flex-grow-1 flex-lg-grow-0 text-decoration-none d-flex align-items-center justify-content-center"
+            >
+              <FaBalanceScale className="me-2" /> Reconcile Cash
+            </Link> */}
+
             <Button variant="success" size="sm" onClick={handleExport}>
               <FaFileDownload className="me-2" /> Download Tally CSV
             </Button>

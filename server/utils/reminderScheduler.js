@@ -60,7 +60,7 @@ const runScheduler = () => {
       // 3. Send Emails
       for (const don of donationsToRemind) {
         const daysLeft = Math.ceil(
-          (new Date(don.nextReminderDate) - today) / (1000 * 60 * 60 * 24)
+          (new Date(don.nextReminderDate) - today) / (1000 * 60 * 60 * 24),
         );
 
         const mailOptions = {
@@ -74,8 +74,8 @@ const runScheduler = () => {
               <p>This is a gentle reminder that your annual support for <strong>${
                 don.scheme
               }</strong> is upcoming in <strong>${daysLeft} days</strong> (on ${new Date(
-            don.nextReminderDate
-          ).toLocaleDateString()}).</p>
+                don.nextReminderDate,
+              ).toLocaleDateString()}).</p>
               <p>Last year, your generous contribution of <strong>Rs. ${
                 don.amount
               }</strong> helped us serve the needy effectively.</p>
