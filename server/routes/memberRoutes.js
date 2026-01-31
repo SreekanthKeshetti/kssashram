@@ -5,6 +5,7 @@ const {
   createMember,
   addMemberActivity,
   getMemberById,
+  downloadMemberForm,
 } = require("../controllers/memberController");
 const { protect, staff } = require("../middleware/authMiddleware");
 
@@ -14,5 +15,6 @@ router
   .post(protect, staff, createMember);
 router.post("/:id/activity", protect, staff, addMemberActivity);
 router.get("/:id", protect, staff, getMemberById);
+router.get("/:id/download", protect, staff, downloadMemberForm);
 
 module.exports = router;

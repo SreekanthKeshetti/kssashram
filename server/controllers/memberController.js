@@ -1,6 +1,7 @@
 const Member = require("../models/Member");
 const Voucher = require("../models/Voucher"); // <--- Import Voucher
 const AccountHead = require("../models/AccountHead"); // <--- Import AccountHead
+const { buildMemberProfile } = require("../utils/generateMemberPDF"); // <--- IMPORT
 
 // @desc    Get all members
 // @route   GET /api/members
@@ -30,6 +31,12 @@ const createMember = async (req, res) => {
       pan,
       aadhaar,
       category,
+      spouseName,
+      dob,
+      qualification,
+      profession,
+      otherOrgPositions,
+      references,
     } = req.body;
 
     // Calculate Validity (e.g., 1 year for Annual)
@@ -54,6 +61,12 @@ const createMember = async (req, res) => {
       pan,
       aadhaar,
       category, // Save new fields
+      spouseName,
+      dob,
+      qualification,
+      profession,
+      otherOrgPositions,
+      references,
       createdBy: req.user._id,
     });
 
@@ -125,6 +138,32 @@ const getMemberById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// @desc    Download Member Application Form
+// @route   GET /api/members/:id/download
+const downloadMemberForm = async (req, res) => {
+  try {
+    const member = await Member.findById(req.params.id);
+    if (!member) return res.status(404).json({ message: "Member not found" });
+
+    const filename = `Application_${member.firstName}.pdf`;
+    res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-type", "application/pdf");
+
+    buildMemberProfile(
+      member,
+      (chunk) => res.write(chunk),
+      () => res.end(),
+    );
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // Export
-module.exports = { getMembers, createMember, addMemberActivity, getMemberById };
+module.exports = {
+  getMembers,
+  createMember,
+  addMemberActivity,
+  getMemberById,
+  downloadMemberForm,
+};

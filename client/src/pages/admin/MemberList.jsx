@@ -1,7 +1,9 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/immutability */
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
-import { Link } from "react-router-dom"; // Ensure Link is imported
+import { Link } from "react-router-dom";
 
 import {
   Table,
@@ -25,6 +27,9 @@ import {
 const MemberList = () => {
   const [members, setMembers] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   // Activity Modal State
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
@@ -33,40 +38,100 @@ const MemberList = () => {
     role: "",
     date: "",
   });
-  const [error, setError] = useState("");
 
+  // --- UPDATED FORM STATE WITH NEW FIELDS ---
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+
+    // New Profile Fields
+    spouseName: "",
+    dob: "",
+    qualification: "",
+    profession: "",
+    otherOrgPositions: "",
+    references: "",
+    pan: "",
+    aadhaar: "",
+
     phone: "",
     email: "",
     address: "",
+
+    // Membership Details
     membershipType: "Annual",
+    category: "Ordinary",
     feeAmount: "1000",
     feeStatus: "Paid",
     branch: "Karunya Sindhu",
-    pan: "",
-    aadhaar: "",
-    category: "Ordinary",
   });
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/immutability
     fetchMembers();
   }, []);
 
   const fetchMembers = async () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (!userInfo || !userInfo.token) return;
+
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const { data } = await axios.get(`${BASE_URL}/api/members`, config);
       setMembers(data);
+      setLoading(false);
     } catch (err) {
       console.error(err);
       setError("Failed to fetch members");
+      setLoading(false);
     }
   };
-  // --- ACTIVITY HANDLER ---
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.post(`${BASE_URL}/api/members`, formData, config);
+      setShowModal(false);
+      fetchMembers();
+      alert("Member Registered Successfully!");
+
+      // Reset Form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        spouseName: "",
+        dob: "",
+        qualification: "",
+        profession: "",
+        otherOrgPositions: "",
+        references: "",
+        pan: "",
+        aadhaar: "",
+        phone: "",
+        email: "",
+        address: "",
+        membershipType: "Annual",
+        category: "Ordinary",
+        feeAmount: "1000",
+        feeStatus: "Paid",
+        branch: "Karunya Sindhu",
+      });
+    } catch (err) {
+      alert("Error registering member");
+    }
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // --- ACTIVITY HANDLERS ---
+  const openActivityModal = (member) => {
+    setSelectedMember(member);
+    setShowActivityModal(true);
+  };
+
   const handleAddActivity = async (e) => {
     e.preventDefault();
     try {
@@ -82,35 +147,10 @@ const MemberList = () => {
       alert("Activity Logged Successfully!");
       setShowActivityModal(false);
       setActivityData({ eventName: "", role: "", date: "" });
-      fetchMembers(); // Refresh to update list (if we showed count)
-      // eslint-disable-next-line no-unused-vars
+      fetchMembers();
     } catch (err) {
       alert("Error logging activity");
     }
-  };
-
-  const openActivityModal = (member) => {
-    setSelectedMember(member);
-    setShowActivityModal(true);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.post(`${BASE_URL}/api/members`, formData, config);
-      setShowModal(false);
-      fetchMembers();
-      alert("Member Registered Successfully!");
-      // eslint-disable-next-line no-unused-vars
-    } catch (err) {
-      alert("Error registering member");
-    }
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
@@ -118,12 +158,12 @@ const MemberList = () => {
       <Row className="mb-4 align-items-center">
         <Col>
           <h2
-            className="text-maroon"
+            className="text-maroon m-0"
             style={{ fontFamily: "Playfair Display" }}
           >
-            Membership Management
+            Membership Registry
           </h2>
-          <p className="text-muted">
+          <p className="text-muted m-0 small">
             Manage Volunteers, Life Members, and Patrons
           </p>
         </Col>
@@ -133,7 +173,7 @@ const MemberList = () => {
             style={{ backgroundColor: "#581818", border: "none" }}
             onClick={() => setShowModal(true)}
           >
-            <FaPlus /> Register Member
+            <FaPlus className="me-2" /> New Member
           </Button>
         </Col>
       </Row>
@@ -142,12 +182,17 @@ const MemberList = () => {
 
       <Card className="shadow-sm border-0">
         <Card.Body className="p-0">
-          <Table hover responsive className="align-middle mb-0">
+          <Table
+            hover
+            responsive
+            className="align-middle mb-0"
+            style={{ fontSize: "0.9rem" }}
+          >
             <thead className="bg-light">
               <tr>
                 <th className="ps-4">Name</th>
                 <th>Contact</th>
-                <th>Category / Plan</th> {/* UPDATED HEADER */}
+                <th>Category / Plan</th>
                 <th>Joined Date</th>
                 <th>Fee Status</th>
                 <th>Action</th>
@@ -161,7 +206,6 @@ const MemberList = () => {
                       <FaUserTie className="me-2 text-secondary" />
                       {m.firstName} {m.lastName}
                     </div>
-                    {/* Show ID Proofs if available */}
                     {(m.pan || m.aadhaar) && (
                       <div
                         style={{ fontSize: "0.7rem" }}
@@ -176,10 +220,9 @@ const MemberList = () => {
                     <small className="text-muted">{m.email}</small>
                   </td>
 
-                  {/* --- NEW COLUMN LOGIC --- */}
+                  {/* CATEGORY BADGES */}
                   <td>
                     <div className="d-flex flex-column gap-1 align-items-start">
-                      {/* 1. The Role Category */}
                       <Badge
                         bg={
                           m.category === "EC"
@@ -191,14 +234,11 @@ const MemberList = () => {
                       >
                         {m.category || "Ordinary"}
                       </Badge>
-
-                      {/* 2. The Subscription Plan */}
                       <Badge bg="light" text="dark" className="border">
-                        Plan: {m.membershipType}
+                        {m.membershipType}
                       </Badge>
                     </div>
                   </td>
-                  {/* ------------------------ */}
 
                   <td>{new Date(m.joinDate).toLocaleDateString()}</td>
                   <td>
@@ -227,7 +267,6 @@ const MemberList = () => {
                       >
                         <FaUserTie />
                       </Link>
-
                       <Button
                         size="sm"
                         variant="outline-dark"
@@ -240,9 +279,9 @@ const MemberList = () => {
                   </td>
                 </tr>
               ))}
-              {members.length === 0 && (
+              {members.length === 0 && !loading && (
                 <tr>
-                  <td colSpan="6" className="text-center py-5">
+                  <td colSpan="6" className="text-center py-5 text-muted">
                     No members found
                   </td>
                 </tr>
@@ -251,7 +290,247 @@ const MemberList = () => {
           </Table>
         </Card.Body>
       </Card>
-      {/* --- ACTIVITY MODAL --- */}
+
+      {/* --- NEW MEMBER REGISTRATION MODAL --- */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+        <Modal.Header closeButton className="bg-light">
+          <Modal.Title>New Member Application</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmit}>
+            {/* Personal Details */}
+            <h6 className="text-maroon border-bottom pb-2 mb-3">
+              Personal Information
+            </h6>
+            <Row className="mb-2 g-2">
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  placeholder="First Name *"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  placeholder="Last Name *"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+            </Row>
+
+            <Row className="mb-2 g-2">
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  placeholder="Father's / Spouse Name"
+                  name="spouseName"
+                  value={formData.spouseName}
+                  onChange={handleChange}
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  type="date"
+                  title="Date of Birth"
+                  name="dob"
+                  value={formData.dob}
+                  onChange={handleChange}
+                />
+              </Col>
+            </Row>
+
+            <Row className="mb-2 g-2">
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  placeholder="Qualification (e.g. B.Com)"
+                  name="qualification"
+                  value={formData.qualification}
+                  onChange={handleChange}
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  placeholder="Profession (e.g. Retired Bank Employee)"
+                  name="profession"
+                  value={formData.profession}
+                  onChange={handleChange}
+                />
+              </Col>
+            </Row>
+
+            <Row className="mb-3 g-2">
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  placeholder="Aadhaar Number"
+                  name="aadhaar"
+                  value={formData.aadhaar}
+                  onChange={handleChange}
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  placeholder="PAN Number"
+                  name="pan"
+                  value={formData.pan}
+                  onChange={handleChange}
+                />
+              </Col>
+            </Row>
+
+            {/* Contact & References */}
+            <h6 className="text-maroon border-bottom pb-2 mb-3">
+              Contact & References
+            </h6>
+            <Row className="mb-2 g-2">
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  placeholder="Mobile Number *"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Control
+                  size="sm"
+                  type="email"
+                  placeholder="Email Address"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+              </Col>
+            </Row>
+
+            <Form.Control
+              size="sm"
+              as="textarea"
+              rows={2}
+              placeholder="Residential Address *"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              required
+              className="mb-2"
+            />
+
+            <Form.Control
+              size="sm"
+              placeholder="Positions held in other Organizations (Optional)"
+              name="otherOrgPositions"
+              value={formData.otherOrgPositions}
+              onChange={handleChange}
+              className="mb-2"
+            />
+            <Form.Control
+              size="sm"
+              placeholder="References (Name of persons who introduced you)"
+              name="references"
+              value={formData.references}
+              onChange={handleChange}
+              className="mb-3"
+            />
+
+            {/* Membership Type */}
+            <h6 className="text-maroon border-bottom pb-2 mb-3">
+              Membership Details
+            </h6>
+            <Row className="g-2">
+              <Col md={4} className="mb-3">
+                <Form.Label className="small fw-bold">Category</Form.Label>
+                <Form.Select
+                  size="sm"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                >
+                  <option value="Ordinary">Ordinary Member</option>
+                  <option value="Permanent">Permanent Member</option>
+                  <option value="EC">Executive Committee (EC)</option>
+                </Form.Select>
+              </Col>
+              <Col md={4} className="mb-3">
+                <Form.Label className="small fw-bold">Plan Type</Form.Label>
+                <Form.Select
+                  size="sm"
+                  name="membershipType"
+                  value={formData.membershipType}
+                  onChange={handleChange}
+                >
+                  <option value="Annual">Annual</option>
+                  <option value="Life">Life Membership</option>
+                  <option value="Patron">Patron</option>
+                  <option value="Volunteer">Volunteer</option>
+                </Form.Select>
+              </Col>
+              <Col md={4} className="mb-3">
+                <Form.Label className="small fw-bold">Branch</Form.Label>
+                <Form.Select
+                  size="sm"
+                  name="branch"
+                  value={formData.branch}
+                  onChange={handleChange}
+                >
+                  <option value="Karunya Sindhu">Karunya Sindhu</option>
+                  <option value="Karunya Bharathi">Karunya Bharathi</option>
+                  <option value="Karunya Jyothi">Karunya Jyothi</option>
+                  <option value="Headquarters">Headquarters</option>
+                </Form.Select>
+              </Col>
+            </Row>
+
+            <Row className="g-2">
+              <Col md={6}>
+                <Form.Label className="small fw-bold">
+                  Fee Amount (₹)
+                </Form.Label>
+                <Form.Control
+                  size="sm"
+                  type="number"
+                  name="feeAmount"
+                  value={formData.feeAmount}
+                  onChange={handleChange}
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Label className="small fw-bold">
+                  Payment Status
+                </Form.Label>
+                <Form.Select
+                  size="sm"
+                  name="feeStatus"
+                  value={formData.feeStatus}
+                  onChange={handleChange}
+                >
+                  <option value="Paid">Paid</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Waived">Waived (Honorary)</option>
+                </Form.Select>
+              </Col>
+            </Row>
+
+            <Button type="submit" className="w-100 btn-ashram mt-4">
+              Register Member
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* ACTIVITY MODAL */}
       <Modal
         show={showActivityModal}
         onHide={() => setShowActivityModal(false)}
@@ -260,7 +539,7 @@ const MemberList = () => {
           <Modal.Title>Log Member Activity</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p>
+          <p className="text-muted small mb-3">
             Member:{" "}
             <strong>
               {selectedMember?.firstName} {selectedMember?.lastName}
@@ -268,7 +547,7 @@ const MemberList = () => {
           </p>
           <Form onSubmit={handleAddActivity}>
             <Form.Group className="mb-3">
-              <Form.Label>Event / Program Name</Form.Label>
+              <Form.Label>Event / Task Name</Form.Label>
               <Form.Control
                 placeholder="e.g. Janmashtami Setup"
                 value={activityData.eventName}
@@ -305,212 +584,6 @@ const MemberList = () => {
             </Form.Group>
             <Button type="submit" className="w-100 btn-ashram">
               Save Activity
-            </Button>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* Add Member Modal */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>New Member Registration</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {/* <Form onSubmit={handleSubmit}>
-            <Row>
-              <Col md={6} className="mb-3">
-                <Form.Label>First Name</Form.Label>
-                <Form.Control
-                  name="firstName"
-                  onChange={handleChange}
-                  required
-                />
-              </Col>
-              <Col md={6} className="mb-3">
-                <Form.Label>Last Name</Form.Label>
-                <Form.Control
-                  name="lastName"
-                  onChange={handleChange}
-                  required
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col md={6} className="mb-3">
-                <Form.Label>Phone</Form.Label>
-                <Form.Control name="phone" onChange={handleChange} required />
-              </Col>
-              <Col md={6} className="mb-3">
-                <Form.Label>Email</Form.Label>
-                <Form.Control name="email" onChange={handleChange} />
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Address</Form.Label>
-              <Form.Control
-                as="textarea"
-                name="address"
-                onChange={handleChange}
-                required
-              />
-            </Form.Group>
-
-            <hr />
-
-            <Row>
-              <Col md={4} className="mb-3">
-                <Form.Label>Membership Type</Form.Label>
-                <Form.Select name="membershipType" onChange={handleChange}>
-                  <option>Annual</option>
-                  <option>Life</option>
-                  <option>Patron</option>
-                  <option>Volunteer</option>
-                </Form.Select>
-              </Col>
-              <Col md={4} className="mb-3">
-                <Form.Label>Branch</Form.Label>
-                <Form.Select name="branch" onChange={handleChange}>
-                  <option value="Headquarters">Headquarters</option>
-                  <option value="Karunya Sindu">Karunya Sindu</option>
-                  <option value="Karunya Bharathi">Karunya Bharathi</option>
-                </Form.Select>
-              </Col>
-              <Col md={4} className="mb-3">
-                <Form.Label>Fee Amount (₹)</Form.Label>
-                <Form.Control
-                  type="number"
-                  name="feeAmount"
-                  value={formData.feeAmount}
-                  onChange={handleChange}
-                />
-              </Col>
-              <Col md={4} className="mb-3">
-                <Form.Label>Fee Status</Form.Label>
-                <Form.Select name="feeStatus" onChange={handleChange}>
-                  <option>Paid</option>
-                  <option>Pending</option>
-                  <option>Waived</option>
-                </Form.Select>
-              </Col>
-            </Row>
-
-            <Button type="submit" className="w-100 btn-ashram">
-              Register Member
-            </Button>
-          </Form> */}
-          <Form onSubmit={handleSubmit}>
-            <Row>
-              <Col md={6} className="mb-3">
-                <Form.Label>First Name *</Form.Label>
-                <Form.Control
-                  name="firstName"
-                  onChange={handleChange}
-                  required
-                />
-              </Col>
-              <Col md={6} className="mb-3">
-                <Form.Label>Last Name *</Form.Label>
-                <Form.Control
-                  name="lastName"
-                  onChange={handleChange}
-                  required
-                />
-              </Col>
-            </Row>
-
-            {/* NEW ROW: IDs */}
-            <Row>
-              <Col md={6} className="mb-3">
-                <Form.Label>Aadhaar Number</Form.Label>
-                <Form.Control
-                  name="aadhaar"
-                  onChange={handleChange}
-                  placeholder="12 Digit UID"
-                />
-              </Col>
-              <Col md={6} className="mb-3">
-                <Form.Label>PAN Number</Form.Label>
-                <Form.Control
-                  name="pan"
-                  onChange={handleChange}
-                  placeholder="Permanent Account No"
-                />
-              </Col>
-            </Row>
-
-            <Row>
-              <Col md={6} className="mb-3">
-                <Form.Label>Phone *</Form.Label>
-                <Form.Control name="phone" onChange={handleChange} required />
-              </Col>
-              <Col md={6} className="mb-3">
-                <Form.Label>Email</Form.Label>
-                <Form.Control name="email" onChange={handleChange} />
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Address</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                name="address"
-                onChange={handleChange}
-                required
-              />
-            </Form.Group>
-
-            <hr />
-
-            <Row>
-              <Col md={4} className="mb-3">
-                <Form.Label>Role Category</Form.Label>
-                <Form.Select name="category" onChange={handleChange}>
-                  <option value="Ordinary">Ordinary</option>
-                  <option value="Permanent">Permanent</option>
-                  <option value="EC">Executive Committee (EC)</option>
-                </Form.Select>
-              </Col>
-              <Col md={4} className="mb-3">
-                <Form.Label>Plan Type</Form.Label>
-                <Form.Select name="membershipType" onChange={handleChange}>
-                  <option>Annual</option>
-                  <option>Life</option>
-                  <option>Patron</option>
-                  <option>Volunteer</option>
-                </Form.Select>
-              </Col>
-              <Col md={4} className="mb-3">
-                <Form.Label>Branch</Form.Label>
-                <Form.Select name="branch" onChange={handleChange}>
-                  <option value="Headquarters">Headquarters</option>
-                  <option value="Karunya Sindhu">Karunya Sindhu</option>
-                  <option value="Karunya Bharathi">Karunya Bharathi</option>
-                </Form.Select>
-              </Col>
-            </Row>
-
-            <Row>
-              <Col md={6}>
-                <Form.Label>Fee Amount (₹)</Form.Label>
-                <Form.Control
-                  type="number"
-                  name="feeAmount"
-                  value={formData.feeAmount}
-                  onChange={handleChange}
-                />
-              </Col>
-              <Col md={6}>
-                <Form.Label>Status</Form.Label>
-                <Form.Select name="feeStatus" onChange={handleChange}>
-                  <option>Paid</option>
-                  <option>Pending</option>
-                  <option>Waived</option>
-                </Form.Select>
-              </Col>
-            </Row>
-
-            <Button type="submit" className="w-100 btn-ashram mt-3">
-              Register Member
             </Button>
           </Form>
         </Modal.Body>

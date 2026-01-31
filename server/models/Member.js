@@ -5,6 +5,14 @@ const memberSchema = mongoose.Schema(
     // Personal Details
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
+    // --- NEW FIELDS FROM PHYSICAL FORM ---
+    spouseName: { type: String }, // Father's or Spouse's Name
+    dob: { type: Date },
+    qualification: { type: String },
+    profession: { type: String },
+    otherOrgPositions: { type: String }, // Positions held in other orgs
+    references: { type: String }, // Names of references (e.g. "Sri R. Satyanarayana")
+    // -------------------------------------
     phone: { type: String, required: true, unique: true },
     email: { type: String },
     address: { type: String, required: true },

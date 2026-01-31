@@ -450,6 +450,7 @@ const FinanceList = () => {
       bankName: "",
       transactionId: "",
     },
+    branch: "Headquarters", // Default
   });
   const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
 
@@ -589,6 +590,7 @@ const FinanceList = () => {
         description: "",
         paymentMode: "Cash",
         recipientName: "",
+        branch: "Headquarters",
         paymentDetails: {
           chequeNo: "",
           chequeDate: "",
@@ -615,20 +617,75 @@ const FinanceList = () => {
     }
   };
 
+  // const renderPaymentFields = () => {
+  //   const mode = formData.paymentMode;
+  //   if (mode === "Cheque" || mode === "DD") {
+  //     return (
+  //       <Row className="bg-light p-2 rounded mb-3 border">
+  //         <Col md={4}>
+  //           <Form.Control
+  //             size="sm"
+  //             placeholder="Cheque/DD No"
+  //             name="chequeNo"
+  //             value={formData.paymentDetails.chequeNo}
+  //             onChange={handleChange}
+  //           />
+  //         </Col>
+  //         <Col md={4}>
+  //           <Form.Control
+  //             size="sm"
+  //             type="date"
+  //             name="chequeDate"
+  //             value={formData.paymentDetails.chequeDate}
+  //             onChange={handleChange}
+  //           />
+  //         </Col>
+  //         <Col md={4}>
+  //           <Form.Control
+  //             size="sm"
+  //             placeholder="Bank Name"
+  //             name="bankName"
+  //             value={formData.paymentDetails.bankName}
+  //             onChange={handleChange}
+  //           />
+  //         </Col>
+  //       </Row>
+  //     );
+  //   }
+  //   if (mode === "UPI" || mode === "Bank Transfer") {
+  //     return (
+  //       <Form.Control
+  //         size="sm"
+  //         className="mb-3"
+  //         placeholder="Txn ID"
+  //         name="transactionId"
+  //         value={formData.paymentDetails.transactionId}
+  //         onChange={handleChange}
+  //       />
+  //     );
+  //   }
+  //   return null;
+  // };
   const renderPaymentFields = () => {
-    const mode = formData.paymentMode;
-    if (mode === "Cheque" || mode === "DD") {
-      return (
-        <Row className="bg-light p-2 rounded mb-3 border">
-          <Col md={4}>
-            <Form.Control
-              size="sm"
-              placeholder="Cheque/DD No"
-              name="chequeNo"
-              value={formData.paymentDetails.chequeNo}
-              onChange={handleChange}
-            />
-          </Col>
+    return (
+      <div className="bg-light p-2 rounded mb-3 border">
+        <h6 className="text-muted small mb-2">Payment Details (Optional)</h6>
+        <Row className="g-2">
+          {/* Show Cheque/DD No only for those modes */}
+          {(formData.paymentMode === "Cheque" ||
+            formData.paymentMode === "DD") && (
+            <Col md={4}>
+              <Form.Control
+                size="sm"
+                placeholder="Cheque/DD No"
+                name="chequeNo"
+                value={formData.paymentDetails.chequeNo}
+                onChange={handleChange}
+              />
+            </Col>
+          )}
+
+          {/* Date Field */}
           <Col md={4}>
             <Form.Control
               size="sm"
@@ -636,33 +693,38 @@ const FinanceList = () => {
               name="chequeDate"
               value={formData.paymentDetails.chequeDate}
               onChange={handleChange}
+              title="Instrument Date"
             />
           </Col>
+
+          {/* Bank Name - Visible for CASH too now */}
           <Col md={4}>
             <Form.Control
               size="sm"
-              placeholder="Bank Name"
+              placeholder="Bank Name / Account No"
               name="bankName"
               value={formData.paymentDetails.bankName}
               onChange={handleChange}
             />
           </Col>
+
+          {/* Transaction ID - Visible for Online/UPI */}
+          {(formData.paymentMode === "Online" ||
+            formData.paymentMode === "UPI" ||
+            formData.paymentMode === "Bank Transfer") && (
+            <Col md={12}>
+              <Form.Control
+                size="sm"
+                placeholder="Transaction ID / Ref No"
+                name="transactionId"
+                value={formData.paymentDetails.transactionId}
+                onChange={handleChange}
+              />
+            </Col>
+          )}
         </Row>
-      );
-    }
-    if (mode === "UPI" || mode === "Bank Transfer") {
-      return (
-        <Form.Control
-          size="sm"
-          className="mb-3"
-          placeholder="Txn ID"
-          name="transactionId"
-          value={formData.paymentDetails.transactionId}
-          onChange={handleChange}
-        />
-      );
-    }
-    return null;
+      </div>
+    );
   };
 
   const filteredVouchers = vouchers.filter((v) => {
@@ -845,7 +907,7 @@ const FinanceList = () => {
         </Card.Body>
       </Card>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
+      {/* <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Create Voucher</Modal.Title>
         </Modal.Header>
@@ -853,6 +915,23 @@ const FinanceList = () => {
           <Form onSubmit={handleSubmit}>
             <Row className="g-2 mb-2">
               <Col md={6}>
+                <Form.Group className="mb-2">
+                  <Form.Label className="small">Ashram Branch</Form.Label>
+                  <Form.Select
+                    name="branch"
+                    value={formData.branch}
+                    onChange={handleChange}
+                    className="fw-bold border-warning"
+                  >
+                    <option value="Headquarters">Headquarters</option>
+                    <option value="Karunya Sindu">Karunya Sindhu</option>
+                    <option value="Karunya Bharathi">Karunya Bharathi</option>
+                    <option value="Karunya Jyothi">Karunya Jyothi</option>
+                    <option value="Karuna Sree Seva Samithi">
+                      Karuna Sree Seva Samithi
+                    </option>
+                  </Form.Select>
+                </Form.Group>
                 <Form.Label className="small">Voucher Type</Form.Label>
                 <Form.Select
                   name="voucherType"
@@ -872,7 +951,6 @@ const FinanceList = () => {
                   required
                 >
                   <option value="">-- Select --</option>
-                  {/* FIX: FILTERED CORRECTLY AND SHOWS CODE */}
                   {accountHeads
                     .filter((a) => a.type === formData.voucherType)
                     .map((acc) => (
@@ -931,6 +1009,121 @@ const FinanceList = () => {
               onChange={handleChange}
               className="mb-3"
             />
+
+            <Button type="submit" variant="dark" className="w-100">
+              Generate Voucher
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal> */}
+      {/* MODAL UPDATED WITH BRANCH */}
+      <Modal show={showModal} onHide={() => setShowModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Create Voucher</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmit}>
+            <Row className="g-2 mb-2">
+              <Col md={6}>
+                <Form.Label className="small">Voucher Type</Form.Label>
+                <Form.Select
+                  name="voucherType"
+                  value={formData.voucherType}
+                  onChange={handleChange}
+                >
+                  <option value="Debit">Debit (Payment)</option>
+                  <option value="Credit">Credit (Receipt)</option>
+                </Form.Select>
+              </Col>
+              {/* NEW: BRANCH SELECTION */}
+              <Col md={6}>
+                <Form.Label className="small">Branch</Form.Label>
+                <Form.Select
+                  name="branch"
+                  value={formData.branch}
+                  onChange={handleChange}
+                >
+                  <option value="Headquarters">Headquarters</option>
+                  <option value="Karunya Sindhu">Karunya Sindhu</option>
+                  <option value="Karunya Bharathi">Karunya Bharathi</option>
+                  <option value="Karunya Jyothi">Karunya Jyothi</option>
+                  <option value="Karuna Sree Seva Samithi">
+                    Karuna Sree Seva Samithi
+                  </option>
+                </Form.Select>
+              </Col>
+            </Row>
+
+            <Row className="g-2 mb-2">
+              <Col md={12}>
+                <Form.Label className="small">Account Head</Form.Label>
+                <Form.Select
+                  name="accountHead"
+                  value={formData.accountHead}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">-- Select --</option>
+                  {accountHeads
+                    .filter((a) => a.type === formData.voucherType)
+                    .map((acc) => (
+                      <option key={acc._id} value={acc._id}>
+                        {acc.code} - {acc.name}
+                      </option>
+                    ))}
+                </Form.Select>
+              </Col>
+            </Row>
+
+            <Form.Group className="mb-2">
+              <Form.Label className="small">Paid To (Recipient)</Form.Label>
+              <Form.Control
+                name="recipientName"
+                value={formData.recipientName}
+                onChange={handleChange}
+                required
+                placeholder="Name of Person/Shop"
+              />
+            </Form.Group>
+
+            <Row className="g-2 mb-2">
+              <Col md={6}>
+                <Form.Label className="small">Amount</Form.Label>
+                <Form.Control
+                  type="number"
+                  name="amount"
+                  value={formData.amount}
+                  onChange={handleChange}
+                  required
+                />
+              </Col>
+              <Col md={6}>
+                <Form.Label className="small">Mode</Form.Label>
+                <Form.Select
+                  name="paymentMode"
+                  value={formData.paymentMode}
+                  onChange={handleChange}
+                >
+                  <option>Cash</option>
+                  <option>Cheque</option>
+                  <option>Bank Transfer</option>
+                  <option>UPI</option>
+                </Form.Select>
+              </Col>
+            </Row>
+
+            {renderPaymentFields()}
+
+            <Form.Group className="mb-3">
+              <Form.Label className="small">Towards (Description)</Form.Label>
+              <Form.Control
+                as="textarea"
+                name="description"
+                placeholder="e.g. Bus Charges for students"
+                value={formData.description}
+                onChange={handleChange}
+              />
+            </Form.Group>
 
             <Button type="submit" variant="dark" className="w-100">
               Generate Voucher
