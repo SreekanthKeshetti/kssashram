@@ -22,6 +22,7 @@ import {
   FaCheckCircle,
   FaTimesCircle,
   FaTasks,
+  FaFilePdf,
 } from "react-icons/fa";
 
 const MemberList = () => {
@@ -152,6 +153,24 @@ const MemberList = () => {
       alert("Error logging activity");
     }
   };
+  const handleDownloadBlank = async () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const response = await axios.get(`${BASE_URL}/api/members/blank-form`, {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "Blank_Membership_Form.pdf");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("Error downloading blank form");
+    }
+  };
 
   return (
     <div>
@@ -168,6 +187,14 @@ const MemberList = () => {
           </p>
         </Col>
         <Col className="text-end">
+          <Button
+            variant="outline-danger"
+            className="me-2"
+            onClick={handleDownloadBlank}
+          >
+            <FaFilePdf className="me-2" /> Blank Form
+          </Button>
+
           <Button
             variant="primary"
             style={{ backgroundColor: "#581818", border: "none" }}

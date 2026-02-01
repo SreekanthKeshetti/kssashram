@@ -158,6 +158,52 @@ const downloadMemberForm = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// @desc    Download Blank Membership Form (For offline filling)
+// @route   GET /api/members/blank-form
+const downloadBlankForm = async (req, res) => {
+  try {
+    // Create a "Dummy" member object with lines for writing
+    const blankMember = {
+      firstName: "_______________________",
+      lastName: "_______________________",
+      spouseName: "_______________________________________",
+      dob: null, // Logic in PDF generator handles null dates
+      qualification: "_______________________",
+      profession: "_______________________",
+      otherOrgPositions: "_______________________________________",
+      references: "_______________________________________",
+      aadhaar: "_______________________",
+      pan: "_______________________",
+      phone: "_______________________",
+      email: "_______________________",
+      address:
+        "______________________________________________________________________________\n______________________________________________________________________________",
+      branch: "_______________________",
+      category: "_______________",
+      membershipType: "_______________",
+      feeAmount: "_______",
+      feeStatus: "_______",
+      joinDate: new Date(), // Uses today's date for "Date" field
+      createdAt: new Date(),
+    };
+
+    const filename = "Blank_Membership_Application.pdf";
+    res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-type", "application/pdf");
+
+    // Reuse the existing PDF generator!
+    // It works perfectly because it just expects an object with these keys.
+    const { buildMemberProfile } = require("../utils/generateMemberPDF");
+
+    buildMemberProfile(
+      blankMember,
+      (chunk) => res.write(chunk),
+      () => res.end(),
+    );
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // Export
 module.exports = {
@@ -166,4 +212,5 @@ module.exports = {
   addMemberActivity,
   getMemberById,
   downloadMemberForm,
+  downloadBlankForm,
 };
