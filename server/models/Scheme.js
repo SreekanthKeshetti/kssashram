@@ -11,7 +11,7 @@ const schemeSchema = mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Scheme", schemeSchema);

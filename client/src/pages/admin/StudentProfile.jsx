@@ -523,43 +523,189 @@ const StudentProfile = () => {
         </div>
       </div>
 
-      {/* --- TRANSFER REQUEST PENDING BANNER --- */}
+      {/* --- 3-TIER TRANSFER REQUEST CARD --- */}
       {student.transferRequest?.status === "Pending" && (
-        <Alert
-          variant="info"
-          className="d-flex justify-content-between align-items-center mb-4"
-        >
-          <div>
-            <strong>
-              <FaBuilding className="me-2" /> Transfer Requested
-            </strong>
-            <span className="mx-2">to</span>
-            <Badge bg="dark">{student.transferRequest.targetBranch}</Badge>
-            <div className="small mt-1">
-              Reason: {student.transferRequest.reason}
-            </div>
-          </div>
-          {(currentUser?.role === "president" ||
-            currentUser?.role === "admin") && (
-            <div>
-              <Button
-                size="sm"
-                variant="success"
-                className="me-2"
-                onClick={() => handleApproveTransfer("Approved")}
-              >
-                Approve
-              </Button>
-              <Button
-                size="sm"
-                variant="danger"
-                onClick={() => handleApproveTransfer("Rejected")}
-              >
-                Reject
-              </Button>
-            </div>
-          )}
-        </Alert>
+        <Card className="mb-4 border-info shadow-sm">
+          <Card.Header className="bg-info text-white fw-bold d-flex align-items-center">
+            <FaBuilding className="me-2" /> Transfer Request Pending
+          </Card.Header>
+          <Card.Body>
+            <Row className="align-items-center">
+              <Col md={7}>
+                <h5 className="text-maroon">
+                  Target:{" "}
+                  <strong>{student.transferRequest.targetBranch}</strong>
+                </h5>
+                <p className="text-muted mb-1">
+                  <strong>Reason:</strong> {student.transferRequest.reason}
+                </p>
+                <small className="text-muted">
+                  Requested on:{" "}
+                  {new Date(
+                    student.transferRequest.requestDate || Date.now(),
+                  ).toLocaleDateString()}
+                </small>
+              </Col>
+              <Col md={5}>
+                <Table size="sm" bordered className="mb-0 text-center bg-white">
+                  <tbody>
+                    {/* PRESIDENT ROW */}
+                    <tr>
+                      <td className="small fw-bold align-middle">President</td>
+                      <td className="align-middle">
+                        <Badge
+                          bg={
+                            student.transferRequest.approvals?.president
+                              ?.status === "Approved"
+                              ? "success"
+                              : student.transferRequest.approvals?.president
+                                    ?.status === "Rejected"
+                                ? "danger"
+                                : "secondary"
+                          }
+                        >
+                          {student.transferRequest.approvals?.president
+                            ?.status || "Pending"}
+                        </Badge>
+                      </td>
+                      <td className="align-middle">
+                        {(currentUser?.role === "president" ||
+                          currentUser?.role === "admin") &&
+                          student.transferRequest.approvals?.president
+                            ?.status === "Pending" && (
+                            <div className="d-flex gap-1 justify-content-center">
+                              <Button
+                                size="sm"
+                                variant="success"
+                                className="py-0 px-2"
+                                onClick={() =>
+                                  handleApproveTransfer("Approved")
+                                }
+                                title="Approve"
+                              >
+                                ✓
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                className="py-0 px-2"
+                                onClick={() =>
+                                  handleApproveTransfer("Rejected")
+                                }
+                                title="Reject"
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          )}
+                      </td>
+                    </tr>
+
+                    {/* SECRETARY ROW */}
+                    <tr>
+                      <td className="small fw-bold align-middle">Secretary</td>
+                      <td className="align-middle">
+                        <Badge
+                          bg={
+                            student.transferRequest.approvals?.secretary
+                              ?.status === "Approved"
+                              ? "success"
+                              : student.transferRequest.approvals?.secretary
+                                    ?.status === "Rejected"
+                                ? "danger"
+                                : "secondary"
+                          }
+                        >
+                          {student.transferRequest.approvals?.secretary
+                            ?.status || "Pending"}
+                        </Badge>
+                      </td>
+                      <td className="align-middle">
+                        {(currentUser?.role === "secretary" ||
+                          currentUser?.role === "admin") &&
+                          student.transferRequest.approvals?.secretary
+                            ?.status === "Pending" && (
+                            <div className="d-flex gap-1 justify-content-center">
+                              <Button
+                                size="sm"
+                                variant="success"
+                                className="py-0 px-2"
+                                onClick={() =>
+                                  handleApproveTransfer("Approved")
+                                }
+                              >
+                                ✓
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                className="py-0 px-2"
+                                onClick={() =>
+                                  handleApproveTransfer("Rejected")
+                                }
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          )}
+                      </td>
+                    </tr>
+
+                    {/* TREASURER ROW */}
+                    <tr>
+                      <td className="small fw-bold align-middle">Treasurer</td>
+                      <td className="align-middle">
+                        <Badge
+                          bg={
+                            student.transferRequest.approvals?.treasurer
+                              ?.status === "Approved"
+                              ? "success"
+                              : student.transferRequest.approvals?.treasurer
+                                    ?.status === "Rejected"
+                                ? "danger"
+                                : "secondary"
+                          }
+                        >
+                          {student.transferRequest.approvals?.treasurer
+                            ?.status || "Pending"}
+                        </Badge>
+                      </td>
+                      <td className="align-middle">
+                        {(currentUser?.role === "treasurer" ||
+                          currentUser?.role === "admin") &&
+                          student.transferRequest.approvals?.treasurer
+                            ?.status === "Pending" && (
+                            <div className="d-flex gap-1 justify-content-center">
+                              <Button
+                                size="sm"
+                                variant="success"
+                                className="py-0 px-2"
+                                onClick={() =>
+                                  handleApproveTransfer("Approved")
+                                }
+                              >
+                                ✓
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                className="py-0 px-2"
+                                onClick={() =>
+                                  handleApproveTransfer("Rejected")
+                                }
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          )}
+                      </td>
+                    </tr>
+                  </tbody>
+                </Table>
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
       )}
 
       {/* --- ALUMNI EXIT APPROVAL WORKFLOW --- */}
@@ -1342,8 +1488,8 @@ const StudentProfile = () => {
             <option value="Karunya Sindhu">Karunya Sindhu</option>
             <option value="Karunya Bharathi">Karunya Bharathi</option>
             <option value="Karunya Jyothi">Karunya Jyothi</option>
-            <option value="Karuna Sree Seva Samithi">
-              Karuna Sree Seva Samithi
+            <option value="KarunaSri Seva Samithi">
+              KarunaSri Seva Samithi
             </option>
           </Form.Select>
           <Form.Label>Reason</Form.Label>

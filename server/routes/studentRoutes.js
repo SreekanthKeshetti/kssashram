@@ -22,15 +22,7 @@ const {
 } = require("../controllers/studentController");
 const { protect, admin, staff } = require("../middleware/authMiddleware");
 // --- MULTER CONFIG (Same as Donation) ---
-// const storage = multer.diskStorage({
-//   destination(req, file, cb) {
-//     cb(null, "uploads/");
-//   },
-//   filename(req, file, cb) {
-//     cb(null, `STU-${Date.now()}${path.extname(file.originalname)}`);
-//   },
-// });
-// --- UPDATED MULTER CONFIGURATION (Auto-Create Folder) ---
+
 const storage = multer.diskStorage({
   destination(req, file, cb) {
     const uploadPath = "uploads/";

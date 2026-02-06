@@ -191,8 +191,14 @@ const updateStudent = async (req, res) => {
         targetBranch: req.body.targetBranch,
         reason: req.body.reason,
         initiatedBy: req.user._id,
+        requestDate: Date.now(),
         status: "Pending",
-        date: Date.now(),
+        // Reset all 3 approvals to Pending
+        approvals: {
+          president: { status: "Pending" },
+          secretary: { status: "Pending" },
+          treasurer: { status: "Pending" },
+        },
       };
 
       await student.save();
@@ -292,37 +298,58 @@ const approveAlumniExit = async (req, res) => {
   }
 };
 
-// @desc    Approve Branch Transfer (President/Admin Only)
+// @desc    Approve Branch Transfer (3-Tier)
 // @route   PUT /api/students/:id/approve-transfer
 const approveTransfer = async (req, res) => {
   try {
     const student = await Student.findById(req.params.id);
     if (!student) return res.status(404).json({ message: "Student not found" });
 
+    const { role } = req.user;
     const { status } = req.body; // 'Approved' or 'Rejected'
 
-    // Only President or Admin can approve transfers
-    if (req.user.role !== "president" && req.user.role !== "admin") {
+    // 1. Update Specific Role
+    if (role === "president" || role === "admin") {
+      student.transferRequest.approvals.president = {
+        status,
+        date: Date.now(),
+      };
+    } else if (role === "secretary") {
+      student.transferRequest.approvals.secretary = {
+        status,
+        date: Date.now(),
+      };
+    } else if (role === "treasurer") {
+      student.transferRequest.approvals.treasurer = {
+        status,
+        date: Date.now(),
+      };
+    } else {
       return res
         .status(403)
-        .json({ message: "Only President can approve transfers." });
+        .json({ message: "Not authorized to approve transfers." });
     }
 
-    if (status === "Approved") {
-      // Execute Transfer
-      student.branch = student.transferRequest.targetBranch; // Update Branch
-      student.transferRequest.status = "Approved";
-      student.transferRequest.approvedBy = req.user._id;
+    // 2. Check Logic
+    const p = student.transferRequest.approvals.president.status;
+    const s = student.transferRequest.approvals.secretary.status;
+    const t = student.transferRequest.approvals.treasurer.status;
 
-      // Log it
+    if (p === "Approved" && s === "Approved" && t === "Approved") {
+      // ALL APPROVED: Execute Transfer
+      student.branch = student.transferRequest.targetBranch;
+      student.transferRequest.status = "Approved";
+
+      // Log the movement
       await logAudit(
         req,
         "UPDATE",
         "Student",
         student._id,
-        `Transferred to ${student.branch}`,
+        `Transferred to ${student.branch} (Consensus Approved)`,
       );
-    } else {
+    } else if (p === "Rejected" || s === "Rejected" || t === "Rejected") {
+      // ANY ONE REJECTED: Cancel Request
       student.transferRequest.status = "Rejected";
     }
 
@@ -332,6 +359,8 @@ const approveTransfer = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// ... export it at the bottom
 
 // @desc    Delete Student (Admin Only)
 // @route   DELETE /api/students/:id

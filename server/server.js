@@ -1,31 +1,3 @@
-// const express = require("express");
-// const dotenv = require("dotenv");
-// const cors = require("cors");
-// const connectDB = require("./config/db");
-
-// // Load config
-// dotenv.config();
-
-// // Connect to Database
-// connectDB();
-
-// const app = express();
-
-// // Middleware
-// app.use(cors()); // Allows frontend to connect
-// app.use(express.json()); // Allows us to parse JSON data sent from frontend
-
-// // Basic Route (Test if server is running)
-// app.get("/", (req, res) => {
-//   res.send("Karunasri Backend is Running...");
-// });
-
-// // Define Port
-// const PORT = process.env.PORT || 5000;
-
-// app.listen(PORT, () => {
-//   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-// });
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");

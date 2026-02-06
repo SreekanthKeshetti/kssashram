@@ -538,6 +538,9 @@ const Settings = () => {
                     <option value="Headquarters">Headquarters</option>
                     <option value="Karunya Sindhu">Karunya Sindhu</option>
                     <option value="Karunya Bharathi">Karunya Bharathi</option>
+                    <option value="KarunaSri Seva Samithi">
+                      KarunaSri Seva Samithi
+                    </option>
                   </Form.Select>
                 </Form.Group>
               </Col>

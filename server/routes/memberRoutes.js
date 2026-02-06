@@ -7,8 +7,9 @@ const {
   getMemberById,
   downloadMemberForm,
   downloadBlankForm,
+  approveMember,
 } = require("../controllers/memberController");
-const { protect, staff } = require("../middleware/authMiddleware");
+const { protect, staff, committee } = require("../middleware/authMiddleware");
 
 router
   .route("/")
@@ -18,5 +19,7 @@ router.post("/:id/activity", protect, staff, addMemberActivity);
 router.get("/blank-form", protect, staff, downloadBlankForm);
 router.get("/:id", protect, staff, getMemberById);
 router.get("/:id/download", protect, staff, downloadMemberForm);
+// Add Approval Route (Restricted to Committee/Admin)
+router.put("/:id/approve", protect, committee, approveMember);
 
 module.exports = router;

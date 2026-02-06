@@ -724,8 +724,8 @@ const StudentList = () => {
                   <option value="Karunya Sindhu">Karunya Sindhu</option>
                   <option value="Karunya Bharathi">Karunya Bharathi</option>
                   <option value="Karunya Jyothi">Karunya Jyothi</option>
-                  <option value="Karuna Sree Seva Samithi">
-                    Karuna Sree Seva Samithi
+                  <option value="KarunaSri Seva Samithi">
+                    KarunaSri Seva Samithi
                   </option>
                 </Form.Select>
               </Col>

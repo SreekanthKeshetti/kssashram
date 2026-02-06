@@ -69,13 +69,56 @@ const numToWords = (num) => {
   return str + "Rupees Only";
 };
 
+// const drawHeader = (doc, branchName) => {
+//   const logoPath = path.join(__dirname, "..", "logo.jpg");
+//   if (fs.existsSync(logoPath)) {
+//     doc.image(logoPath, 30, 25, { width: 50 });
+//   }
+
+//   // Corners
+//   doc.fontSize(9).font("Helvetica-Bold").text("SEVA", 30, 20);
+//   doc.text("SAMSKAR", 500, 20, { align: "right" });
+
+//   // Main Title
+//   doc
+//     .font("Helvetica-Bold")
+//     .fontSize(18)
+//     .fillColor("#000000")
+//     .text("KARUNASRI SEVA SAMITHI", 0, 25, { align: "center" });
+
+//   // Address Block
+//   doc
+//     .font("Helvetica")
+//     .fontSize(8)
+//     .fillColor("#333")
+//     .text("H.No.17-1-474, Krishna Nagar, Saidabad, Hyderabad - 500 059", {
+//       align: "center",
+//     })
+//     .text(
+//       "Society Regd. No. 7451/1999 | PAN: AAATK6724F | Ph: 040-24073204, 9000889785",
+//       { align: "center" },
+//     )
+//     .text("Email: karunasri1999@gmail.com | Website: https://karunasri.org", {
+//       align: "center",
+//     });
+
+//   doc.moveDown(0.5);
+//   // Double Line
+//   doc
+//     .moveTo(20, 80)
+//     .lineTo(575, 80)
+//     .strokeColor("#DAA520")
+//     .lineWidth(1)
+//     .stroke();
+//   doc.moveTo(20, 83).lineTo(575, 83).stroke();
+// };
 const drawHeader = (doc, branchName) => {
   const logoPath = path.join(__dirname, "..", "logo.jpg");
 
   // --- 1. Top Slogans (Y = 20) ---
   doc.fontSize(9).font("Helvetica-Bold").fillColor("black");
   doc.text("SEVA", 30, 20);
-  doc.text("SHIKSHANA", 0, 20, { align: "center" });
+  doc.text("SHIKSHANA", 0, 20, { align: "center" }); // <--- Added Middle Text
   doc.text("SAMSKAR", 500, 20, { align: "right" });
 
   // --- 2. Logo (Moved down to Y=35) ---
@@ -109,7 +152,7 @@ const drawHeader = (doc, branchName) => {
   doc.moveDown(0.5);
   // Double Line
   doc
-    .moveTo(20, 95)
+    .moveTo(20, 95) // Adjusted Y position for lines due to shift
     .lineTo(575, 95)
     .strokeColor("#DAA520")
     .lineWidth(1)
@@ -117,13 +160,8 @@ const drawHeader = (doc, branchName) => {
   doc.moveTo(20, 98).lineTo(575, 98).stroke();
 };
 
-// --- FILE: server/utils/generatePDF.js ---
-
-// ... (Keep imports and helper functions at the top) ...
-
 const buildReceipt = (donation, dataCallback, endCallback) => {
-  // A4 Size (Portrait)
-  const doc = new PDFDocument({ size: "A4", margin: 30 });
+  const doc = new PDFDocument({ size: "A5", layout: "landscape", margin: 30 });
 
   doc.on("data", dataCallback);
   doc.on("end", endCallback);
@@ -131,28 +169,29 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
   drawHeader(doc, donation.branch);
 
   // --- TOP ROW: RECEIPT NO & DATE ---
-  let y = 115;
+  let y = 120;
 
-  const systemReceiptNo =
-    donation.receiptNo || `${donation._id.toString().slice(-6).toUpperCase()}`;
-  const systemDate = new Date(donation.createdAt).toLocaleDateString();
-
+  const receiptNo =
+    donation.manualReceiptNo || donation._id.toString().slice(-6).toUpperCase();
   doc
     .font("Helvetica-Bold")
     .fontSize(11)
     .fillColor("#B22222")
-    .text(`Receipt No: ${systemReceiptNo}`, 30, y);
+    .text(`Receipt No: ${receiptNo}`, 30, y);
 
   doc
     .fillColor("black")
     .fontSize(14)
     .text("RECEIPT", 250, y - 2);
 
-  doc.fontSize(11).text(`Date: ${systemDate}`, 450, y);
+  const dateStr = donation.manualReceiptDate
+    ? new Date(donation.manualReceiptDate).toLocaleDateString()
+    : new Date(donation.createdAt).toLocaleDateString();
+  doc.fontSize(11).text(`Date: ${dateStr}`, 450, y);
 
   // --- MAIN CONTENT ---
-  y += 35;
-  const lineGap = 25; // Slightly increased gap for clarity
+  y += 30;
+  const lineGap = 20;
   doc.fontSize(10).fillColor("black");
 
   // 1. Received From
@@ -165,32 +204,18 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     .strokeColor("#999")
     .stroke();
 
-  // 2. Mobile & IDs (UPDATED: Added underlines for values)
+  // 2. Mobile & IDs
   y += lineGap;
-
-  // Mobile
   doc.font("Helvetica").text("Mobile:", 30, y);
   doc.font("Helvetica-Bold").text(donation.donorPhone, 75, y);
-  doc
-    .moveTo(75, y + 12)
-    .lineTo(190, y + 12)
-    .stroke(); // Underline Mobile Value
 
-  // PAN
   doc.font("Helvetica").text("PAN:", 200, y);
-  doc.font("Helvetica-Bold").text(donation.donorPan || "", 230, y);
-  doc
-    .moveTo(230, y + 12)
-    .lineTo(340, y + 12)
-    .stroke(); // Underline PAN Value
+  doc.font("Helvetica-Bold").text(donation.donorPan || "__________", 230, y);
 
-  // Aadhaar
   doc.font("Helvetica").text("Aadhaar:", 350, y);
-  doc.font("Helvetica-Bold").text(donation.donorAadhaar || "", 400, y);
   doc
-    .moveTo(400, y + 12)
-    .lineTo(560, y + 12)
-    .stroke(); // Underline Aadhaar Value
+    .font("Helvetica-Bold")
+    .text(donation.donorAadhaar || "__________", 400, y);
 
   // 3. Address
   y += lineGap;
@@ -198,59 +223,32 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
 
   const addressX = 80;
   const addressWidth = 480;
-  doc.font("Helvetica-Bold").text(donation.address || "", addressX, y, {
-    width: addressWidth,
-    align: "left",
-  });
+  doc
+    .font("Helvetica-Bold")
+    .text(donation.address || "______________________", addressX, y, {
+      width: addressWidth,
+      align: "left",
+    });
 
   const addressHeight = doc.heightOfString(donation.address || "_", {
     width: addressWidth,
   });
-
-  // Underline address (adjusted to height)
   doc
     .moveTo(addressX, y + addressHeight + 2)
     .lineTo(560, y + addressHeight + 2)
     .stroke();
 
-  y += addressHeight + 15; // Gap after address
-
-  // --- 3A. MANUAL RECEIPT ROW (UPDATED: Specific underlines) ---
-  const manualNo = donation.manualReceiptNo || "";
-  const manualDateStr = donation.manualReceiptDate
-    ? new Date(donation.manualReceiptDate).toLocaleDateString()
-    : "";
-
-  // Left: Manual Receipt No
-  doc.font("Helvetica").text("Ref Manual Receipt No:", 30, y);
-  doc.font("Helvetica-Bold").text(manualNo, 150, y);
-  // Underline ONLY the Manual No value
-  doc
-    .moveTo(150, y + 12)
-    .lineTo(330, y + 12)
-    .stroke();
-
-  // Right: Manual Date
-  doc.font("Helvetica").text("Manual Date:", 350, y);
-  doc.font("Helvetica-Bold").text(manualDateStr, 420, y);
-  // Underline ONLY the Date value
-  doc
-    .moveTo(420, y + 12)
-    .lineTo(560, y + 12)
-    .stroke();
-
-  y += 25; // Gap before Email row
-  // ----------------------------------------------
+  y += addressHeight + 10;
 
   // 4. Email
   doc.font("Helvetica").text("Email Id:", 30, y);
-  doc.font("Helvetica-Bold").text(donation.donorEmail || "", 80, y);
+  doc.font("Helvetica-Bold").text(donation.donorEmail || "__________", 80, y);
   doc
     .moveTo(80, y + 12)
     .lineTo(560, y + 12)
     .stroke();
 
-  // 5. Amount & Words
+  // 5. Amount & Words (UPDATED)
   y += lineGap;
   doc.font("Helvetica").text("A sum of Rs:", 30, y);
   doc.rect(95, y - 3, 90, 18).stroke();
@@ -266,67 +264,6 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
   doc.font("Helvetica").text(" /- )", 280 + wordsWidth, y);
 
   // 6. Payment Narrative
-  // y += lineGap + 10;
-  // let payString = "";
-
-  // // A. Build the Payment Mode String
-  // if (donation.paymentMode === "Cash") {
-  //   payString = "Cash";
-  // } else {
-  //   const { chequeNo, chequeDate, bankName, transactionId, ddNo } =
-  //     donation.paymentDetails || {};
-
-  //   if (donation.paymentMode === "Cheque") {
-  //     payString = `Cheque No. ${chequeNo || "-"} Dt ${chequeDate ? new Date(chequeDate).toLocaleDateString() : "-"}`;
-  //   } else if (donation.paymentMode === "DD") {
-  //     payString = `DD No. ${ddNo || "-"} Dt ${chequeDate ? new Date(chequeDate).toLocaleDateString() : "-"}`;
-  //   } else {
-  //     payString = `${donation.paymentMode} Ref. ${transactionId || "-"}`;
-  //   }
-
-  //   // If there is a Donor's Bank (for Cheque/DD), add it
-  //   if (bankName) payString += ` (Donor Bank: ${bankName})`;
-  // }
-
-  // // B. ADD THE ORGANIZATION'S DEPOSIT BANK (The Requirement)
-  // if (donation.depositBank && donation.depositBank.name) {
-  //   // We append it nicely to the string
-  //   payString += ` | Deposited to: ${donation.depositBank.name}`;
-  // }
-
-  // doc.font("Helvetica").text("By Cash/Cheque/Online:", 30, y);
-  // doc.font("Helvetica-Bold").text(payString, 150, y, { width: 400 });
-
-  // // Calculate height in case text wraps to two lines
-  // const payHeight = doc.heightOfString(payString, { width: 400 });
-
-  // doc
-  //   .moveTo(150, y + payHeight + 2) // Dynamic underline based on text height
-  //   .lineTo(560, y + payHeight + 2)
-  //   .stroke();
-
-  // y += payHeight + 15; // Adjust Y for next section
-
-  // // 7. Towards
-  // y += lineGap;
-  // let towards = donation.scheme;
-  // if (donation.occasion) towards += ` (${donation.occasion})`;
-  // if (donation.inNameOf) towards += ` in name of ${donation.inNameOf}`;
-
-  // doc.font("Helvetica").text("Towards:", 30, y);
-
-  // const towardsWidth = 470;
-  // doc.font("Helvetica-Bold").text(towards, 80, y, { width: towardsWidth });
-
-  // const towardsHeight = doc.heightOfString(towards, { width: towardsWidth });
-
-  // doc
-  //   .moveTo(80, y + towardsHeight + 2)
-  //   .lineTo(560, y + towardsHeight + 2)
-  //   .stroke();
-
-  // y += towardsHeight + 25;
-  // 6. Payment Narrative
   y += lineGap + 10;
   let payString = "";
   if (donation.paymentMode === "Cash") {
@@ -341,78 +278,37 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     } else {
       payString = `${donation.paymentMode} Ref. ${transactionId || "-"}`;
     }
-    // Add Donor Bank if exists
-    if (bankName) payString += ` (Donor Bank: ${bankName})`;
+    if (bankName) payString += ` drawn on ${bankName}`;
   }
 
-  // Draw Payment Mode Line
   doc.font("Helvetica").text("By Cash/Cheque/Online:", 30, y);
   doc.font("Helvetica-Bold").text(payString, 150, y, { width: 400 });
-
-  const payHeight = doc.heightOfString(payString, { width: 400 });
   doc
-    .moveTo(150, y + payHeight + 2)
-    .lineTo(560, y + payHeight + 2)
+    .moveTo(150, y + 12)
+    .lineTo(560, y + 12)
     .stroke();
 
-  // --- 7. DEPOSITED TO ACCOUNT (Always Visible) ---
-  // Add gap based on previous text height
-  y += lineGap + (payHeight > 15 ? 10 : 0);
-
-  doc.font("Helvetica").text("Deposited to Account:", 30, y);
-
-  // Get Bank Name or default to empty string/dash
-  const bankName =
-    donation.depositBank && donation.depositBank.name
-      ? donation.depositBank.name
-      : "";
-
-  doc.font("Helvetica-Bold").text(bankName, 150, y, { width: 400 });
-
-  // Calculate height to position the underline correctly
-  // If bankName is empty, default height is ~12-14px
-  const bankHeight = bankName
-    ? doc.heightOfString(bankName, { width: 400 })
-    : 12;
-
-  doc
-    .moveTo(150, y + bankHeight + 2)
-    .lineTo(560, y + bankHeight + 2)
-    .stroke();
-
-  // Adjust Y for the next section
-  y += bankHeight + 10;
-
-  // --- 8. TOWARDS ---
+  // 7. Towards
   y += lineGap;
-
   let towards = donation.scheme;
   if (donation.occasion) towards += ` (${donation.occasion})`;
   if (donation.inNameOf) towards += ` in name of ${donation.inNameOf}`;
 
   doc.font("Helvetica").text("Towards:", 30, y);
-
-  const towardsWidth = 470;
-  doc.font("Helvetica-Bold").text(towards, 80, y, { width: towardsWidth });
-
-  const towardsHeight = doc.heightOfString(towards, { width: towardsWidth });
-
+  doc.font("Helvetica-Bold").text(towards, 80, y, { width: 470 });
   doc
-    .moveTo(80, y + towardsHeight + 2)
-    .lineTo(560, y + towardsHeight + 2)
+    .moveTo(80, y + 12)
+    .lineTo(560, y + 12)
     .stroke();
 
-  y += towardsHeight + 25;
-
-  // --- FOOTER (Same as before) ---
-  let footerY = y < 350 ? 350 : y;
+  // --- FOOTER ---
+  const footerY = 320;
 
   const isCorpus =
     donation.scheme.toLowerCase().includes("corpus") ||
     donation.scheme.toLowerCase().includes("shasvitha");
 
   doc.font("Helvetica-Bold").fontSize(9);
-
   doc.text("1). Corpus Funds", 30, footerY);
   doc.rect(110, footerY - 2, 10, 10).stroke();
   if (isCorpus) doc.text("X", 112, footerY - 2);
@@ -484,9 +380,8 @@ const buildTaxCertificate = (
 
   let y = infoY + 60;
   donations.forEach((d) => {
-    const recNo = d.receiptNo || d._id.toString().slice(-6).toUpperCase();
     doc.text(
-      `${new Date(d.createdAt).toLocaleDateString()} - Rec: ${recNo} - Rs.${d.amount} - ${d.scheme}`,
+      `${new Date(d.createdAt).toLocaleDateString()} - Rs.${d.amount} - ${d.scheme}`,
       50,
       y,
     );

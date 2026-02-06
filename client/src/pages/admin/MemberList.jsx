@@ -23,6 +23,7 @@ import {
   FaTimesCircle,
   FaTasks,
   FaFilePdf,
+  FaEye, // For viewing approval status
 } from "react-icons/fa";
 
 const MemberList = () => {
@@ -30,22 +31,23 @@ const MemberList = () => {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Approval Modal State
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
 
   // Activity Modal State
   const [showActivityModal, setShowActivityModal] = useState(false);
-  const [selectedMember, setSelectedMember] = useState(null);
   const [activityData, setActivityData] = useState({
     eventName: "",
     role: "",
     date: "",
   });
 
-  // --- UPDATED FORM STATE WITH NEW FIELDS ---
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-
-    // New Profile Fields
     spouseName: "",
     dob: "",
     qualification: "",
@@ -54,12 +56,9 @@ const MemberList = () => {
     references: "",
     pan: "",
     aadhaar: "",
-
     phone: "",
     email: "",
     address: "",
-
-    // Membership Details
     membershipType: "Annual",
     category: "Ordinary",
     feeAmount: "1000",
@@ -68,15 +67,14 @@ const MemberList = () => {
   });
 
   useEffect(() => {
-    fetchMembers();
+    const user = JSON.parse(localStorage.getItem("userInfo"));
+    setCurrentUser(user);
+    if (user) fetchMembers(user);
   }, []);
 
-  const fetchMembers = async () => {
+  const fetchMembers = async (user) => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      if (!userInfo || !userInfo.token) return;
-
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
       const { data } = await axios.get(`${BASE_URL}/api/members`, config);
       setMembers(data);
       setLoading(false);
@@ -87,15 +85,36 @@ const MemberList = () => {
     }
   };
 
+  // --- HANDLERS ---
+
+  const handleApprove = async (status) => {
+    try {
+      const config = {
+        headers: { Authorization: `Bearer ${currentUser.token}` },
+      };
+      await axios.put(
+        `${BASE_URL}/api/members/${selectedMember._id}/approve`,
+        { status, remark: "Approved via Dashboard" },
+        config,
+      );
+      alert(`Membership ${status}`);
+      setShowApproveModal(false);
+      fetchMembers(currentUser);
+    } catch (err) {
+      alert("Error processing approval");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      const config = {
+        headers: { Authorization: `Bearer ${currentUser.token}` },
+      };
       await axios.post(`${BASE_URL}/api/members`, formData, config);
       setShowModal(false);
-      fetchMembers();
-      alert("Member Registered Successfully!");
+      fetchMembers(currentUser);
+      alert("Application Submitted! Waiting for Committee Approval.");
 
       // Reset Form
       setFormData({
@@ -127,7 +146,11 @@ const MemberList = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // --- ACTIVITY HANDLERS ---
+  const openApproveModal = (m) => {
+    setSelectedMember(m);
+    setShowApproveModal(true);
+  };
+
   const openActivityModal = (member) => {
     setSelectedMember(member);
     setShowActivityModal(true);
@@ -136,28 +159,27 @@ const MemberList = () => {
   const handleAddActivity = async (e) => {
     e.preventDefault();
     try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-
+      const config = {
+        headers: { Authorization: `Bearer ${currentUser.token}` },
+      };
       await axios.post(
         `${BASE_URL}/api/members/${selectedMember._id}/activity`,
         activityData,
         config,
       );
-
-      alert("Activity Logged Successfully!");
+      alert("Activity Logged!");
       setShowActivityModal(false);
       setActivityData({ eventName: "", role: "", date: "" });
-      fetchMembers();
+      fetchMembers(currentUser);
     } catch (err) {
       alert("Error logging activity");
     }
   };
+
   const handleDownloadBlank = async () => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const response = await axios.get(`${BASE_URL}/api/members/blank-form`, {
-        headers: { Authorization: `Bearer ${userInfo.token}` },
+        headers: { Authorization: `Bearer ${currentUser.token}` },
         responseType: "blob",
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -170,6 +192,25 @@ const MemberList = () => {
     } catch (err) {
       alert("Error downloading blank form");
     }
+  };
+
+  // Helper for Status Icons
+  const ApprovalStatus = ({ status, label }) => {
+    let color = "text-muted";
+    let icon = "⏳";
+    if (status === "Approved") {
+      color = "text-success";
+      icon = "✅";
+    } else if (status === "Rejected") {
+      color = "text-danger";
+      icon = "❌";
+    }
+
+    return (
+      <span className={`${color} small fw-bold me-2`} title={label}>
+        {label.charAt(0)}:{icon}
+      </span>
+    );
   };
 
   return (
@@ -194,13 +235,12 @@ const MemberList = () => {
           >
             <FaFilePdf className="me-2" /> Blank Form
           </Button>
-
           <Button
             variant="primary"
             style={{ backgroundColor: "#581818", border: "none" }}
             onClick={() => setShowModal(true)}
           >
-            <FaPlus className="me-2" /> New Member
+            <FaPlus className="me-2" /> New Application
           </Button>
         </Col>
       </Row>
@@ -218,9 +258,9 @@ const MemberList = () => {
             <thead className="bg-light">
               <tr>
                 <th className="ps-4">Name</th>
-                <th>Contact</th>
-                <th>Category / Plan</th>
-                <th>Joined Date</th>
+                <th>Category</th>
+                <th>Approvals</th>
+                <th>Membership Status</th>
                 <th>Fee Status</th>
                 <th>Action</th>
               </tr>
@@ -233,60 +273,69 @@ const MemberList = () => {
                       <FaUserTie className="me-2 text-secondary" />
                       {m.firstName} {m.lastName}
                     </div>
-                    {(m.pan || m.aadhaar) && (
-                      <div
-                        style={{ fontSize: "0.7rem" }}
-                        className="text-muted ms-4"
-                      >
-                        {m.pan && <span className="me-2">PAN: {m.pan}</span>}
-                      </div>
-                    )}
+                    <small className="text-muted">{m.phone}</small>
                   </td>
-                  <td>
-                    <div>{m.phone}</div>
-                    <small className="text-muted">{m.email}</small>
-                  </td>
-
-                  {/* CATEGORY BADGES */}
                   <td>
                     <div className="d-flex flex-column gap-1 align-items-start">
-                      <Badge
-                        bg={
-                          m.category === "EC"
-                            ? "danger"
-                            : m.category === "Permanent"
-                              ? "success"
-                              : "secondary"
-                        }
-                      >
-                        {m.category || "Ordinary"}
-                      </Badge>
-                      <Badge bg="light" text="dark" className="border">
-                        {m.membershipType}
-                      </Badge>
+                      <Badge bg="secondary">{m.category}</Badge>
+                      <small>{m.membershipType}</small>
                     </div>
                   </td>
 
-                  <td>{new Date(m.joinDate).toLocaleDateString()}</td>
+                  {/* APPROVAL ICONS */}
+                  <td>
+                    <ApprovalStatus
+                      status={m.approvals?.president?.status}
+                      label="President"
+                    />
+                    <ApprovalStatus
+                      status={m.approvals?.secretary?.status}
+                      label="Secretary"
+                    />
+                    <ApprovalStatus
+                      status={m.approvals?.treasurer?.status}
+                      label="Treasurer"
+                    />
+                  </td>
+
+                  {/* OVERALL STATUS */}
+                  <td>
+                    <Badge
+                      bg={
+                        m.membershipStatus === "Active"
+                          ? "success"
+                          : m.membershipStatus === "Rejected"
+                            ? "danger"
+                            : "warning"
+                      }
+                      text={m.membershipStatus === "Pending" ? "dark" : "light"}
+                    >
+                      {m.membershipStatus}
+                    </Badge>
+                  </td>
+
                   <td>
                     {m.feeStatus === "Paid" ? (
-                      <span
-                        className="text-success fw-bold"
-                        style={{ fontSize: "0.85rem" }}
-                      >
-                        <FaCheckCircle className="me-1" /> Paid
+                      <span className="text-success fw-bold small">
+                        <FaCheckCircle /> Paid
                       </span>
                     ) : (
-                      <span
-                        className="text-danger fw-bold"
-                        style={{ fontSize: "0.85rem" }}
-                      >
-                        <FaTimesCircle className="me-1" /> Pending
+                      <span className="text-danger fw-bold small">
+                        <FaTimesCircle /> Pending
                       </span>
                     )}
                   </td>
                   <td>
                     <div className="d-flex gap-2">
+                      {/* Approval Action */}
+                      <Button
+                        size="sm"
+                        variant="outline-dark"
+                        onClick={() => openApproveModal(m)}
+                        title="View/Approve"
+                      >
+                        <FaEye />
+                      </Button>
                       <Link
                         to={`/dashboard/members/${m._id}`}
                         className="btn btn-sm btn-outline-primary"
@@ -296,7 +345,7 @@ const MemberList = () => {
                       </Link>
                       <Button
                         size="sm"
-                        variant="outline-dark"
+                        variant="outline-secondary"
                         onClick={() => openActivityModal(m)}
                         title="Log Activity"
                       >
@@ -306,19 +355,342 @@ const MemberList = () => {
                   </td>
                 </tr>
               ))}
-              {members.length === 0 && !loading && (
-                <tr>
-                  <td colSpan="6" className="text-center py-5 text-muted">
-                    No members found
-                  </td>
-                </tr>
-              )}
             </tbody>
           </Table>
         </Card.Body>
       </Card>
 
-      {/* --- NEW MEMBER REGISTRATION MODAL --- */}
+      {/* --- APPROVAL MODAL --- */}
+      {/* <Modal show={showApproveModal} onHide={() => setShowApproveModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Membership Application</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedMember && (
+            <>
+              <h5 className="text-maroon">
+                {selectedMember.firstName} {selectedMember.lastName}
+              </h5>
+              <p className="text-muted mb-3">
+                Applied for:{" "}
+                <strong>
+                  {selectedMember.category} ({selectedMember.membershipType})
+                </strong>
+              </p>
+
+              <Table bordered size="sm" className="mb-0">
+                <tbody>
+                  <tr>
+                    <td>President</td>
+                    <td className="text-center">
+                      <Badge
+                        bg={
+                          selectedMember.approvals.president.status ===
+                          "Approved"
+                            ? "success"
+                            : "secondary"
+                        }
+                      >
+                        {selectedMember.approvals.president.status}
+                      </Badge>
+                    </td>
+                    <td>
+                      {currentUser?.role === "president" &&
+                        selectedMember.approvals.president.status ===
+                          "Pending" && (
+                          <Button
+                            size="sm"
+                            variant="success"
+                            onClick={() => handleApprove("Approved")}
+                          >
+                            Approve
+                          </Button>
+                        )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Secretary</td>
+                    <td className="text-center">
+                      <Badge
+                        bg={
+                          selectedMember.approvals.secretary.status ===
+                          "Approved"
+                            ? "success"
+                            : "secondary"
+                        }
+                      >
+                        {selectedMember.approvals.secretary.status}
+                      </Badge>
+                    </td>
+                    <td>
+                      {currentUser?.role === "secretary" &&
+                        selectedMember.approvals.secretary.status ===
+                          "Pending" && (
+                          <Button
+                            size="sm"
+                            variant="success"
+                            onClick={() => handleApprove("Approved")}
+                          >
+                            Approve
+                          </Button>
+                        )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Treasurer</td>
+                    <td className="text-center">
+                      <Badge
+                        bg={
+                          selectedMember.approvals.treasurer.status ===
+                          "Approved"
+                            ? "success"
+                            : "secondary"
+                        }
+                      >
+                        {selectedMember.approvals.treasurer.status}
+                      </Badge>
+                    </td>
+                    <td>
+                      {currentUser?.role === "treasurer" &&
+                        selectedMember.approvals.treasurer.status ===
+                          "Pending" && (
+                          <Button
+                            size="sm"
+                            variant="success"
+                            onClick={() => handleApprove("Approved")}
+                          >
+                            Approve
+                          </Button>
+                        )}
+                    </td>
+                  </tr>
+                </tbody>
+              </Table>
+              {currentUser?.role === "admin" &&
+                selectedMember.membershipStatus === "Pending" && (
+                  <div className="mt-3 text-center">
+                    <small className="text-muted d-block mb-2">
+                      Admin Override
+                    </small>
+                    <Button
+                      size="sm"
+                      variant="success"
+                      onClick={() => handleApprove("Approved")}
+                    >
+                      Force Approve
+                    </Button>
+                  </div>
+                )}
+            </>
+          )}
+        </Modal.Body>
+      </Modal> */}
+      {/* --- APPROVAL MODAL --- */}
+      <Modal show={showApproveModal} onHide={() => setShowApproveModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Membership Application Review</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedMember && (
+            <>
+              {/* --- ENHANCED MEMBER SUMMARY --- */}
+              <div className="bg-light p-3 rounded mb-3 border">
+                <h5 className="text-maroon fw-bold mb-3">
+                  {selectedMember.firstName} {selectedMember.lastName}
+                </h5>
+
+                <Row className="g-2 small text-muted">
+                  <Col xs={6}>
+                    <strong>Applied For:</strong>
+                    <br />
+                    <span className="text-dark">
+                      {selectedMember.category} ({selectedMember.membershipType}
+                      )
+                    </span>
+                  </Col>
+                  <Col xs={6}>
+                    <strong>Referred By:</strong>
+                    <br />
+                    <span className="text-dark fw-bold">
+                      {selectedMember.references || "N/A"}
+                    </span>
+                  </Col>
+                  <Col xs={6}>
+                    <strong>Profession:</strong>
+                    <br />
+                    <span className="text-dark">
+                      {selectedMember.profession || "-"}
+                    </span>
+                  </Col>
+                  <Col xs={6}>
+                    <strong>Payment:</strong>
+                    <br />
+                    {selectedMember.feeStatus === "Paid" ? (
+                      <Badge bg="success">
+                        Paid ₹{selectedMember.feeAmount}
+                      </Badge>
+                    ) : (
+                      <Badge bg="danger">Pending</Badge>
+                    )}
+                  </Col>
+                </Row>
+              </div>
+
+              {/* --- APPROVAL TABLE --- */}
+              <h6 className="small fw-bold text-uppercase text-muted mb-2">
+                Committee Decisions
+              </h6>
+              <Table bordered size="sm" className="mb-0 align-middle">
+                <tbody>
+                  <tr>
+                    <td style={{ width: "30%" }}>President</td>
+                    <td className="text-center">
+                      <Badge
+                        bg={
+                          selectedMember.approvals.president.status ===
+                          "Approved"
+                            ? "success"
+                            : selectedMember.approvals.president.status ===
+                                "Rejected"
+                              ? "danger"
+                              : "secondary"
+                        }
+                      >
+                        {selectedMember.approvals.president.status}
+                      </Badge>
+                    </td>
+                    <td className="text-end">
+                      {currentUser?.role === "president" &&
+                        selectedMember.approvals.president.status ===
+                          "Pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline-success"
+                              className="me-1 py-0"
+                              onClick={() => handleApprove("Approved")}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline-danger"
+                              className="py-0"
+                              onClick={() => handleApprove("Rejected")}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Secretary</td>
+                    <td className="text-center">
+                      <Badge
+                        bg={
+                          selectedMember.approvals.secretary.status ===
+                          "Approved"
+                            ? "success"
+                            : selectedMember.approvals.secretary.status ===
+                                "Rejected"
+                              ? "danger"
+                              : "secondary"
+                        }
+                      >
+                        {selectedMember.approvals.secretary.status}
+                      </Badge>
+                    </td>
+                    <td className="text-end">
+                      {currentUser?.role === "secretary" &&
+                        selectedMember.approvals.secretary.status ===
+                          "Pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline-success"
+                              className="me-1 py-0"
+                              onClick={() => handleApprove("Approved")}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline-danger"
+                              className="py-0"
+                              onClick={() => handleApprove("Rejected")}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Treasurer</td>
+                    <td className="text-center">
+                      <Badge
+                        bg={
+                          selectedMember.approvals.treasurer.status ===
+                          "Approved"
+                            ? "success"
+                            : selectedMember.approvals.treasurer.status ===
+                                "Rejected"
+                              ? "danger"
+                              : "secondary"
+                        }
+                      >
+                        {selectedMember.approvals.treasurer.status}
+                      </Badge>
+                    </td>
+                    <td className="text-end">
+                      {currentUser?.role === "treasurer" &&
+                        selectedMember.approvals.treasurer.status ===
+                          "Pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline-success"
+                              className="me-1 py-0"
+                              onClick={() => handleApprove("Approved")}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline-danger"
+                              className="py-0"
+                              onClick={() => handleApprove("Rejected")}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                    </td>
+                  </tr>
+                </tbody>
+              </Table>
+
+              {currentUser?.role === "admin" &&
+                selectedMember.membershipStatus === "Pending" && (
+                  <div className="mt-3 text-center border-top pt-2">
+                    <small className="text-muted d-block mb-2">
+                      System Admin Override
+                    </small>
+                    <Button
+                      size="sm"
+                      variant="dark"
+                      onClick={() => handleApprove("Approved")}
+                    >
+                      Force Approve
+                    </Button>
+                  </div>
+                )}
+            </>
+          )}
+        </Modal.Body>
+      </Modal>
+      {/* --- CREATE MEMBER MODAL --- */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton className="bg-light">
           <Modal.Title>New Member Application</Modal.Title>
@@ -373,12 +745,11 @@ const MemberList = () => {
                 />
               </Col>
             </Row>
-
             <Row className="mb-2 g-2">
               <Col md={6}>
                 <Form.Control
                   size="sm"
-                  placeholder="Qualification (e.g. B.Com)"
+                  placeholder="Qualification"
                   name="qualification"
                   value={formData.qualification}
                   onChange={handleChange}
@@ -387,19 +758,18 @@ const MemberList = () => {
               <Col md={6}>
                 <Form.Control
                   size="sm"
-                  placeholder="Profession (e.g. Retired Bank Employee)"
+                  placeholder="Profession"
                   name="profession"
                   value={formData.profession}
                   onChange={handleChange}
                 />
               </Col>
             </Row>
-
             <Row className="mb-3 g-2">
               <Col md={6}>
                 <Form.Control
                   size="sm"
-                  placeholder="Aadhaar Number"
+                  placeholder="Aadhaar"
                   name="aadhaar"
                   value={formData.aadhaar}
                   onChange={handleChange}
@@ -408,7 +778,7 @@ const MemberList = () => {
               <Col md={6}>
                 <Form.Control
                   size="sm"
-                  placeholder="PAN Number"
+                  placeholder="PAN"
                   name="pan"
                   value={formData.pan}
                   onChange={handleChange}
@@ -416,7 +786,6 @@ const MemberList = () => {
               </Col>
             </Row>
 
-            {/* Contact & References */}
             <h6 className="text-maroon border-bottom pb-2 mb-3">
               Contact & References
             </h6>
@@ -424,7 +793,7 @@ const MemberList = () => {
               <Col md={6}>
                 <Form.Control
                   size="sm"
-                  placeholder="Mobile Number *"
+                  placeholder="Mobile *"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
@@ -434,8 +803,7 @@ const MemberList = () => {
               <Col md={6}>
                 <Form.Control
                   size="sm"
-                  type="email"
-                  placeholder="Email Address"
+                  placeholder="Email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
@@ -451,10 +819,11 @@ const MemberList = () => {
               name="address"
               value={formData.address}
               onChange={handleChange}
-              required
               className="mb-2"
+              required
             />
 
+            {/* --- ADDED MISSING FIELDS HERE --- */}
             <Form.Control
               size="sm"
               placeholder="Positions held in other Organizations (Optional)"
@@ -465,16 +834,15 @@ const MemberList = () => {
             />
             <Form.Control
               size="sm"
-              placeholder="References (Name of persons who introduced you)"
+              placeholder="References (Introduced by)"
               name="references"
               value={formData.references}
               onChange={handleChange}
               className="mb-3"
             />
 
-            {/* Membership Type */}
             <h6 className="text-maroon border-bottom pb-2 mb-3">
-              Membership Details
+              Membership Plan
             </h6>
             <Row className="g-2">
               <Col md={4} className="mb-3">
@@ -487,7 +855,7 @@ const MemberList = () => {
                 >
                   <option value="Ordinary">Ordinary Member</option>
                   <option value="Permanent">Permanent Member</option>
-                  <option value="EC">Executive Committee (EC)</option>
+                  <option value="EC">Executive Committee</option>
                 </Form.Select>
               </Col>
               <Col md={4} className="mb-3">
@@ -519,24 +887,18 @@ const MemberList = () => {
                 </Form.Select>
               </Col>
             </Row>
-
             <Row className="g-2">
               <Col md={6}>
-                <Form.Label className="small fw-bold">
-                  Fee Amount (₹)
-                </Form.Label>
                 <Form.Control
                   size="sm"
                   type="number"
+                  placeholder="Fee Amount"
                   name="feeAmount"
                   value={formData.feeAmount}
                   onChange={handleChange}
                 />
               </Col>
               <Col md={6}>
-                <Form.Label className="small fw-bold">
-                  Payment Status
-                </Form.Label>
                 <Form.Select
                   size="sm"
                   name="feeStatus"
@@ -545,38 +907,30 @@ const MemberList = () => {
                 >
                   <option value="Paid">Paid</option>
                   <option value="Pending">Pending</option>
-                  <option value="Waived">Waived (Honorary)</option>
                 </Form.Select>
               </Col>
             </Row>
 
             <Button type="submit" className="w-100 btn-ashram mt-4">
-              Register Member
+              Submit Application
             </Button>
           </Form>
         </Modal.Body>
       </Modal>
 
-      {/* ACTIVITY MODAL */}
+      {/* ACTIVITY MODAL (Same as before) */}
       <Modal
         show={showActivityModal}
         onHide={() => setShowActivityModal(false)}
       >
         <Modal.Header closeButton>
-          <Modal.Title>Log Member Activity</Modal.Title>
+          <Modal.Title>Log Activity</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p className="text-muted small mb-3">
-            Member:{" "}
-            <strong>
-              {selectedMember?.firstName} {selectedMember?.lastName}
-            </strong>
-          </p>
           <Form onSubmit={handleAddActivity}>
             <Form.Group className="mb-3">
-              <Form.Label>Event / Task Name</Form.Label>
+              <Form.Label>Event Name</Form.Label>
               <Form.Control
-                placeholder="e.g. Janmashtami Setup"
                 value={activityData.eventName}
                 onChange={(e) =>
                   setActivityData({
@@ -588,9 +942,8 @@ const MemberList = () => {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Role / Responsibility</Form.Label>
+              <Form.Label>Role</Form.Label>
               <Form.Control
-                placeholder="e.g. Food Serving Volunteer"
                 value={activityData.role}
                 onChange={(e) =>
                   setActivityData({ ...activityData, role: e.target.value })
@@ -610,7 +963,7 @@ const MemberList = () => {
               />
             </Form.Group>
             <Button type="submit" className="w-100 btn-ashram">
-              Save Activity
+              Save
             </Button>
           </Form>
         </Modal.Body>

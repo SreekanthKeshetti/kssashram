@@ -63,49 +63,6 @@ const getVouchers = async (req, res) => {
   }
 };
 
-// @desc    Approve Voucher (Admin Only)
-// @route   PUT /api/finance/vouchers/:id/approve
-// @desc    Approve Voucher (Multi-Signature)
-// @route   PUT /api/finance/vouchers/:id/approve
-// const approveVoucher = async (req, res) => {
-//   try {
-//     const voucher = await Voucher.findById(req.params.id);
-
-//     if (!voucher) {
-//       return res.status(404).json({ message: "Voucher not found" });
-//     }
-
-//     // Check if this user already approved it
-//     if (voucher.approvedBy.includes(req.user._id)) {
-//       return res
-//         .status(400)
-//         .json({ message: "You have already approved this voucher" });
-//     }
-
-//     // Add current user to approval list
-//     voucher.approvedBy.push(req.user._id);
-
-//     // LOGIC: If 2 or more approvals, mark as Approved. Else, Partially Approved.
-//     if (voucher.approvedBy.length >= 2) {
-//       voucher.status = "Approved";
-//     } else {
-//       voucher.status = "Partially Approved";
-//     }
-
-//     await voucher.save();
-
-//     // Return populated data so frontend updates immediately
-//     const updatedVoucher = await Voucher.findById(req.params.id)
-//       .populate("accountHead", "code name")
-//       .populate("preparedBy", "name")
-//       .populate("approvedBy", "name");
-
-//     res.json(updatedVoucher);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
 // @desc    Approve Voucher (Strict Hierarchy)
 // Route: PUT /api/finance/vouchers/:id/approve
 const approveVoucher = async (req, res) => {

@@ -24,7 +24,7 @@ const CashReconciliation = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const { data } = await axios.get(
         `${BASE_URL}/api/finance/cash-balance`,
-        config
+        config,
       );
       setSystemBalance(data.systemBalance);
       setLoading(false);
@@ -44,8 +44,8 @@ const CashReconciliation = () => {
     if (
       !window.confirm(
         `This will create an adjustment voucher for Rs. ${Math.abs(
-          diff
-        )}. Proceed?`
+          diff,
+        )}. Proceed?`,
       )
     )
       return;
@@ -61,7 +61,7 @@ const CashReconciliation = () => {
           physicalBalance: Number(physicalBalance),
           remark,
         },
-        config
+        config,
       );
 
       alert("Reconciliation Successful! Adjustment Voucher Created.");

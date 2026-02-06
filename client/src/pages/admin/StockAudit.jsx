@@ -53,46 +53,10 @@ const StockAudit = () => {
     setRemarks({ ...remarks, [id]: val });
   };
 
-  // const handleSubmitAudit = async () => {
-  //   if (
-  //     !window.confirm(
-  //       "This will update the live stock quantities. Are you sure?"
-  //     )
-  //   )
-  //     return;
-
-  //   setLoading(true);
-  //   try {
-  //     const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-  //     const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-
-  //     // Prepare Payload
-  //     const auditItems = items.map((item) => ({
-  //       itemId: item._id,
-  //       itemName: item.itemName,
-  //       systemQty: item.quantity,
-  //       physicalQty: auditData[item._id],
-  //       remark: remarks[item._id] || "",
-  //     }));
-
-  //     await axios.post(
-  //       "http://localhost:5000/api/inventory/audit",
-  //       { items: auditItems },
-  //       config
-  //     );
-
-  //     alert("Audit Completed! Stock Adjusted.");
-  //     fetchInventory(); // Refresh data
-  //     setRemarks({});
-  //   } catch (error) {
-  //     alert("Error submitting audit");
-  //   }
-  //   setLoading(false);
-  // };
   const handleSubmitAudit = async () => {
     if (
       !window.confirm(
-        "This will update the live stock quantities. Are you sure?"
+        "This will update the live stock quantities. Are you sure?",
       )
     )
       return;
@@ -116,7 +80,7 @@ const StockAudit = () => {
       await axios.post(
         `${BASE_URL}/api/inventory/audit`,
         { items: auditItems },
-        config
+        config,
       );
 
       alert("Audit Completed Successfully!");

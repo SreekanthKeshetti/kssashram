@@ -7,7 +7,7 @@ const accountHeadSchema = mongoose.Schema(
     type: { type: String, enum: ["Credit", "Debit"], required: true }, // Credit = Income, Debit = Expense
     description: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("AccountHead", accountHeadSchema);

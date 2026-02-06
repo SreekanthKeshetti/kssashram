@@ -161,13 +161,40 @@ const studentSchema = mongoose.Schema(
       targetBranch: String,
       reason: String,
       initiatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      requestDate: { type: Date, default: Date.now },
       status: {
         type: String,
         enum: ["Pending", "Approved", "Rejected"],
         // default: "Pending",
       },
+      // The 3-Tier Approvals
+      approvals: {
+        president: {
+          status: {
+            type: String,
+            enum: ["Pending", "Approved", "Rejected"],
+            default: "Pending",
+          },
+          date: Date,
+        },
+        secretary: {
+          status: {
+            type: String,
+            enum: ["Pending", "Approved", "Rejected"],
+            default: "Pending",
+          },
+          date: Date,
+        },
+        treasurer: {
+          status: {
+            type: String,
+            enum: ["Pending", "Approved", "Rejected"],
+            default: "Pending",
+          },
+          date: Date,
+        },
+      },
       approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Usually President
-      date: Date,
     },
     documents: [{ type: String }],
     leaves: [

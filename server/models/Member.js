@@ -53,6 +53,42 @@ const memberSchema = mongoose.Schema(
 
     branch: { type: String, default: "Headquarters" },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    // --- NEW: 3-TIER APPROVAL SYSTEM ---
+    membershipStatus: {
+      type: String,
+      enum: ["Pending", "Active", "Rejected"],
+      default: "Pending", // Starts as Pending
+    },
+    approvals: {
+      president: {
+        status: {
+          type: String,
+          enum: ["Pending", "Approved", "Rejected"],
+          default: "Pending",
+        },
+        date: Date,
+        remark: String,
+      },
+      secretary: {
+        status: {
+          type: String,
+          enum: ["Pending", "Approved", "Rejected"],
+          default: "Pending",
+        },
+        date: Date,
+        remark: String,
+      },
+      treasurer: {
+        status: {
+          type: String,
+          enum: ["Pending", "Approved", "Rejected"],
+          default: "Pending",
+        },
+        date: Date,
+        remark: String,
+      },
+    },
+    // -----------
   },
   {
     timestamps: true,

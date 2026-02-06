@@ -1,5 +1,6 @@
 const Member = require("../models/Member");
 const Voucher = require("../models/Voucher"); // <--- Import Voucher
+const { logAudit } = require("../utils/auditLogger"); // Ensure this is imported
 const AccountHead = require("../models/AccountHead"); // <--- Import AccountHead
 const { buildMemberProfile } = require("../utils/generateMemberPDF"); // <--- IMPORT
 
@@ -67,6 +68,12 @@ const createMember = async (req, res) => {
       profession,
       otherOrgPositions,
       references,
+      membershipStatus: "Pending",
+      approvals: {
+        president: { status: "Pending" },
+        secretary: { status: "Pending" },
+        treasurer: { status: "Pending" },
+      },
       createdBy: req.user._id,
     });
 
@@ -99,6 +106,55 @@ const createMember = async (req, res) => {
     res.status(201).json(member);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+};
+// --- NEW FUNCTION: APPROVE MEMBER ---
+// @route   PUT /api/members/:id/approve
+const approveMember = async (req, res) => {
+  try {
+    const member = await Member.findById(req.params.id);
+    if (!member) return res.status(404).json({ message: "Member not found" });
+
+    const { role } = req.user;
+    const { status, remark } = req.body; // 'Approved' or 'Rejected'
+
+    // 1. Update Specific Approval based on Role
+    if (role === "president" || role === "admin") {
+      member.approvals.president = { status, date: Date.now(), remark };
+    } else if (role === "secretary") {
+      member.approvals.secretary = { status, date: Date.now(), remark };
+    } else if (role === "treasurer") {
+      member.approvals.treasurer = { status, date: Date.now(), remark };
+    } else {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to approve members." });
+    }
+
+    // 2. Check Consensus
+    const p = member.approvals.president.status;
+    const s = member.approvals.secretary.status;
+    const t = member.approvals.treasurer.status;
+
+    if (p === "Approved" && s === "Approved" && t === "Approved") {
+      member.membershipStatus = "Active"; // All 3 said Yes
+    } else if (p === "Rejected" || s === "Rejected" || t === "Rejected") {
+      member.membershipStatus = "Rejected"; // At least one said No
+    }
+
+    await member.save();
+
+    await logAudit(
+      req,
+      "APPROVE",
+      "Member",
+      member._id,
+      `Membership Approval by ${role}: ${status}`,
+    );
+
+    res.json(member);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -213,4 +269,5 @@ module.exports = {
   getMemberById,
   downloadMemberForm,
   downloadBlankForm,
+  approveMember,
 };

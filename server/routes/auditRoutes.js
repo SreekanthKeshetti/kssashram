@@ -16,7 +16,7 @@ const { protect, admin } = require("../middleware/authMiddleware");
 // Check if getSystemLogs is undefined (Common error)
 if (!getSystemLogs) {
   console.error(
-    "Error: getSystemLogs function is missing in auditController export!"
+    "Error: getSystemLogs function is missing in auditController export!",
   );
 }
 

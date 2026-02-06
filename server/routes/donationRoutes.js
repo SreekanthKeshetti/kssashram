@@ -1,38 +1,3 @@
-// const express = require("express");
-// const router = express.Router();
-// const {
-//   createDonation,
-//   getDonations,
-// } = require("../controllers/donationController");
-// const { protect } = require("../middleware/authMiddleware");
-
-// // Protect these routes so only logged-in users can access
-// router.route("/").post(protect, createDonation).get(protect, getDonations);
-
-// module.exports = router;
-// const express = require("express");
-// const router = express.Router();
-
-// // IMPORTANT: Ensure you are destructuring all 4 functions from the controller
-// const {
-//   createDonation,
-//   getDonations,
-//   downloadReceipt,
-//   emailReceipt,
-// } = require("../controllers/donationController");
-
-// const { protect } = require("../middleware/authMiddleware");
-
-// // Standard Routes
-// router.route("/").post(protect, createDonation).get(protect, getDonations);
-
-// // Receipt Routes
-// // If downloadReceipt is undefined, the app will crash here
-// router.get("/:id/receipt", protect, downloadReceipt);
-// router.post("/:id/email", protect, emailReceipt);
-
-// module.exports = router;
-
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -55,18 +20,6 @@ const {
 
 const { protect } = require("../middleware/authMiddleware");
 // --- MULTER CONFIGURATION ---
-// const storage = multer.diskStorage({
-//   destination(req, file, cb) {
-//     cb(null, "uploads/"); // Save to 'uploads' folder
-//   },
-//   filename(req, file, cb) {
-//     // Rename file to: donationID-timestamp.ext
-//     cb(
-//       null,
-//       `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
-//     );
-//   },
-// });
 
 // --- 2. UPDATED MULTER CONFIGURATION (Auto-Create Folder) ---
 const storage = multer.diskStorage({
@@ -83,7 +36,7 @@ const storage = multer.diskStorage({
   filename(req, file, cb) {
     cb(
       null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
+      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`,
     );
   },
 });

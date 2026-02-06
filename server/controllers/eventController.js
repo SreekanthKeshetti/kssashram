@@ -27,6 +27,7 @@ const createEvent = async (req, res) => {
       branch,
       isPaid,
       feeAmount,
+      faculty,
     } = req.body;
 
     // Use startDate as fallback if old frontend sends 'date'
@@ -42,6 +43,12 @@ const createEvent = async (req, res) => {
       eventType,
       isPaid: isPaid || false,
       feeAmount: isPaid ? Number(feeAmount) : 0,
+      faculty: faculty || {
+        name: "",
+        phone: "",
+        organization: "",
+        designation: "",
+      },
       branch: branch || "Headquarters",
       createdBy: req.user._id,
     });

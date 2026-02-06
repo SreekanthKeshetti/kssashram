@@ -73,6 +73,8 @@ const DonationList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [schemes, setSchemes] = useState([]);
+  // --- NEW: STATE FOR BANKS ---
+  const [bankAccounts, setBankAccounts] = useState([]);
 
   // Filters
   const [filterCategory, setFilterCategory] = useState("Household");
@@ -121,6 +123,7 @@ const DonationList = () => {
     branch: "Karunya Sindhu",
     category: "Household",
     address: "",
+    depositBank: "",
 
     // Occasion
     occasion: "",
@@ -161,6 +164,23 @@ const DonationList = () => {
 
         const occRes = await axios.get(`${BASE_URL}/api/occasions`, config);
         setOccasionsList(occRes.data);
+        // --- NEW: FETCH ACCOUNTS & FILTER FOR BANKS/CASH ---
+        const accRes = await axios.get(`${BASE_URL}/api/accounts`, config);
+
+        // Filter logic: Check if name contains "Bank" or "Cash"
+        // Adjust this logic if your account codes are specific (e.g., starts with 10)
+        const banks = accRes.data.filter(
+          (acc) =>
+            acc.name.toLowerCase().includes("bank") ||
+            acc.name.toLowerCase().includes("cash"),
+        );
+        setBankAccounts(banks);
+
+        // Set default if available
+        if (banks.length > 0) {
+          setFormData((prev) => ({ ...prev, depositBank: banks[0]._id }));
+        }
+        // ------------
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
       }
@@ -296,6 +316,7 @@ const DonationList = () => {
         tithi: "",
         manualReceiptNo: "",
         manualReceiptDate: "",
+        depositBank: bankAccounts.length > 0 ? bankAccounts[0]._id : "", // Reset to default
         paymentDetails: {
           chequeNo: "",
           chequeDate: "",
@@ -380,37 +401,114 @@ const DonationList = () => {
     }
   };
 
+  // const handleExport = () => {
+  //   if (filteredDonations.length === 0) return alert("No data to export");
+  //   const headers = [
+  //     "Receipt ID",
+  //     "Date",
+  //     "Donor Name",
+  //     "Phone",
+  //     "Category",
+  //     "Amount",
+  //     "Scheme",
+  //     "Mode",
+  //     "Branch",
+  //     "Manual Ref",
+  //   ];
+  //   const rows = filteredDonations.map((d) => [
+  //     d._id.toString().slice(-6).toUpperCase(),
+  //     new Date(d.createdAt).toLocaleDateString(),
+  //     `"${d.donorName}"`,
+  //     `"${d.donorPhone}"`,
+  //     d.category,
+  //     d.amount,
+  //     d.scheme,
+  //     d.paymentMode,
+  //     d.branch,
+  //     d.manualReceiptNo || "-",
+  //   ]);
+  //   const csvContent =
+  //     "data:text/csv;charset=utf-8," +
+  //     headers.join(",") +
+  //     "\n" +
+  //     rows.map((e) => e.join(",")).join("\n");
+  //   const encodedUri = encodeURI(csvContent);
+  //   const link = document.createElement("a");
+  //   link.setAttribute("href", encodedUri);
+  //   link.setAttribute(
+  //     "download",
+  //     `Donations_Export_${new Date().toISOString().split("T")[0]}.csv`,
+  //   );
+  //   document.body.appendChild(link);
+  //   link.click();
+  //   document.body.removeChild(link);
+  // };
+  // --- FILE: client/src/pages/admin/DonationList.jsx ---
+
+  // ... inside DonationList component ...
+
   const handleExport = () => {
     if (filteredDonations.length === 0) return alert("No data to export");
+
+    // 1. Define All Headers
     const headers = [
       "Receipt ID",
       "Date",
       "Donor Name",
       "Phone",
+      "PAN",
+      "Address",
       "Category",
       "Amount",
       "Scheme",
       "Mode",
+      "Cheque/DD No",
+      "Cheque Date",
+      "Transaction Ref",
+      "Donor Bank",
+      "Deposited To (Org Account)", // <--- New Column
       "Branch",
       "Manual Ref",
     ];
-    const rows = filteredDonations.map((d) => [
-      d._id.toString().slice(-6).toUpperCase(),
-      new Date(d.createdAt).toLocaleDateString(),
-      `"${d.donorName}"`,
-      `"${d.donorPhone}"`,
-      d.category,
-      d.amount,
-      d.scheme,
-      d.paymentMode,
-      d.branch,
-      d.manualReceiptNo || "-",
-    ]);
+
+    // 2. Map Data Rows
+    const rows = filteredDonations.map((d) => {
+      // Helper to safely get payment details
+      const pd = d.paymentDetails || {};
+
+      // Helper to format date
+      const formatDate = (date) =>
+        date ? new Date(date).toLocaleDateString() : "-";
+
+      return [
+        d.receiptNo || d._id.toString().slice(-6).toUpperCase(),
+        formatDate(d.createdAt),
+        `"${d.donorName}"`, // Quote strings to handle commas in names
+        `"${d.donorPhone}"`,
+        d.donorPan || "-",
+        `"${d.address ? d.address.replace(/\n/g, " ") : "-"}"`, // Clean address
+        d.category,
+        d.amount,
+        d.scheme,
+        d.paymentMode,
+        // Payment Details:
+        pd.chequeNo || pd.ddNo || "-",
+        formatDate(pd.chequeDate),
+        pd.transactionId || "-",
+        pd.bankName || "-", // Donor's Bank
+        d.depositBank?.name || "-", // Organization's Bank (The new requirement)
+        d.branch,
+        d.manualReceiptNo || "-",
+      ];
+    });
+
+    // 3. Generate CSV
     const csvContent =
       "data:text/csv;charset=utf-8," +
       headers.join(",") +
       "\n" +
       rows.map((e) => e.join(",")).join("\n");
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -930,8 +1028,8 @@ const DonationList = () => {
                   <option value="Karunya Sindhu">Karunya Sindhu</option>
                   <option value="Karunya Bharathi">Karunya Bharathi</option>
                   <option value="Karunya Jyothi">Karunya Jyothi</option>
-                  <option value="Karuna Sree Seva Samithi">
-                    Karuna Sree Seva Samithi
+                  <option value="KarunaSri Seva Samithi">
+                    KarunaSri Seva Samithi
                   </option>
                   <option value="Headquarters">Headquarters</option>
                 </Form.Select>
@@ -953,22 +1051,48 @@ const DonationList = () => {
               </Col>
             </Row>
 
-            <Form.Group className="mb-2">
-              <Form.Label className="small fw-bold">Payment Mode</Form.Label>
-              <Form.Select
-                size="sm"
-                name="paymentMode"
-                value={formData.paymentMode}
-                onChange={handleChange}
-              >
-                <option>Cash</option>
-                <option>Online</option>
-                <option>UPI</option>
-                <option>Cheque</option>
-                <option>DD</option>
-                <option>Foreign Currency</option>
-              </Form.Select>
-            </Form.Group>
+            {/* --- NEW ROW: Payment Mode & Deposited Bank --- */}
+            <Row className="g-2 mb-2">
+              <Col md={6}>
+                <Form.Label className="small fw-bold">Payment Mode</Form.Label>
+                <Form.Select
+                  size="sm"
+                  name="paymentMode"
+                  value={formData.paymentMode}
+                  onChange={handleChange}
+                >
+                  <option>Cash</option>
+                  <option>Online</option>
+                  <option>UPI</option>
+                  <option>Cheque</option>
+                  <option>DD</option>
+                  <option>Foreign Currency</option>
+                  <option>Bank Transfer</option>
+                </Form.Select>
+              </Col>
+
+              <Col md={6}>
+                <Form.Label className="small fw-bold ">
+                  Deposited To (Org Account) *
+                </Form.Label>
+                <Form.Select
+                  size="sm"
+                  name="depositBank"
+                  value={formData.depositBank}
+                  onChange={handleChange}
+                  required
+                  className="border-success"
+                >
+                  <option value="">-- Select Bank/Cash Account --</option>
+                  {bankAccounts.map((b) => (
+                    <option key={b._id} value={b._id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Col>
+            </Row>
+
             <Form.Group className="mb-2">
               <Form.Check
                 type="switch"

@@ -23,7 +23,7 @@ const auditSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("InventoryAudit", auditSchema);

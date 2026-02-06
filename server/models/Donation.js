@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Counter = require("./Counter"); // <--- Import the Counter model
 
 const donationSchema = mongoose.Schema(
   {
@@ -8,41 +9,49 @@ const donationSchema = mongoose.Schema(
       ref: "User",
       required: false,
     },
+    // --- NEW: SYSTEM GENERATED RECEIPT ID ---
+    receiptNo: { type: String, unique: true },
+
     // Basic Details
     donorName: { type: String, required: true },
     donorPhone: { type: String, required: true },
     donorEmail: { type: String },
-    donorPan: { type: String }, // For Tax Benefit (KSS_DON_8)
+    donorPan: { type: String }, // For Tax Benefit (80G)
     donorAadhaar: { type: String },
 
-    // --- NEW FIELD: BILLING ADDRESS ---
+    // Billing Address
     address: { type: String },
-    // ---------------------------------
 
     // Donation Details
     amount: { type: Number, required: true },
     scheme: { type: String, required: true }, // e.g. Nitya Annadhana
-    // --- NEW FIELD: Account Head Link ---
+
+    // Account Head Link
     accountHead: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AccountHead",
-      // Not required yet, to support legacy data, but highly recommended
     },
-    // ------------------------------------
+    depositBank: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AccountHead",
+      required: false, // Optional for now to support old records
+    },
 
-    // Payment Details (KSS_DON_1)
-    // paymentMode: {
-    //   type: String,
-    //   enum: ["Cash", "Online", "Cheque", "DD", "Foreign Currency"],
-    //   required: true,
-    // },
-    // UPDATED: Payment Logic
     paymentMode: {
       type: String,
-      enum: ["Cash", "Online", "Cheque", "DD", "UPI", "Foreign Currency"],
+      enum: [
+        "Cash",
+        "Online",
+        "Cheque",
+        "DD",
+        "UPI",
+        "Foreign Currency",
+        "Bank Transfer",
+      ],
       required: true,
     },
-    // NEW: Detailed Payment Info (For Cheque/DD/UPI)
+
+    // Detailed Payment Info (For Cheque/DD/UPI)
     paymentDetails: {
       chequeNo: String,
       chequeDate: Date,
@@ -51,56 +60,52 @@ const donationSchema = mongoose.Schema(
       ddDate: Date,
       transactionId: String, // For UPI/Online
     },
-    // NEW: Manual Receipt Logging (Legacy Sync)
+
+    // Manual Receipt Logging (Legacy Sync)
     manualReceiptNo: { type: String },
     manualReceiptDate: { type: Date },
-    paymentReference: { type: String }, // Cheque No or Transaction ID
+    paymentReference: { type: String },
 
-    // --- NEW FIELD: DONATION CATEGORY ---
+    // Donation Category
     category: {
       type: String,
       enum: ["Household", "Organizational"],
       default: "Household",
     },
-    // ------------------------------------
 
-    // --- NEW FIELDS FOR REMINDERS (KSS_DON_12, 13) ---
+    // Reminders
     isRecurring: { type: Boolean, default: false },
     reminderFrequency: {
       type: String,
       enum: ["Annual", "Monthly"],
       default: "Annual",
     },
-    nextReminderDate: { type: Date }, // The date of the NEXT donation (e.g. Next Year)
-    // -------------------------------------------
+    nextReminderDate: { type: Date },
 
-    // NEW: Expiry for Permanent Schemes (10 Years)
+    // Expiry for Permanent Schemes
     schemeExpiryDate: { type: Date },
-    // --- NEW: SPECIAL OCCASION FIELDS (Tithi/Seva) ---
-    occasion: { type: String }, // e.g. "Birthday", "Wedding Anniversary", "In Memory Of"
+
+    // Special Occasion Fields (Tithi/Seva)
+    occasion: { type: String }, // e.g. "Birthday", "Wedding Anniversary"
     inNameOf: { type: String }, // e.g. "Sairam" or "Late Father Name"
     calendarType: {
       type: String,
       enum: ["Gregorian", "Telugu"],
       default: "Gregorian",
     },
-    programDate: { type: Date }, // The actual date to perform the seva (e.g., Feb 14)
-    // -------------------------------------------
-
-    tithi: { type: String }, // Used if Telugu (e.g. "Magha Shuddha Ekadashi")
+    programDate: { type: Date }, // English Date
+    tithi: { type: String }, // Telugu Tithi string
 
     // System Details
-    // branch: { type: String, required: true, default: "Headquarters" }, // KSS_GEN_2
-
     branch: {
       type: String,
       required: true,
       enum: [
         "Headquarters",
-        "Karunya Sindhu", // Corrected Spelling
+        "Karunya Sindhu",
         "Karunya Bharathi",
-        "Karunya Jyothi", // New
-        "Karuna Sree Seva Samithi", // New
+        "Karunya Jyothi",
+        "KarunaSri Seva Samithi", // <--- Corrected Spelling
       ],
       default: "Headquarters",
     },
@@ -115,7 +120,7 @@ const donationSchema = mongoose.Schema(
       },
     ],
 
-    // Who entered this record? (Audit Trail)
+    // Audit Trail
     collectedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -125,5 +130,48 @@ const donationSchema = mongoose.Schema(
     timestamps: true,
   },
 );
+
+// --- PRE-SAVE HOOK FOR AUTO-INCREMENT RECEIPT NO ---
+// donationSchema.pre("save", async function (next) {
+//   // Only generate if it's a new document
+//   if (!this.isNew) return next();
+
+//   try {
+//     const counter = await Counter.findOneAndUpdate(
+//       { id: "donation_id" }, // Identifier for this sequence
+//       { $inc: { seq: 1 } }, // Increment by 1
+//       { new: true, upsert: true }, // Create if doesn't exist
+//     );
+
+//     // Format: "KSS-0001", "KSS-0002"
+//     // padStart(4, "0") ensures we get 0001 instead of 1
+//     this.receiptNo = `KSS-${counter.seq.toString().padStart(4, "0")}`;
+//     next();
+//   } catch (error) {
+//     next(error);
+//   }
+// });
+// --- PRE-SAVE HOOK FOR AUTO-INCREMENT RECEIPT NO ---
+donationSchema.pre("save", async function () {
+  // 1. Remove 'next' from arguments above ^^^
+
+  // Only generate if it's a new document
+  if (!this.isNew) return; // Just return, don't call next()
+
+  try {
+    const counter = await Counter.findOneAndUpdate(
+      { id: "donation_id" }, // Identifier for this sequence
+      { $inc: { seq: 1 } }, // Increment by 1
+      { new: true, upsert: true }, // Create if doesn't exist
+    );
+
+    // Format: "KSS-0001", "KSS-0002"
+    this.receiptNo = `KSS-${counter.seq.toString().padStart(4, "0")}`;
+
+    // No need to call next() here, the async function resolving acts as next()
+  } catch (error) {
+    throw error; // Just throw the error, Mongoose will catch it
+  }
+});
 
 module.exports = mongoose.model("Donation", donationSchema);

@@ -1,150 +1,3 @@
-// const Donation = require("../models/Donation");
-// const { buildReceipt } = require("../utils/generatePDF"); // Import the utility
-// const nodemailer = require("nodemailer");
-
-// // @desc    Create new donation (Manual Entry by Admin/Employee)
-// // @route   POST /api/donations
-// const createDonation = async (req, res) => {
-//   try {
-//     const {
-//       donorName,
-//       donorPhone,
-//       donorEmail,
-//       donorPan,
-//       amount,
-//       scheme,
-//       paymentMode,
-//       paymentReference,
-//       branch,
-//     } = req.body;
-
-//     const donation = await Donation.create({
-//       donorName,
-//       donorPhone,
-//       donorEmail,
-//       donorPan,
-//       amount,
-//       scheme,
-//       paymentMode,
-//       paymentReference,
-//       branch: branch || "Headquarters",
-//       collectedBy: req.user._id, // The logged-in employee ID
-//     });
-
-//     res.status(201).json(donation);
-//   } catch (error) {
-//     res.status(400).json({ message: error.message });
-//   }
-// };
-
-// // @desc    Get all donations
-// // @route   GET /api/donations
-// const getDonations = async (req, res) => {
-//   try {
-//     // Sort by newest first
-//     const donations = await Donation.find({}).sort({ createdAt: -1 });
-//     res.json(donations);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-// // @desc    Download Receipt PDF
-// // @route   GET /api/donations/:id/receipt
-// const downloadReceipt = async (req, res) => {
-//   try {
-//     const donation = await Donation.findById(req.params.id);
-//     if (!donation)
-//       return res.status(404).json({ message: "Donation not found" });
-
-//     // Set headers to tell browser this is a PDF
-//     const filename = `Receipt_${donation.donorName}_${Date.now()}.pdf`;
-//     res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
-//     res.setHeader("Content-type", "application/pdf");
-
-//     // Stream the PDF to the response
-//     buildReceipt(
-//       donation,
-//       (chunk) => res.write(chunk),
-//       () => res.end()
-//     );
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
-// // @desc    Email Receipt PDF
-// // @route   POST /api/donations/:id/email
-// const emailReceipt = async (req, res) => {
-//   try {
-//     const donation = await Donation.findById(req.params.id);
-//     if (!donation)
-//       return res.status(404).json({ message: "Donation not found" });
-//     if (!donation.donorEmail)
-//       return res.status(400).json({ message: "Donor has no email address" });
-
-//     // 1. Generate PDF in memory
-//     let buffers = [];
-//     const pdfPromise = new Promise((resolve) => {
-//       buildReceipt(
-//         donation,
-//         (chunk) => buffers.push(chunk),
-//         () => resolve(Buffer.concat(buffers))
-//       );
-//     });
-
-//     const pdfBuffer = await pdfPromise;
-
-//     // 2. Setup Nodemailer
-//     const transporter = nodemailer.createTransport({
-//       service: "gmail",
-//       auth: {
-//         user: process.env.EMAIL_USER,
-//         pass: process.env.EMAIL_PASS,
-//       },
-//     });
-
-//     // 3. Send Email with Attachment
-//     await transporter.sendMail({
-//       from: process.env.EMAIL_USER,
-//       to: donation.donorEmail,
-//       subject: `Donation Receipt - Karunasri Seva Samithi`,
-//       html: `
-//         <h3>Namaste ${donation.donorName},</h3>
-//         <p>Thank you for your generous donation of <strong>Rs. ${donation.amount}</strong>.</p>
-//         <p>Please find your official 80G tax-exempt receipt attached to this email.</p>
-//         <br/>
-//         <p>Regards,<br/>Karunasri Team</p>
-//       `,
-//       attachments: [
-//         {
-//           filename: `Receipt_${donation._id}.pdf`,
-//           content: pdfBuffer,
-//           contentType: "application/pdf",
-//         },
-//       ],
-//     });
-
-//     // 4. Update Status
-//     donation.receiptStatus = "Sent";
-//     await donation.save();
-
-//     res.json({ message: "Receipt sent successfully" });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
-// // Don't forget to export them!
-// module.exports = {
-//   createDonation,
-//   getDonations,
-//   downloadReceipt,
-//   emailReceipt,
-// };
-
-// module.exports = { createDonation, getDonations };
-
 const fs = require("fs"); // <--- Add this at the very top
 const csv = require("csv-parser"); // Ensure csv-parser is installed
 const AccountHead = require("../models/AccountHead"); // Import AccountHead model
@@ -189,6 +42,7 @@ const createDonation = async (req, res) => {
       manualReceiptDate,
       calendarType,
       tithi,
+      depositBank,
     } = req.body;
 
     // Calculate Next Reminder Date (If Recurring)
@@ -214,6 +68,7 @@ const createDonation = async (req, res) => {
       amount,
       scheme,
       accountHead: accountHeadId,
+      depositBank,
       paymentMode,
       paymentDetails,
       paymentReference,
@@ -243,17 +98,6 @@ const createDonation = async (req, res) => {
   }
 };
 
-// @desc    Get all donations
-// @route   GET /api/donations
-// const getDonations = async (req, res) => {
-//   try {
-//     const donations = await Donation.find({}).sort({ createdAt: -1 });
-//     res.json(donations);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
 // @desc    Get all donations (Populated with Account Code)
 // @route   GET /api/donations
 const getDonations = async (req, res) => {
@@ -282,7 +126,9 @@ const getDonations = async (req, res) => {
 // @route   GET /api/donations/:id/receipt
 const downloadReceipt = async (req, res) => {
   try {
-    const donation = await Donation.findById(req.params.id);
+    const donation = await Donation.findById(req.params.id)
+      .populate("depositBank", "name") // <--- ADD THIS
+      .populate("accountHead", "code name");
     if (!donation)
       return res.status(404).json({ message: "Donation not found" });
 
@@ -304,7 +150,11 @@ const downloadReceipt = async (req, res) => {
 // @route   POST /api/donations/:id/email
 const emailReceipt = async (req, res) => {
   try {
-    const donation = await Donation.findById(req.params.id);
+    const donation = await Donation.findById(req.params.id)
+      .populate("depositBank", "name") // <--- ADD THIS
+      .populate("accountHead", "code name")
+      .sort({ createdAt: -1 });
+
     if (!donation)
       return res.status(404).json({ message: "Donation not found" });
     if (!donation.donorEmail)
@@ -460,16 +310,6 @@ const deleteMedia = async (req, res) => {
   }
 };
 
-// // Add to exports
-// module.exports = {
-//   createDonation,
-//   createPublicDonation,
-//   getDonations,
-//   downloadReceipt,
-//   emailReceipt,
-//   uploadMedia,
-//   deleteMedia, // <--- Add this
-// };
 // @desc    Get My Donations (Logged in User)
 // @route   GET /api/donations/my
 const getMyDonations = async (req, res) => {
@@ -581,29 +421,7 @@ const generateTaxCertificate = async (req, res) => {
   }
 };
 // --- NEW: Get Daily Seva List (Today's Sponsors) ---
-// const getDailySevaList = async (req, res) => {
-//   try {
-//     const { date } = req.query; // Format: YYYY-MM-DD
 
-//     if (!date) return res.status(400).json({ message: "Date is required" });
-
-//     // Construct Start and End of the selected day
-//     const start = new Date(date);
-//     start.setHours(0, 0, 0, 0);
-
-//     const end = new Date(date);
-//     end.setHours(23, 59, 59, 999);
-
-//     // Find donations scheduled for this PROGRAM DATE
-//     const donations = await Donation.find({
-//       programDate: { $gte: start, $lte: end },
-//     }).sort({ createdAt: 1 });
-
-//     res.json(donations);
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 // @desc    Get Daily Seva List (Complex Logic: Date vs Tithi + Expiry)
 const getDailySevaList = async (req, res) => {
   try {
