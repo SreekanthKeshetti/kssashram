@@ -43,6 +43,9 @@ const staff = (req, res, next) => {
     "warden",
     "accountant",
     "clerk",
+    // --- ADD NEW ROLES HERE ---
+    "kba_manager",
+    "ksa_manager",
   ];
 
   if (req.user && allowedRoles.includes(req.user.role)) {

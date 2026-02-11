@@ -47,7 +47,7 @@ const StudentList = () => {
     guardianName: "",
     contactNumber: "",
     address: "",
-    branch: "Headquarters",
+    branch: "KarunaSri Seva Samithi",
     admissionNumber: "",
     caseNumber: "",
     studentType: "General",
@@ -205,7 +205,7 @@ const StudentList = () => {
         guardianName: "",
         contactNumber: "",
         address: "",
-        branch: "Headquarters",
+        branch: "KarunaSri Seva Samithi",
         admissionNumber: "",
         caseNumber: "",
         studentType: "General",
@@ -720,7 +720,9 @@ const StudentList = () => {
               <Col md={6} className="mb-3">
                 <Form.Label>Branch</Form.Label>
                 <Form.Select name="branch" onChange={handleChange}>
-                  <option value="Headquarters">Headquarters</option>
+                  <option value="KarunaSri Seva Samithi">
+                    KarunaSri Seva Samithi
+                  </option>
                   <option value="Karunya Sindhu">Karunya Sindhu</option>
                   <option value="Karunya Bharathi">Karunya Bharathi</option>
                   <option value="Karunya Jyothi">Karunya Jyothi</option>

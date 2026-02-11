@@ -9,16 +9,11 @@ import {
   FaExclamationTriangle,
   FaHandHoldingHeart,
   FaArrowRight,
-  FaClock,
-  FaTasks,
-  FaUserTie,
-  FaFileInvoiceDollar,
-  FaChevronRight,
+  FaClock, // <--- Added Icon for Pending
 } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const DashboardHome = () => {
-  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -43,126 +38,27 @@ const DashboardHome = () => {
     }
   };
 
-  // Helper Component for Action Cards
-  const ActionCard = ({ title, count, link, icon, color }) => (
-    <Col md={4} className="mb-3">
-      <Card
-        className="shadow-sm border-0 h-100 action-card-hover"
-        onClick={() => navigate(link)}
-        style={{ cursor: "pointer", borderLeft: `5px solid ${color}` }}
-      >
-        <Card.Body className="d-flex align-items-center justify-content-between">
-          <div>
-            <h6 className="text-muted text-uppercase small fw-bold mb-1">
-              {title}
-            </h6>
-            <h4 className="m-0 fw-bold" style={{ color: color }}>
-              {count} Pending
-            </h4>
-            <div className="small text-muted mt-1">
-              Click to Review <FaChevronRight size={10} />
-            </div>
-          </div>
-          <div
-            className="p-3 rounded-circle"
-            style={{ backgroundColor: `${color}20`, color: color }}
-          >
-            {icon}
-          </div>
-        </Card.Body>
-      </Card>
-    </Col>
-  );
-
-  // 1. Loading State
   if (loading)
     return (
       <div className="text-center py-5">
         <Spinner animation="border" variant="primary" />
       </div>
     );
-
-  // 2. Error State
   if (error) return <Alert variant="danger">{error}</Alert>;
 
-  // 3. DEFINE VARIABLES (Critical Step - Must be before return)
-  // Check if myActions exists in stats to avoid crashes if backend didn't send it
-  const actions = stats.myActions || { students: 0, members: 0, vouchers: 0 };
-
-  // Calculate if we should show the section
-  const hasActions =
-    actions.students > 0 || actions.members > 0 || actions.vouchers > 0;
-
-  // 4. Render
   return (
     <div>
       {/* --- Welcome Section --- */}
-      <div className="mb-4 d-flex justify-content-between align-items-end">
-        <div>
-          <h2
-            className="text-maroon"
-            style={{ fontFamily: "Playfair Display" }}
-          >
-            Welcome back, {user?.name.split(" ")[0]}!
-          </h2>
-          <p className="text-muted m-0">
-            Overview of Ashram activities & pending tasks.
-          </p>
-        </div>
-        <div className="d-none d-md-block">
-          <span className="badge bg-light text-dark border p-2">
-            {new Date().toLocaleDateString("en-IN", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </span>
-        </div>
+      <div className="mb-4">
+        <h2 className="text-maroon" style={{ fontFamily: "Playfair Display" }}>
+          Welcome back, {user?.name.split(" ")[0]}!
+        </h2>
+        <p className="text-muted">
+          Here is the real-time status of the Ashram.
+        </p>
       </div>
 
-      {/* --- ACTION CENTER (Dynamic Row) --- */}
-      {hasActions && (
-        <div className="mb-4 fade-in">
-          <h5 className="text-maroon mb-3">
-            <FaTasks className="me-2" /> Action Center (My Tasks)
-          </h5>
-          <Row>
-            {actions.students > 0 && (
-              <ActionCard
-                title="Student Admissions"
-                count={actions.students}
-                link="/dashboard/students"
-                icon={<FaUserGraduate size={24} />}
-                color="#d35400"
-              />
-            )}
-            {actions.members > 0 && (
-              <ActionCard
-                title="Membership Requests"
-                count={actions.members}
-                link="/dashboard/members"
-                icon={<FaUserTie size={24} />}
-                color="#2980b9"
-              />
-            )}
-            {actions.vouchers > 0 && (
-              <ActionCard
-                title="Voucher Approvals"
-                count={actions.vouchers}
-                link="/dashboard/finance"
-                icon={<FaFileInvoiceDollar size={24} />}
-                color="#c0392b"
-              />
-            )}
-          </Row>
-        </div>
-      )}
-
       {/* --- ROW 1: INCOME METRICS --- */}
-      <h5 className="text-muted small fw-bold text-uppercase mb-3">
-        Financial Overview
-      </h5>
       <Row className="mb-3">
         {/* 1. TOTAL INCOME */}
         <Col lg={4} md={6} xs={12} className="mb-3">
@@ -227,7 +123,7 @@ const DashboardHome = () => {
 
       {/* --- ROW 2: OPERATIONAL & EXPENSE METRICS --- */}
       <Row className="mb-4">
-        {/* 1. APPROVED EXPENSES */}
+        {/* 1. APPROVED EXPENSES (Red) */}
         <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 text-white shadow border-0 h-100"
@@ -247,25 +143,18 @@ const DashboardHome = () => {
           </Card>
         </Col>
 
-        {/* 2. PENDING EXPENSES - CLICKABLE */}
+        {/* 2. PENDING EXPENSES (Yellow/Orange - NEW!) */}
         <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
-            className="p-3 text-white shadow border-0 h-100 action-card-hover"
-            style={{
-              background: "linear-gradient(45deg, #f09819, #edde5d)",
-              cursor: "pointer",
-            }}
-            onClick={() =>
-              navigate("/dashboard/finance", { state: { filter: "Pending" } })
-            }
-            title="Click to view pending vouchers"
+            className="p-3 text-white shadow border-0 h-100"
+            style={{ background: "linear-gradient(45deg, #f09819, #edde5d)" }}
           >
             <div className="d-flex justify-content-between align-items-center">
               <div>
                 <h3 className="mb-0 fw-bold">
                   ₹ {stats.financials.pendingExpense?.toLocaleString() || 0}
                 </h3>
-                <small>Pending Approval ➜</small>
+                <small>Pending Approval</small>
               </div>
               <div style={{ fontSize: "2rem", opacity: 0.5 }}>
                 <FaClock />
@@ -274,15 +163,11 @@ const DashboardHome = () => {
           </Card>
         </Col>
 
-        {/* 3. ACTIVE STUDENTS */}
+        {/* 3. ACTIVE STUDENTS (Blue) */}
         <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
-            className="p-3 text-white shadow border-0 h-100 action-card-hover"
-            style={{
-              background: "linear-gradient(45deg, #2193b0, #6dd5ed)",
-              cursor: "pointer",
-            }}
-            onClick={() => navigate("/dashboard/students")}
+            className="p-3 text-white shadow border-0 h-100"
+            style={{ background: "linear-gradient(45deg, #2193b0, #6dd5ed)" }}
           >
             <div className="d-flex justify-content-between align-items-center">
               <div>
@@ -296,15 +181,11 @@ const DashboardHome = () => {
           </Card>
         </Col>
 
-        {/* 4. LOW STOCK ALERTS */}
+        {/* 4. LOW STOCK ALERTS (Orange Warning) */}
         <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
-            className="p-3 text-white shadow border-0 h-100 action-card-hover"
-            style={{
-              background: "linear-gradient(45deg, #f7971e, #ffd200)",
-              cursor: "pointer",
-            }}
-            onClick={() => navigate("/dashboard/inventory")}
+            className="p-3 text-white shadow border-0 h-100"
+            style={{ background: "linear-gradient(45deg, #f7971e, #ffd200)" }}
           >
             <div className="d-flex justify-content-between align-items-center">
               <div>
@@ -374,7 +255,7 @@ const DashboardHome = () => {
           {/* Quick Actions Card */}
           <Card className="shadow-sm border-0 mb-4">
             <Card.Header className="bg-white py-3">
-              <h5 className="mb-0 text-maroon">Quick Links</h5>
+              <h5 className="mb-0 text-maroon">Quick Actions</h5>
             </Card.Header>
             <Card.Body>
               <div className="d-grid gap-2">
@@ -399,16 +280,36 @@ const DashboardHome = () => {
               </div>
             </Card.Body>
           </Card>
+
+          {/* Alert Box for Pending Items */}
+          {(stats.financials.pendingExpense > 0 ||
+            stats.counts.lowStock > 0) && (
+            <Card className="shadow-sm border-warning bg-light">
+              <Card.Body>
+                <h6 className="fw-bold text-dark mb-3">Attention Required</h6>
+
+                {stats.financials.pendingExpense > 0 && (
+                  <div className="mb-2 text-danger small">
+                    <FaClock className="me-2" />
+                    <strong>
+                      ₹ {stats.financials.pendingExpense.toLocaleString()}
+                    </strong>{" "}
+                    in vouchers waiting for approval.
+                  </div>
+                )}
+
+                {stats.counts.lowStock > 0 && (
+                  <div className="text-warning small">
+                    <FaExclamationTriangle className="me-2" />
+                    <strong>{stats.counts.lowStock} items</strong> are running
+                    low on stock.
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+          )}
         </Col>
       </Row>
-      <style>
-        {`
-          .action-card-hover:hover {
-            transform: translateY(-3px);
-            transition: all 0.2s ease-in-out;
-          }
-        `}
-      </style>
     </div>
   );
 };

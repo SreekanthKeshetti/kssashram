@@ -33,6 +33,9 @@ const userSchema = mongoose.Schema(
         "clerk", // Staff (General Entry)
         "user", // Guest / Donor
         "employee",
+        // --- NEW ROLES ---
+        "kba_manager", // Karunya Bharathi Manager
+        "ksa_manager", // Karunya Sindhu Manager
       ],
       default: "user", // Everyone starts as a guest user
     },

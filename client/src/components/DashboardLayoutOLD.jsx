@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
+
 import React, { useEffect, useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -13,8 +14,8 @@ import {
   FaSignOutAlt,
   FaCogs,
   FaShieldAlt,
-  FaBars,
-  FaTimes,
+  FaBars, // <--- Import Menu Icon
+  FaTimes, // <--- Import Close Icon
 } from "react-icons/fa";
 import "./DashboardLayout.css";
 
@@ -22,10 +23,13 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
+
+  // --- NEW: SIDEBAR STATE ---
   const [showSidebar, setShowSidebar] = useState(false);
 
   useEffect(() => {
     const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+    // Define allowed roles
     const allowedRoles = [
       "admin",
       "employee",
@@ -39,45 +43,36 @@ const DashboardLayout = () => {
       "ksa_manager",
     ];
 
-    // 1. Check Auth
     if (!userInfo || !allowedRoles.includes(userInfo.role)) {
       navigate("/login");
-      return;
+    } else {
+      setUser(userInfo);
     }
-
-    // 2. RESTRICTION: Redirect Managers away from "Overview"
-    // If they land on "/dashboard", send them straight to "Donations"
-    if (
-      location.pathname === "/dashboard" &&
-      ["kba_manager", "ksa_manager"].includes(userInfo.role)
-    ) {
-      navigate("/dashboard/donations");
-    }
-
-    setUser(userInfo);
-  }, [navigate, location.pathname]);
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("userInfo");
     navigate("/login");
   };
 
+  // Close sidebar automatically when route changes (for mobile)
+  useEffect(() => {
+    setShowSidebar(false);
+  }, [location]);
+
   if (!user) return null;
 
   const isActive = (path) => (location.pathname.includes(path) ? "active" : "");
 
-  // Helper to check if user is a Branch Manager
-  const isBranchManager = ["kba_manager", "ksa_manager"].includes(user.role);
-
   return (
     <div className="dashboard-container">
-      {/* Mobile Overlay */}
+      {/* --- MOBILE OVERLAY --- */}
       <div
         className={`sidebar-overlay ${showSidebar ? "show" : ""}`}
         onClick={() => setShowSidebar(false)}
       ></div>
 
-      {/* SIDEBAR */}
+      {/* --- SIDEBAR --- */}
       <aside className={`sidebar ${showSidebar ? "show" : ""}`}>
         <div className="sidebar-header d-flex justify-content-between align-items-center">
           <div>
@@ -88,6 +83,7 @@ const DashboardLayout = () => {
               Branch: {user.branch || "Headquarters"}
             </div>
           </div>
+          {/* Close Button for Mobile */}
           <button
             className="btn text-white d-lg-none"
             onClick={() => setShowSidebar(false)}
@@ -96,20 +92,129 @@ const DashboardLayout = () => {
           </button>
         </div>
 
-        <ul className="sidebar-menu">
-          {/* 1. OVERVIEW - HIDDEN FOR MANAGERS */}
-          {!isBranchManager && (
+        {/* <ul className="sidebar-menu">
+          <li>
+            <Link
+              to="/dashboard"
+              className={`menu-item ${
+                location.pathname === "/dashboard" ? "active" : ""
+              }`}
+            >
+              <FaTachometerAlt /> Overview
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/dashboard/donations"
+              className={`menu-item ${isActive("donations")}`}
+            >
+              <FaHandHoldingHeart /> Donations
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/dashboard/students"
+              className={`menu-item ${isActive("students")}`}
+            >
+              <FaUserGraduate /> Students
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/dashboard/inventory"
+              className={`menu-item ${isActive("inventory")}`}
+            >
+              <FaBoxOpen /> Inventory
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/dashboard/finance"
+              className={`menu-item ${isActive("finance")}`}
+            >
+              <FaRupeeSign /> Finance
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/dashboard/events"
+              className={`menu-item ${isActive("events")}`}
+            >
+              <FaCalendarAlt /> Events
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/dashboard/daily-seva"
+              className={`menu-item ${isActive("daily-seva")}`}
+            >
+              <FaCalendarAlt /> Today's Donors
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/dashboard/members"
+              className={`menu-item ${isActive("members")}`}
+            >
+              <FaUsers /> Members
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/dashboard/reports"
+              className={`menu-item ${isActive("reports")}`}
+            >
+              <FaChartBar /> Reports
+            </Link>
+          </li>
+
+          {(user.role === "admin" || user.role === "employee") && (
             <li>
               <Link
-                to="/dashboard"
-                className={`menu-item ${location.pathname === "/dashboard" ? "active" : ""}`}
+                to="/dashboard/settings"
+                className={`menu-item ${isActive("settings")}`}
               >
-                <FaTachometerAlt /> Overview
+                <FaCogs /> Settings
+              </Link>
+            </li>
+          )}
+          {user.role === "admin" && (
+            <li>
+              <Link
+                to="/dashboard/audit"
+                className={`menu-item ${isActive("audit")}`}
+              >
+                <FaShieldAlt /> Audit Trail
               </Link>
             </li>
           )}
 
-          {/* 2. DONATIONS (Visible to All) */}
+          <li style={{ marginTop: "auto" }}>
+            <button
+              onClick={handleLogout}
+              className="menu-item"
+              style={{
+                background: "transparent",
+                border: "none",
+                width: "100%",
+              }}
+            >
+              <FaSignOutAlt /> Logout
+            </button>
+          </li>
+        </ul> */}
+        <ul className="sidebar-menu">
+          {/* 1. OVERVIEW (Visible to ALL) */}
+          <li>
+            <Link
+              to="/dashboard"
+              className={`menu-item ${location.pathname === "/dashboard" ? "active" : ""}`}
+            >
+              <FaTachometerAlt /> Overview
+            </Link>
+          </li>
+
+          {/* 2. DONATIONS (Visible to ALL Staff) */}
           <li>
             <Link
               to="/dashboard/donations"
@@ -139,7 +244,7 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 4. INVENTORY (Visible to Managers + HQ Staff) */}
+          {/* 4. INVENTORY (Warden, Clerk, Admin, Committee) */}
           {[
             "admin",
             "president",
@@ -148,8 +253,8 @@ const DashboardLayout = () => {
             "warden",
             "clerk",
             "employee",
-            "kba_manager",
-            "ksa_manager",
+            "kba_manager", // <--- ADDED
+            "ksa_manager", // <--- ADDED
           ].includes(user.role) && (
             <li>
               <Link
@@ -161,7 +266,7 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 5. FINANCE (Accountant, Admin, Committee, Managers) */}
+          {/* 5. FINANCE (Accountant, Admin, Committee ONLY) - Hidden from Warden/Clerk */}
           {[
             "admin",
             "president",
@@ -169,8 +274,8 @@ const DashboardLayout = () => {
             "treasurer",
             "accountant",
             "employee",
-            "kba_manager",
-            "ksa_manager",
+            "kba_manager", // <--- ADDED
+            "ksa_manager", // <--- ADDED
           ].includes(user.role) && (
             <li>
               <Link
@@ -182,7 +287,7 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 6. EVENTS (Visible to All) */}
+          {/* 6. EVENTS (All Staff) */}
           <li>
             <Link
               to="/dashboard/events"
@@ -192,7 +297,7 @@ const DashboardLayout = () => {
             </Link>
           </li>
 
-          {/* 7. DAILY SEVA (Visible to All) */}
+          {/* 7. DAILY SEVA (All Staff) */}
           <li>
             <Link
               to="/dashboard/daily-seva"
@@ -202,7 +307,7 @@ const DashboardLayout = () => {
             </Link>
           </li>
 
-          {/* 8. MEMBERS (HQ Only) */}
+          {/* 8. MEMBERS (Clerk, Admin, Committee) */}
           {[
             "admin",
             "president",
@@ -221,7 +326,7 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 9. REPORTS (HQ Only - Managers don't need global reports) */}
+          {/* 9. REPORTS (Accountant, Admin, Committee) */}
           {[
             "admin",
             "president",
@@ -240,7 +345,7 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 10. SETTINGS (Committee Only) */}
+          {/* 10. SETTINGS (Admin & Committee Only) */}
           {["admin", "president", "secretary", "treasurer"].includes(
             user.role,
           ) && (
@@ -282,19 +387,20 @@ const DashboardLayout = () => {
         </ul>
       </aside>
 
+      {/* --- MAIN CONTENT --- */}
       <div className="main-content">
         <header className="top-header">
           <div className="d-flex align-items-center gap-3">
+            {/* --- HAMBURGER MENU (Visible only on Mobile) --- */}
             <button
               className="btn btn-light d-lg-none border"
               onClick={() => setShowSidebar(!showSidebar)}
             >
               <FaBars size={20} />
             </button>
+
             <h5 className="m-0 text-secondary d-none d-md-block">
-              {location.pathname === "/dashboard"
-                ? "DASHBOARD"
-                : location.pathname.split("/")[2]?.toUpperCase()}
+              {location.pathname.split("/")[2]?.toUpperCase() || "DASHBOARD"}
             </h5>
           </div>
 

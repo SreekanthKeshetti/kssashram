@@ -7,8 +7,9 @@ const {
   downloadVoucherPDF, // Import
   getCashBalance,
   reconcileCash,
+  transferFunds,
 } = require("../controllers/financeController");
-const { protect, committee } = require("../middleware/authMiddleware");
+const { protect, committee, staff } = require("../middleware/authMiddleware");
 
 router
   .route("/vouchers")
@@ -22,4 +23,7 @@ router.get("/vouchers/:id/pdf", protect, downloadVoucherPDF);
 // Reconciliation Routes
 router.get("/cash-balance", protect, getCashBalance);
 router.post("/reconcile", protect, reconcileCash);
+// --- 2. NEW TRANSFER ROUTE ---
+// Only Staff (Admin/Warden) can initiate transfers
+router.post("/transfer", protect, staff, transferFunds);
 module.exports = router;

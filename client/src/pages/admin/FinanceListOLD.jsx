@@ -1,5 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/immutability */
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
@@ -20,25 +20,15 @@ import {
   FaFilePdf,
   FaFileDownload,
   FaBalanceScale,
-  FaExchangeAlt,
 } from "react-icons/fa";
 import { Link, useLocation } from "react-router-dom";
 
 const FinanceList = () => {
-  const location = useLocation();
   const [vouchers, setVouchers] = useState([]);
   const [accountHeads, setAccountHeads] = useState([]);
-
-  // Modals
   const [showModal, setShowModal] = useState(false);
-  const [showTransferModal, setShowTransferModal] = useState(false); // NEW MODAL
-
   const [userInfo, setUserInfo] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
-  const [currentBalance, setCurrentBalance] = useState(0);
 
-  // Voucher Form Data
   const [formData, setFormData] = useState({
     voucherType: "Debit",
     accountHead: "",
@@ -46,23 +36,15 @@ const FinanceList = () => {
     description: "",
     paymentMode: "Cash",
     recipientName: "",
-    branch: "KarunaSri Seva Samithi",
     paymentDetails: {
       chequeNo: "",
       chequeDate: "",
       bankName: "",
       transactionId: "",
     },
+    branch: "Headquarters", // Default
   });
-
-  // NEW: Transfer Form Data
-  const [transferData, setTransferData] = useState({
-    toBranch: "Karunya Sindhu",
-    amount: "",
-    paymentMode: "Bank Transfer",
-    description: "Monthly Fund Release",
-    paymentDetails: { transactionId: "", bankName: "" },
-  });
+  const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("userInfo"));
@@ -71,25 +53,15 @@ const FinanceList = () => {
       fetchVouchers(user);
       fetchAccountHeads(user);
     }
-    // Auto-filter if coming from Dashboard
+  }, []);
+  const [statusFilter, setStatusFilter] = useState("All");
+  useEffect(() => {
     if (location.state && location.state.filter) {
       setStatusFilter(location.state.filter);
+      // Optional: Clear state so it doesn't persist on refresh if you want
+      // window.history.replaceState({}, document.title)
     }
-    fetchBalance();
   }, [location]);
-  const fetchBalance = async () => {
-    try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get(
-        `${BASE_URL}/api/finance/cash-balance`,
-        config,
-      );
-      setCurrentBalance(data.systemBalance);
-    } catch (error) {
-      console.error("Balance Error", error);
-    }
-  };
 
   const fetchVouchers = async (user) => {
     try {
@@ -114,18 +86,19 @@ const FinanceList = () => {
     }
   };
 
-  // --- ACTIONS ---
-
+  // --- NEW: DOWNLOAD HANDLER ---
   const handleDownloadVoucher = async (id, voucherNo) => {
     try {
       const config = {
         headers: { Authorization: `Bearer ${userInfo.token}` },
-        responseType: "blob",
+        responseType: "blob", // Important for PDF
       };
       const response = await axios.get(
         `${BASE_URL}/api/finance/vouchers/${id}/pdf`,
         config,
       );
+
+      // Create Link and Download
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -154,65 +127,10 @@ const FinanceList = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.post(`${BASE_URL}/api/finance/vouchers`, formData, config);
-      setShowModal(false);
-      fetchVouchers(userInfo);
-      fetchBalance();
-      alert("Voucher Created Successfully!");
-      // Reset
-      setFormData({
-        voucherType: "Debit",
-        accountHead: "",
-        amount: "",
-        description: "",
-        paymentMode: "Cash",
-        recipientName: "",
-        branch: "KarunaSri Seva Samithi",
-        paymentDetails: {
-          chequeNo: "",
-          chequeDate: "",
-          bankName: "",
-          transactionId: "",
-        },
-      });
-    } catch (error) {
-      alert("Error creating voucher");
-    }
-  };
-
-  // --- NEW: HANDLE FUND TRANSFER ---
-  const handleTransferSubmit = async () => {
-    if (!transferData.amount) return alert("Please enter amount");
-    try {
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      await axios.post(
-        `${BASE_URL}/api/finance/transfer`,
-        transferData,
-        config,
-      );
-
-      alert("Funds Transferred! Vouchers created for both HQ and Branch.");
-      setShowTransferModal(false);
-      fetchVouchers(userInfo);
-      fetchBalance();
-      setTransferData({
-        toBranch: "Karunya Sindhu",
-        amount: "",
-        paymentMode: "Bank Transfer",
-        description: "Monthly Fund Release",
-        paymentDetails: { transactionId: "", bankName: "" },
-      });
-    } catch (error) {
-      alert(error.response?.data?.message || "Transfer failed");
-    }
-  };
-
+  // Tally Export Logic
   const handleExport = () => {
     if (vouchers.length === 0) return alert("No vouchers to export.");
+
     const headers = [
       "Date",
       "Voucher No",
@@ -225,6 +143,8 @@ const FinanceList = () => {
       "Prepared By",
       "Status",
     ];
+
+    // Using filtered vouchers
     const rows = filteredVouchers.map((v) => [
       new Date(v.createdAt).toLocaleDateString(),
       v.voucherNo,
@@ -237,13 +157,15 @@ const FinanceList = () => {
       v.preparedBy?.name || "System",
       v.status,
     ]);
+
     const csvContent =
       "data:text/csv;charset=utf-8," +
       headers.join(",") +
       "\n" +
       rows.map((e) => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
       `Tally_Export_${new Date().toISOString().split("T")[0]}.csv`,
@@ -251,6 +173,34 @@ const FinanceList = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.post(`${BASE_URL}/api/finance/vouchers`, formData, config);
+      setShowModal(false);
+      fetchVouchers(userInfo);
+      alert("Voucher Created Successfully!");
+      setFormData({
+        voucherType: "Debit",
+        accountHead: "",
+        amount: "",
+        description: "",
+        paymentMode: "Cash",
+        recipientName: "",
+        branch: "Headquarters",
+        paymentDetails: {
+          chequeNo: "",
+          chequeDate: "",
+          bankName: "",
+          transactionId: "",
+        },
+      });
+    } catch (error) {
+      alert("Error creating voucher");
+    }
   };
 
   const handleChange = (e) => {
@@ -267,58 +217,75 @@ const FinanceList = () => {
     }
   };
 
-  const renderPaymentFields = () => (
-    <div className="bg-light p-2 rounded mb-3 border">
-      <h6 className="text-muted small mb-2">Payment Details (Optional)</h6>
-      <Row className="g-2">
-        {(formData.paymentMode === "Cheque" ||
-          formData.paymentMode === "DD") && (
+  const renderPaymentFields = () => {
+    return (
+      <div className="bg-light p-2 rounded mb-3 border">
+        <h6 className="text-muted small mb-2">Payment Details (Optional)</h6>
+        <Row className="g-2">
+          {/* Show Cheque/DD No only for those modes */}
+          {(formData.paymentMode === "Cheque" ||
+            formData.paymentMode === "DD") && (
+            <Col md={4}>
+              <Form.Control
+                size="sm"
+                placeholder="Cheque/DD No"
+                name="chequeNo"
+                value={formData.paymentDetails.chequeNo}
+                onChange={handleChange}
+              />
+            </Col>
+          )}
+
+          {/* Date Field */}
           <Col md={4}>
             <Form.Control
               size="sm"
-              placeholder="Cheque/DD No"
-              name="chequeNo"
-              value={formData.paymentDetails.chequeNo}
+              type="date"
+              name="chequeDate"
+              value={formData.paymentDetails.chequeDate}
               onChange={handleChange}
+              title="Instrument Date"
             />
           </Col>
-        )}
-        <Col md={4}>
-          <Form.Control
-            size="sm"
-            type="date"
-            name="chequeDate"
-            value={formData.paymentDetails.chequeDate}
-            onChange={handleChange}
-          />
-        </Col>
-        <Col md={4}>
-          <Form.Control
-            size="sm"
-            placeholder="Bank Name"
-            name="bankName"
-            value={formData.paymentDetails.bankName}
-            onChange={handleChange}
-          />
-        </Col>
-        {(formData.paymentMode === "Online" ||
-          formData.paymentMode === "UPI" ||
-          formData.paymentMode === "Bank Transfer") && (
-          <Col md={12}>
+
+          {/* Bank Name - Visible for CASH too now */}
+          <Col md={4}>
             <Form.Control
               size="sm"
-              placeholder="Transaction ID / Ref No"
-              name="transactionId"
-              value={formData.paymentDetails.transactionId}
+              placeholder="Bank Name / Account No"
+              name="bankName"
+              value={formData.paymentDetails.bankName}
               onChange={handleChange}
             />
           </Col>
-        )}
-      </Row>
-    </div>
-  );
+
+          {/* Transaction ID - Visible for Online/UPI */}
+          {(formData.paymentMode === "Online" ||
+            formData.paymentMode === "UPI" ||
+            formData.paymentMode === "Bank Transfer") && (
+            <Col md={12}>
+              <Form.Control
+                size="sm"
+                placeholder="Transaction ID / Ref No"
+                name="transactionId"
+                value={formData.paymentDetails.transactionId}
+                onChange={handleChange}
+              />
+            </Col>
+          )}
+        </Row>
+      </div>
+    );
+  };
 
   const filteredVouchers = vouchers.filter((v) => {
+    // if (!dateFilter.start) return true;
+    // const vDate = new Date(v.createdAt);
+    // const start = new Date(dateFilter.start);
+    // const end = dateFilter.end ? new Date(dateFilter.end) : new Date();
+    // end.setHours(23, 59, 59);
+    // return vDate >= start && vDate <= end;
+    // A. Date Filter (Existing)
     let dateMatch = true;
     if (dateFilter.start) {
       const vDate = new Date(v.createdAt);
@@ -327,9 +294,16 @@ const FinanceList = () => {
       end.setHours(23, 59, 59);
       dateMatch = vDate >= start && vDate <= end;
     }
+
+    // B. Status Filter (New)
     let statusMatch = true;
-    if (statusFilter === "Pending") statusMatch = v.status !== "Approved";
-    else if (statusFilter === "Approved") statusMatch = v.status === "Approved";
+    if (statusFilter === "Pending") {
+      // Show if ANY level is pending, or global status is not approved
+      statusMatch = v.status !== "Approved";
+    } else if (statusFilter === "Approved") {
+      statusMatch = v.status === "Approved";
+    }
+
     return dateMatch && statusMatch;
   });
 
@@ -343,37 +317,19 @@ const FinanceList = () => {
           >
             Vouchers & Expenses
           </h2>
-          {/* NEW: SHOW BALANCE HERE */}
-          <div className="mt-2">
-            <Badge bg="success" className="p-2 fs-6">
-              Current Funds Available: ₹ {currentBalance.toLocaleString()}
-            </Badge>
-          </div>
         </Col>
         <Col lg={7}>
           <div className="d-flex flex-wrap gap-2 justify-content-lg-end">
+            {/* Reconcile Button */}
             {/* <Link
               to="/dashboard/finance/reconcile"
-              className="btn btn-outline-dark shadow-sm d-flex align-items-center"
+              className="btn btn-outline-dark shadow-sm flex-grow-1 flex-lg-grow-0 text-decoration-none d-flex align-items-center justify-content-center"
             >
-              <FaBalanceScale className="me-2" /> Reconcile
+              <FaBalanceScale className="me-2" /> Reconcile Cash
             </Link> */}
 
-            {/* NEW: TRANSFER BUTTON (Only for Admin/HQ) */}
-            {(userInfo?.role === "admin" ||
-              userInfo?.role === "president" ||
-              userInfo?.role === "secretary") && (
-              <Button
-                variant="warning"
-                className="shadow-sm"
-                onClick={() => setShowTransferModal(true)}
-              >
-                <FaExchangeAlt className="me-2" /> Transfer Funds
-              </Button>
-            )}
-
             <Button variant="success" size="sm" onClick={handleExport}>
-              <FaFileDownload className="me-2" /> Tally CSV
+              <FaFileDownload className="me-2" /> Download Tally CSV
             </Button>
             <Button
               variant="primary"
@@ -387,6 +343,7 @@ const FinanceList = () => {
         </Col>
       </Row>
 
+      {/* Date Filter */}
       <Row className="mb-3">
         <Col md={6}>
           <div className="btn-group">
@@ -412,6 +369,7 @@ const FinanceList = () => {
         </Col>
         <Col md={6}>
           <div className="d-flex gap-2 justify-content-end align-items-center">
+            <span className="text-muted small fw-bold">Filter:</span>
             <Form.Control
               type="date"
               size="sm"
@@ -440,7 +398,7 @@ const FinanceList = () => {
           <Table hover responsive className="align-middle mb-0 text-nowrap">
             <thead className="bg-light">
               <tr>
-                <th className="ps-3">Date / Branch</th>
+                <th className="ps-3">Date</th>
                 <th>Voucher No</th>
                 <th>Payee / Recipient</th>
                 <th>Amount</th>
@@ -463,13 +421,8 @@ const FinanceList = () => {
 
                 return (
                   <tr key={v._id}>
-                    <td className="ps-3">
-                      <div className="small text-muted">
-                        {new Date(v.createdAt).toLocaleDateString()}
-                      </div>
-                      <Badge bg="light" text="dark" className="border">
-                        {v.branch}
-                      </Badge>
+                    <td className="ps-3 small text-muted">
+                      {new Date(v.createdAt).toLocaleDateString()}
                     </td>
                     <td className="fw-bold">{v.voucherNo}</td>
                     <td>
@@ -484,6 +437,7 @@ const FinanceList = () => {
                       {v.voucherType === "Debit" ? "-" : "+"} ₹
                       {v.amount.toLocaleString()}
                     </td>
+
                     <td>
                       <div
                         className="d-flex flex-column gap-1"
@@ -515,6 +469,7 @@ const FinanceList = () => {
                         </Badge>
                       </div>
                     </td>
+
                     <td>
                       {(canApproveL1 || canApproveL2) && (
                         <Button
@@ -526,6 +481,7 @@ const FinanceList = () => {
                           <FaCheck /> Sign
                         </Button>
                       )}
+                      {/* FIX: ADDED ONCLICK HANDLER FOR DOWNLOAD */}
                       <Button
                         size="sm"
                         variant="outline-danger"
@@ -544,7 +500,7 @@ const FinanceList = () => {
         </Card.Body>
       </Card>
 
-      {/* --- MODAL 1: CREATE VOUCHER (Existing) --- */}
+      {/* MODAL UPDATED WITH BRANCH */}
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Create Voucher</Modal.Title>
@@ -563,6 +519,7 @@ const FinanceList = () => {
                   <option value="Credit">Credit (Receipt)</option>
                 </Form.Select>
               </Col>
+              {/* NEW: BRANCH SELECTION */}
               <Col md={6}>
                 <Form.Label className="small">Branch</Form.Label>
                 <Form.Select
@@ -570,9 +527,7 @@ const FinanceList = () => {
                   value={formData.branch}
                   onChange={handleChange}
                 >
-                  <option value="KarunaSri Seva Samithi">
-                    KarunaSri Seva Samithi
-                  </option>
+                  <option value="Headquarters">Headquarters</option>
                   <option value="Karunya Sindhu">Karunya Sindhu</option>
                   <option value="Karunya Bharathi">Karunya Bharathi</option>
                   <option value="Karunya Jyothi">Karunya Jyothi</option>
@@ -582,33 +537,39 @@ const FinanceList = () => {
                 </Form.Select>
               </Col>
             </Row>
+
+            <Row className="g-2 mb-2">
+              <Col md={12}>
+                <Form.Label className="small">Account Head</Form.Label>
+                <Form.Select
+                  name="accountHead"
+                  value={formData.accountHead}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">-- Select --</option>
+                  {accountHeads
+                    .filter((a) => a.type === formData.voucherType)
+                    .map((acc) => (
+                      <option key={acc._id} value={acc._id}>
+                        {acc.code} - {acc.name}
+                      </option>
+                    ))}
+                </Form.Select>
+              </Col>
+            </Row>
+
             <Form.Group className="mb-2">
-              <Form.Label className="small">Account Head</Form.Label>
-              <Form.Select
-                name="accountHead"
-                value={formData.accountHead}
-                onChange={handleChange}
-                required
-              >
-                <option value="">-- Select --</option>
-                {accountHeads
-                  .filter((a) => a.type === formData.voucherType)
-                  .map((acc) => (
-                    <option key={acc._id} value={acc._id}>
-                      {acc.code} - {acc.name}
-                    </option>
-                  ))}
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label className="small">Paid To</Form.Label>
+              <Form.Label className="small">Paid To (Recipient)</Form.Label>
               <Form.Control
                 name="recipientName"
                 value={formData.recipientName}
                 onChange={handleChange}
                 required
+                placeholder="Name of Person/Shop"
               />
             </Form.Group>
+
             <Row className="g-2 mb-2">
               <Col md={6}>
                 <Form.Label className="small">Amount</Form.Label>
@@ -634,95 +595,24 @@ const FinanceList = () => {
                 </Form.Select>
               </Col>
             </Row>
+
             {renderPaymentFields()}
+
             <Form.Group className="mb-3">
-              <Form.Label className="small">Description</Form.Label>
+              <Form.Label className="small">Towards (Description)</Form.Label>
               <Form.Control
                 as="textarea"
                 name="description"
+                placeholder="e.g. Bus Charges for students"
                 value={formData.description}
                 onChange={handleChange}
               />
             </Form.Group>
+
             <Button type="submit" variant="dark" className="w-100">
               Generate Voucher
             </Button>
           </Form>
-        </Modal.Body>
-      </Modal>
-
-      {/* --- MODAL 2: TRANSFER FUNDS (NEW) --- */}
-      <Modal
-        show={showTransferModal}
-        onHide={() => setShowTransferModal(false)}
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Inter-Branch Fund Transfer</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="alert alert-info small">
-            This will create a <strong>Debit Voucher</strong> for HQ and a{" "}
-            <strong>Credit Voucher</strong> for the Branch automatically.
-          </div>
-          <Form.Group className="mb-3">
-            <Form.Label>Transfer To</Form.Label>
-            <Form.Select
-              value={transferData.toBranch}
-              onChange={(e) =>
-                setTransferData({ ...transferData, toBranch: e.target.value })
-              }
-            >
-              <option value="Karunya Sindhu">Karunya Sindhu</option>
-              <option value="Karunya Bharathi">Karunya Bharathi</option>
-              <option value="Karunya Jyothi">Karunya Jyothi</option>
-            </Form.Select>
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>Amount (₹)</Form.Label>
-            <Form.Control
-              type="number"
-              value={transferData.amount}
-              onChange={(e) =>
-                setTransferData({ ...transferData, amount: e.target.value })
-              }
-              required
-            />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>Payment Mode</Form.Label>
-            <Form.Select
-              value={transferData.paymentMode}
-              onChange={(e) =>
-                setTransferData({
-                  ...transferData,
-                  paymentMode: e.target.value,
-                })
-              }
-            >
-              <option>Bank Transfer</option>
-              <option>Cheque</option>
-              <option>Cash</option>
-            </Form.Select>
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>Description / Month</Form.Label>
-            <Form.Control
-              value={transferData.description}
-              onChange={(e) =>
-                setTransferData({
-                  ...transferData,
-                  description: e.target.value,
-                })
-              }
-            />
-          </Form.Group>
-          <Button
-            variant="warning"
-            className="w-100"
-            onClick={handleTransferSubmit}
-          >
-            Transfer Funds
-          </Button>
         </Modal.Body>
       </Modal>
     </div>

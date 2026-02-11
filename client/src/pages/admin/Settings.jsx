@@ -48,7 +48,7 @@ const Settings = () => {
     email: "",
     phone: "",
     role: "employee",
-    branch: "Headquarters",
+    branch: "KarunaSri Seva Samithi",
     password: "",
   });
 
@@ -208,7 +208,7 @@ const Settings = () => {
         email: "",
         phone: "",
         role: "employee",
-        branch: "Headquarters",
+        branch: "KarunaSri Seva Samithi",
         password: "",
       });
     }
@@ -510,6 +510,13 @@ const Settings = () => {
                     }
                   >
                     <option value="employee">Standard Employee</option>
+                    <option disabled>--- Branch Managers ---</option>
+                    <option value="kba_manager">
+                      KBA Manager (Karunya Bharathi)
+                    </option>
+                    <option value="ksa_manager">
+                      KSA Manager (Karunya Sindhu)
+                    </option>
 
                     <option disabled>--- Staff Roles ---</option>
                     <option value="warden">Warden</option>
@@ -535,7 +542,9 @@ const Settings = () => {
                       setUserForm({ ...userForm, branch: e.target.value })
                     }
                   >
-                    <option value="Headquarters">Headquarters</option>
+                    <option value="KarunaSri Seva Samithi">
+                      KarunaSri Seva Samithi
+                    </option>
                     <option value="Karunya Sindhu">Karunya Sindhu</option>
                     <option value="Karunya Bharathi">Karunya Bharathi</option>
                     <option value="KarunaSri Seva Samithi">

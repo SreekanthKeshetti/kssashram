@@ -22,7 +22,7 @@ const importData = async () => {
         password: hashedPassword,
         phone: "9999999999",
         role: "admin",
-        branch: "Headquarters",
+        branch: "KarunaSri Seva Samithi",
       },
       {
         name: "Ashram Manager",
@@ -38,7 +38,7 @@ const importData = async () => {
         password: hashedPassword,
         phone: "1111111111",
         role: "president",
-        branch: "Headquarters",
+        branch: "KarunaSri Seva Samithi",
       },
       {
         name: "Trust Secretary",
@@ -46,7 +46,7 @@ const importData = async () => {
         password: hashedPassword,
         phone: "2222222222",
         role: "secretary",
-        branch: "Headquarters",
+        branch: "KarunaSri Seva Samithi",
       },
       {
         name: "Trust Treasurer",
@@ -54,7 +54,24 @@ const importData = async () => {
         password: hashedPassword,
         phone: "3333333333",
         role: "treasurer",
-        branch: "Headquarters",
+        branch: "KarunaSri Seva Samithi",
+      },
+      // --- NEW ROLES FOR KBA & KSA ---
+      {
+        name: "KBA Manager",
+        email: "kba@karunasri.org",
+        password: hashedPassword,
+        phone: "4444444444",
+        role: "kba_manager",
+        branch: "Karunya Bharathi", // Hardcoded Branch
+      },
+      {
+        name: "KSA Manager",
+        email: "ksa@karunasri.org",
+        password: hashedPassword,
+        phone: "5555555555",
+        role: "ksa_manager",
+        branch: "Karunya Sindhu", // Hardcoded Branch
       },
     ];
 

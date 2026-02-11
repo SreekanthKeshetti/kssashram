@@ -32,6 +32,10 @@ const createEvent = async (req, res) => {
 
     // Use startDate as fallback if old frontend sends 'date'
     const start = startDate || req.body.date;
+    let finalBranch = "Headquarters";
+    if (req.user.role === "kba_manager") finalBranch = "Karunya Bharathi";
+    else if (req.user.role === "ksa_manager") finalBranch = "Karunya Sindhu";
+    else finalBranch = branch || "Headquarters";
 
     const event = await Event.create({
       title,
@@ -49,7 +53,8 @@ const createEvent = async (req, res) => {
         organization: "",
         designation: "",
       },
-      branch: branch || "Headquarters",
+      // branch: branch || "Headquarters",
+      branch: finalBranch,
       createdBy: req.user._id,
     });
 

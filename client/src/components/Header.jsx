@@ -36,6 +36,8 @@ const Header = () => {
     "warden",
     "accountant",
     "clerk",
+    "kba_manager", // <--- Added
+    "ksa_manager",
   ];
 
   return (

@@ -120,10 +120,11 @@ const DonationList = () => {
     amount: "",
     scheme: "Nitya Annadhana",
     paymentMode: "Cash",
-    branch: "Karunya Sindhu",
+    branch: "KarunaSri Seva Samithi",
     category: "Household",
     address: "",
     depositBank: "",
+    isRecurring: false,
 
     // Occasion
     occasion: "",
@@ -146,8 +147,18 @@ const DonationList = () => {
       transactionId: "",
     },
   });
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("userInfo"));
+    setCurrentUser(user);
+
+    // Auto-set branch for Managers
+    if (user.role === "kba_manager") {
+      setFormData((prev) => ({ ...prev, branch: "Karunya Bharathi" }));
+    } else if (user.role === "ksa_manager") {
+      setFormData((prev) => ({ ...prev, branch: "Karunya Sindhu" }));
+    }
     const fetchData = async () => {
       try {
         const userInfo = JSON.parse(localStorage.getItem("userInfo"));
@@ -189,6 +200,8 @@ const DonationList = () => {
     fetchData();
     fetchDonations();
   }, []);
+  const isBranchLocked =
+    currentUser?.role === "kba_manager" || currentUser?.role === "ksa_manager";
 
   const fetchDonations = useCallback(async () => {
     try {
@@ -450,13 +463,14 @@ const DonationList = () => {
   const handleExport = () => {
     if (filteredDonations.length === 0) return alert("No data to export");
 
-    // 1. Define All Headers
+    // 1. Define All Headers (Added Aadhaar)
     const headers = [
       "Receipt ID",
       "Date",
       "Donor Name",
       "Phone",
       "PAN",
+      "Aadhaar", // <--- ADDED HEADER
       "Address",
       "Category",
       "Amount",
@@ -466,37 +480,34 @@ const DonationList = () => {
       "Cheque Date",
       "Transaction Ref",
       "Donor Bank",
-      "Deposited To (Org Account)", // <--- New Column
+      "Deposited To (Org Account)",
       "Branch",
       "Manual Ref",
     ];
 
     // 2. Map Data Rows
     const rows = filteredDonations.map((d) => {
-      // Helper to safely get payment details
       const pd = d.paymentDetails || {};
-
-      // Helper to format date
       const formatDate = (date) =>
         date ? new Date(date).toLocaleDateString() : "-";
 
       return [
         d.receiptNo || d._id.toString().slice(-6).toUpperCase(),
         formatDate(d.createdAt),
-        `"${d.donorName}"`, // Quote strings to handle commas in names
+        `"${d.donorName}"`,
         `"${d.donorPhone}"`,
         d.donorPan || "-",
-        `"${d.address ? d.address.replace(/\n/g, " ") : "-"}"`, // Clean address
+        d.donorAadhaar || "-", // <--- ADDED DATA
+        `"${d.address ? d.address.replace(/\n/g, " ") : "-"}"`,
         d.category,
         d.amount,
         d.scheme,
         d.paymentMode,
-        // Payment Details:
         pd.chequeNo || pd.ddNo || "-",
         formatDate(pd.chequeDate),
         pd.transactionId || "-",
-        pd.bankName || "-", // Donor's Bank
-        d.depositBank?.name || "-", // Organization's Bank (The new requirement)
+        pd.bankName || "-",
+        d.depositBank?.name || "-",
         d.branch,
         d.manualReceiptNo || "-",
       ];
@@ -758,6 +769,7 @@ const DonationList = () => {
                   Date / ID
                 </th>
                 <th style={{ width: "20%" }}>Donor</th>
+                <th style={{ width: "20%" }}>Scheme / Head</th>
                 <th style={{ width: "10%" }}>Category</th>
                 <th style={{ width: "10%" }}>Amount</th>
                 <th style={{ width: "15%" }}>Mode</th>
@@ -793,6 +805,29 @@ const DonationList = () => {
                     </div>
                     <small className="text-muted">{d.donorPhone}</small>
                   </td>
+                  <td>
+                    <div className="fw-bold text-dark">{d.scheme}</div>
+                    {d.accountHead ? (
+                      <small
+                        className="text-muted"
+                        style={{ fontSize: "0.75rem" }}
+                      >
+                        <strong className="text-success">
+                          {d.accountHead.code}
+                        </strong>{" "}
+                        - {d.accountHead.name}
+                      </small>
+                    ) : (
+                      <Badge
+                        bg="warning"
+                        text="dark"
+                        style={{ fontSize: "0.6rem" }}
+                      >
+                        No Account Mapped
+                      </Badge>
+                    )}
+                  </td>
+
                   <td>
                     <Badge bg="light" text="dark" className="border">
                       {d.category}
@@ -1024,14 +1059,17 @@ const DonationList = () => {
                   name="branch"
                   value={formData.branch}
                   onChange={handleChange}
+                  disabled={isBranchLocked}
                 >
                   <option value="Karunya Sindhu">Karunya Sindhu</option>
                   <option value="Karunya Bharathi">Karunya Bharathi</option>
                   <option value="Karunya Jyothi">Karunya Jyothi</option>
+                  {/* <option value="KarunaSri Seva Samithi">
+                    KarunaSri Seva Samithi
+                  </option> */}
                   <option value="KarunaSri Seva Samithi">
                     KarunaSri Seva Samithi
                   </option>
-                  <option value="Headquarters">Headquarters</option>
                 </Form.Select>
               </Col>
               <Col md={4}>
