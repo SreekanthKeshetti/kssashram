@@ -6,6 +6,7 @@ const {
   registerForEvent,
   markAttendance,
   updatePaymentStatus, // <--- Import
+  downloadBlankForm,
 } = require("../controllers/eventController");
 const { protect, staff } = require("../middleware/authMiddleware");
 
@@ -16,5 +17,6 @@ router.put("/:id/attendance", protect, staff, markAttendance);
 
 // --- NEW ROUTE ---
 router.put("/:id/payment", protect, staff, updatePaymentStatus);
+router.get("/blank-form", downloadBlankForm);
 
 module.exports = router;

@@ -19,6 +19,7 @@ const {
   importStudents,
   approveAlumniExit,
   approveTransfer,
+  downloadBlankForm,
 } = require("../controllers/studentController");
 const { protect, admin, staff } = require("../middleware/authMiddleware");
 // --- MULTER CONFIG (Same as Donation) ---
@@ -57,7 +58,7 @@ const upload = multer({
 // ----------------------------------------
 
 router.route("/").post(protect, createStudent).get(protect, getStudents);
-
+router.get("/blank-form", protect, staff, downloadBlankForm);
 router
   .route("/:id")
   .get(protect, getStudentById)

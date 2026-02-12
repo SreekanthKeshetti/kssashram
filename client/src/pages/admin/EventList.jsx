@@ -731,6 +731,7 @@ import {
   FaTrash,
   FaUserPlus,
   FaFileDownload, // <--- Restored Import
+  FaFilePdf,
 } from "react-icons/fa";
 
 const EventList = () => {
@@ -973,6 +974,29 @@ const EventList = () => {
       setFormData({ ...formData, [name]: val });
     }
   };
+  // --- NEW HANDLER ---
+  const handleDownloadForm = async () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      // Note: We send token just in case, though route might be open. Safer to keep protected if possible.
+      // But based on controller, I didn't add 'protect' middleware to route for ease.
+      // If you added 'protect' in route, keep headers.
+
+      const response = await axios.get(`${BASE_URL}/api/events/blank-form`, {
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "Skill_Registration_Form.pdf");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("Error downloading form");
+    }
+  };
 
   return (
     <div>
@@ -989,7 +1013,14 @@ const EventList = () => {
           </p>
         </Col>
         <Col lg={6} xs={12}>
-          <div className="text-end">
+          <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
+            <Button
+              variant="outline-danger"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              onClick={handleDownloadForm}
+            >
+              <FaFilePdf className="me-2" /> Blank Form
+            </Button>
             <Button
               variant="primary"
               style={{ backgroundColor: "#581818", border: "none" }}

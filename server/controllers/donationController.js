@@ -44,6 +44,7 @@ const createDonation = async (req, res) => {
       calendarType,
       tithi,
       depositBank,
+      interestPeriod,
     } = req.body;
 
     let finalBranch = "KarunaSri Seva Samithi";
@@ -51,11 +52,21 @@ const createDonation = async (req, res) => {
     else if (req.user.role === "ksa_manager") finalBranch = "Karunya Sindhu";
     else finalBranch = branch || "KarunaSri Seva Samithi";
 
+    // let nextDate = null;
+    // if (isRecurring) {
+    //   const d = new Date();
+    //   d.setFullYear(d.getFullYear() + 1);
+    //   nextDate = d;
+    // }
     let nextDate = null;
     if (isRecurring) {
-      const d = new Date();
-      d.setFullYear(d.getFullYear() + 1);
-      nextDate = d;
+      // If 'programDate' (Occasion Date) is filled, use it.
+      // If not, use 'new Date()' (Today).
+      const baseDate = programDate ? new Date(programDate) : new Date();
+
+      // Set to Next Year
+      baseDate.setFullYear(baseDate.getFullYear() + 1);
+      nextDate = baseDate;
     }
 
     const accountHeadId = await getAccountHeadForScheme(scheme);
@@ -86,6 +97,7 @@ const createDonation = async (req, res) => {
       nextReminderDate: nextDate,
       calendarType: calendarType || "Gregorian",
       tithi: tithi || "",
+      interestPeriod: interestPeriod || null,
     });
 
     await logAudit(
@@ -95,6 +107,75 @@ const createDonation = async (req, res) => {
       donation._id,
       `Created donation of Rs.${amount} for ${donorName}`,
     );
+    // ---------------------------------------------------------
+    // 4. AUTO-SEND EMAIL LOGIC (ADDED BACK)
+    // ---------------------------------------------------------
+    if (donation.donorEmail) {
+      try {
+        // IMPORTANT: We must re-fetch with populate to get Bank Name & Account Head Name for the PDF
+        const fullDonation = await Donation.findById(donation._id)
+          .populate("depositBank", "name")
+          .populate("accountHead", "code name");
+
+        if (fullDonation) {
+          // Generate PDF Buffer
+          let buffers = [];
+          const pdfPromise = new Promise((resolve, reject) => {
+            try {
+              buildReceipt(
+                fullDonation,
+                (chunk) => buffers.push(chunk),
+                () => resolve(Buffer.concat(buffers)),
+              );
+            } catch (e) {
+              reject(e);
+            }
+          });
+
+          const pdfBuffer = await pdfPromise;
+
+          // Setup Transporter
+          const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS,
+            },
+          });
+
+          // Send Mail
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: fullDonation.donorEmail,
+            subject: `Donation Receipt - Karunasri Seva Samithi`,
+            html: `
+              <h3>Namaste ${fullDonation.donorName},</h3>
+              <p>Thank you for your generous donation of <strong>Rs. ${fullDonation.amount}</strong>.</p>
+              <p>Please find your official 80G tax-exempt receipt attached to this email.</p>
+              <br/>
+              <p>Regards,<br/>Karunasri Team</p>
+            `,
+            attachments: [
+              {
+                filename: `Receipt_${fullDonation.receiptNo || "New"}.pdf`,
+                content: pdfBuffer,
+                contentType: "application/pdf",
+              },
+            ],
+          });
+
+          // Update Status
+          donation.receiptStatus = "Sent";
+          await donation.save();
+          console.log(`📧 Receipt sent to ${fullDonation.donorEmail}`);
+        }
+      } catch (emailError) {
+        console.error("❌ Auto-Email Failed:", emailError.message);
+        // We do NOT stop the function here; the donation was created successfully.
+        // The user will see "Pending" status in the list and can retry manually.
+      }
+    }
+    // ---------------------------------------------------------
     res.status(201).json(donation);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -492,6 +573,118 @@ const importDonations = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// @desc    Cancel a Donation (Void)
+// @route   PUT /api/donations/:id/cancel
+const cancelDonation = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason)
+      return res
+        .status(400)
+        .json({ message: "Cancellation reason is required" });
+
+    const donation = await Donation.findById(req.params.id);
+    if (!donation)
+      return res.status(404).json({ message: "Donation not found" });
+
+    // Mark as Cancelled
+    donation.status = "Cancelled";
+    donation.cancellationReason = reason;
+    donation.cancelledBy = req.user._id;
+
+    await donation.save();
+
+    await logAudit(
+      req,
+      "CANCEL",
+      "Donation",
+      donation._id,
+      `Cancelled Receipt ${donation.receiptNo}. Reason: ${reason}`,
+    );
+
+    // res.json({ message: "Donation Cancelled Successfully", donation });
+    // 2. SEND CANCELLATION EMAIL
+    if (donation.donorEmail) {
+      try {
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: donation.donorEmail,
+          subject: `IMPORTANT: Receipt Cancelled - ${donation.receiptNo}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; color: #333; border: 1px solid #ddd; padding: 20px;">
+              <h3 style="color: #b00;">Receipt Cancellation Notice</h3>
+              <p>Namaste <strong>${donation.donorName}</strong>,</p>
+              
+              <p>This is to inform you that your donation receipt <strong>${donation.receiptNo}</strong> for <strong>Rs. ${donation.amount}</strong> has been cancelled.</p>
+              
+              <div style="background-color: #fff0f0; padding: 15px; border-left: 5px solid #b00; margin: 15px 0;">
+                <strong>Reason for Cancellation:</strong><br/>
+                ${reason}
+              </div>
+
+              <p>If this was due to a cheque issue (signature mismatch, etc.), we kindly request you to issue a fresh cheque or make a transfer online.</p>
+              
+              <p>Please contact our office if you have any questions.</p>
+              <br/>
+              <p>Regards,<br/><strong>Karunasri Seva Samithi</strong></p>
+            </div>
+          `,
+        });
+        console.log(`❌ Cancellation email sent to ${donation.donorEmail}`);
+      } catch (emailErr) {
+        console.error("Email failed:", emailErr.message);
+        // Don't fail the request, just log it
+      }
+    }
+
+    res.json({ message: "Donation Cancelled and Donor Notified", donation });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// @desc    Update Donation (Edit)
+// @route   PUT /api/donations/:id
+const updateDonation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // 1. Find existing
+    const donation = await Donation.findById(id);
+    if (!donation)
+      return res.status(404).json({ message: "Donation not found" });
+
+    // 2. Update Fields
+    // We iterate over the keys in the update object and apply them
+    Object.keys(updates).forEach((key) => {
+      donation[key] = updates[key];
+    });
+
+    // 3. Save
+    await donation.save();
+
+    // 4. Log Audit
+    await logAudit(
+      req,
+      "UPDATE",
+      "Donation",
+      donation._id,
+      `Updated Receipt ${donation.receiptNo}`,
+    );
+
+    res.json(donation);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   createDonation,
@@ -506,4 +699,6 @@ module.exports = {
   generateTaxCertificate,
   getDailySevaList,
   importDonations,
+  cancelDonation,
+  updateDonation,
 };

@@ -1,6 +1,7 @@
 const Event = require("../models/Event");
 const Voucher = require("../models/Voucher"); // <--- Import Voucher
 const AccountHead = require("../models/AccountHead"); // <--- Import AccountHead
+const { buildSkillForm } = require("../utils/generateSkillFormPDF");
 
 // @desc    Get all events
 const getEvents = async (req, res) => {
@@ -221,6 +222,22 @@ const updatePaymentStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// @desc    Download Blank Registration Form
+// @route   GET /api/events/blank-form
+const downloadBlankForm = async (req, res) => {
+  try {
+    const filename = "Skill_Registration_Form.pdf";
+    res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-type", "application/pdf");
+
+    buildSkillForm(
+      (chunk) => res.write(chunk),
+      () => res.end(),
+    );
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   getEvents,
@@ -228,4 +245,5 @@ module.exports = {
   registerForEvent,
   markAttendance,
   updatePaymentStatus,
+  downloadBlankForm,
 };

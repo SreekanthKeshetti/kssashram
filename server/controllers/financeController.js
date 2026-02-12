@@ -280,7 +280,10 @@ const getCashBalance = async (req, res) => {
 
     if (queryBranch === "KarunaSri Seva Samithi") {
       // Admin/HQ sees ALL cash donations as their main pool
-      const donations = await Donation.find({ paymentMode: "Cash" });
+      const donations = await Donation.find({
+        paymentMode: "Cash",
+        status: "Active",
+      });
       totalDonationCash = donations.reduce((acc, item) => acc + item.amount, 0);
     } else {
       // Branches see 0 from donations for their "Spending Balance"
@@ -294,9 +297,29 @@ const getCashBalance = async (req, res) => {
       status: "Approved",
     });
 
+    // with this voucherINcome the training amont is adding to the total current balance in finance.
+
+    // const voucherIncome = vouchers
+    //   .filter((v) => v.voucherType === "Credit")
+    //   .reduce((acc, v) => acc + v.amount, 0);
+    // --- SPENDING LOGIC FIX ---
     const voucherIncome = vouchers
-      .filter((v) => v.voucherType === "Credit")
+      .filter((v) => {
+        if (v.voucherType !== "Credit") return false;
+
+        // If it is HQ, they can spend all Credit money
+        if (queryBranch === "KarunaSri Seva Samithi") return true;
+
+        // If it is a BRANCH, they can ONLY spend money Transferred from HQ.
+        // We filter by checking if it's a Transfer, NOT a Training Fee.
+        // Training Fees usually start with "Training Fee:" (set in eventController)
+        // Transfers usually start with "Funds Received from HQ" (set in financeController)
+        return (
+          v.description && v.description.includes("Funds Received from HQ")
+        );
+      })
       .reduce((acc, v) => acc + v.amount, 0);
+    // -----
 
     const voucherExpense = vouchers
       .filter((v) => v.voucherType === "Debit")
@@ -455,6 +478,35 @@ const transferFunds = async (req, res) => {
   }
 };
 
+// @desc    Cancel a Voucher
+// @route   PUT /api/finance/vouchers/:id/cancel
+const cancelVoucher = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason) return res.status(400).json({ message: "Reason required" });
+
+    const voucher = await Voucher.findById(req.params.id);
+    if (!voucher) return res.status(404).json({ message: "Voucher not found" });
+
+    voucher.status = "Cancelled";
+    voucher.cancellationReason = reason;
+
+    await voucher.save();
+
+    await logAudit(
+      req,
+      "CANCEL",
+      "Finance",
+      voucher.voucherNo,
+      `Cancelled Voucher. Reason: ${reason}`,
+    );
+
+    res.json({ message: "Voucher Cancelled" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Export new functions
 module.exports = {
   createVoucher,
@@ -464,4 +516,5 @@ module.exports = {
   getCashBalance,
   reconcileCash, // <--- Add these
   transferFunds,
+  cancelVoucher,
 };

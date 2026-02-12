@@ -16,6 +16,8 @@ const {
   generateTaxCertificate, // <--- Import
   getDailySevaList,
   importDonations,
+  cancelDonation,
+  updateDonation,
 } = require("../controllers/donationController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -82,5 +84,6 @@ router.delete("/:id/media", protect, deleteMedia); // <--- Add this
 router.get("/my", protect, getMyDonations); // <--- Add this
 router.get("/daily-seva", protect, getDailySevaList);
 router.post("/import", protect, upload.single("file"), importDonations);
-
+router.put("/:id/cancel", protect, cancelDonation);
+router.put("/:id", protect, updateDonation);
 module.exports = router;

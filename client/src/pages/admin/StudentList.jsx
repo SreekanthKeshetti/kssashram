@@ -26,6 +26,7 @@ import {
   FaFileUpload,
   FaUserFriends,
   FaHistory,
+  FaFilePdf,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
@@ -270,6 +271,25 @@ const StudentList = () => {
       alert(err.response?.data?.message || "Import Failed");
     }
   };
+  // Handler for Blank Form
+  const handleDownloadBlankForm = async () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const response = await axios.get(`${BASE_URL}/api/students/blank-form`, {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "Admission_Form_Blank.pdf");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert("Error downloading form");
+    }
+  };
 
   return (
     <div>
@@ -287,6 +307,15 @@ const StudentList = () => {
 
         <Col lg={7} xs={12}>
           <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
+            {/* --- NEW BUTTON HERE --- */}
+            <Button
+              variant="danger"
+              className="shadow-sm flex-grow-1 flex-lg-grow-0"
+              onClick={handleDownloadBlankForm}
+            >
+              <FaFilePdf className="me-1" /> Blank Form
+            </Button>
+            {/* ----------------------- */}
             <input
               type="file"
               id="csvInput"

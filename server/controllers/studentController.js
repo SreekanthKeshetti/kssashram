@@ -5,6 +5,7 @@ const Student = require("../models/Student");
 const { buildProgressPDF } = require("../utils/generateProgressPDF");
 const nodemailer = require("nodemailer");
 const { logAudit } = require("../utils/auditLogger"); // Added for tracking transfers
+const { buildStudentAdmissionForm } = require("../utils/generateStudentForm");
 
 // @desc    Register a new Student (Employee)
 // @route   POST /api/students
@@ -659,6 +660,22 @@ const importStudents = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// @desc    Download Blank Student Admission Form
+// @route   GET /api/students/blank-form
+const downloadBlankForm = async (req, res) => {
+  try {
+    const filename = "Student_Admission_Form.pdf";
+    res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-type", "application/pdf");
+
+    buildStudentAdmissionForm(
+      (chunk) => res.write(chunk),
+      () => res.end(),
+    );
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   createStudent,
@@ -676,4 +693,5 @@ module.exports = {
   emailProgressReport,
   updateStatutoryInfo,
   importStudents,
+  downloadBlankForm,
 };

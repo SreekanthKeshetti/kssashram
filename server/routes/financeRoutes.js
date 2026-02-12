@@ -8,6 +8,7 @@ const {
   getCashBalance,
   reconcileCash,
   transferFunds,
+  cancelVoucher,
 } = require("../controllers/financeController");
 const { protect, committee, staff } = require("../middleware/authMiddleware");
 
@@ -26,4 +27,5 @@ router.post("/reconcile", protect, reconcileCash);
 // --- 2. NEW TRANSFER ROUTE ---
 // Only Staff (Admin/Warden) can initiate transfers
 router.post("/transfer", protect, staff, transferFunds);
+router.put("/vouchers/:id/cancel", protect, committee, cancelVoucher);
 module.exports = router;

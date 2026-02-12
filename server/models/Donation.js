@@ -95,6 +95,10 @@ const donationSchema = mongoose.Schema(
     },
     programDate: { type: Date }, // English Date
     tithi: { type: String }, // Telugu Tithi string
+    interestPeriod: {
+      startDate: { type: Date },
+      endDate: { type: Date },
+    },
 
     // System Details
     branch: {
@@ -114,6 +118,15 @@ const donationSchema = mongoose.Schema(
       enum: ["Generated", "Sent", "Pending"],
       default: "Pending",
     },
+    // --- NEW FIELDS FOR CANCELLATION ---
+    status: {
+      type: String,
+      enum: ["Active", "Cancelled"],
+      default: "Active",
+    },
+    cancellationReason: { type: String },
+    cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    // -----------------------------------
     media: [
       {
         type: String, // Stores the URL/Path of the file

@@ -11,29 +11,29 @@ import {
   Card,
   Row,
   Col,
+  Spinner,
+  Alert,
   Modal,
   Form,
   ButtonGroup,
-  Alert,
 } from "react-bootstrap";
 import {
   FaPlus,
   FaFilePdf,
   FaImages,
+  FaTrash,
   FaSearch,
   FaCertificate,
-  FaFileUpload,
-  FaEnvelope,
-  FaBan,
-  FaCheckCircle,
-  FaFileCsv,
   FaUsers,
   FaBuilding,
+  FaLayerGroup,
+  FaFileUpload,
   FaClock,
-  FaEdit,
+  FaEnvelope,
+  FaCheck,
 } from "react-icons/fa";
 
-// Constants for Telugu Date
+// --- CONSTANTS FOR TELUGU DATE ---
 const TELUGU_MASAMS = [
   "Chaitra",
   "Vaishakha",
@@ -71,10 +71,10 @@ const TITHIS = [
 const DonationList = () => {
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [schemes, setSchemes] = useState([]);
+  // --- NEW: STATE FOR BANKS ---
   const [bankAccounts, setBankAccounts] = useState([]);
-  const [occasionsList, setOccasionsList] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
 
   // Filters
   const [filterCategory, setFilterCategory] = useState("Household");
@@ -82,33 +82,35 @@ const DonationList = () => {
 
   // Modals
   const [showModal, setShowModal] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showTaxModal, setShowTaxModal] = useState(false);
   const [showMediaModal, setShowMediaModal] = useState(false);
 
-  // States
-  const [receiptType, setReceiptType] = useState("Donation"); // "Donation" or "General"
-  const [cancelData, setCancelData] = useState({ id: "", reason: "" });
-  const [importFile, setImportFile] = useState(null);
+  // Import State
   const [importCategory, setImportCategory] = useState("Household");
-  const [submitLoading, setSubmitLoading] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+
+  // Tax Cert State
   const [taxYear, setTaxYear] = useState(new Date().getFullYear());
   const [taxPhone, setTaxPhone] = useState("");
+
+  // Media State
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
-  // --- NEW: EDIT STATE ---
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
 
-  // Form DataF
+  // Occasion List State
+  const [occasionsList, setOccasionsList] = useState([]);
+
+  // --- TITHI SELECTION STATE ---
   const [tithiParts, setTithiParts] = useState({
     masam: TELUGU_MASAMS[0],
     paksha: PAKSHAS[0],
     tithi: TITHIS[0],
   });
 
+  // --- MAIN FORM DATA ---
   const [formData, setFormData] = useState({
     donorName: "",
     donorPhone: "",
@@ -122,14 +124,22 @@ const DonationList = () => {
     category: "Household",
     address: "",
     depositBank: "",
+    isRecurring: false,
+
+    // Occasion
     occasion: "",
     inNameOf: "",
+
+    // Calendar Logic
     calendarType: "Gregorian",
     programDate: "",
-    tithi: "",
-    isRecurring: false,
+    tithi: "", // Will be auto-filled on submit
+
+    // Manual Legacy Data
     manualReceiptNo: "",
     manualReceiptDate: "",
+
+    // Payment Details (Nested)
     paymentDetails: {
       chequeNo: "",
       chequeDate: "",
@@ -138,22 +148,26 @@ const DonationList = () => {
     },
     interestPeriod: { startDate: "", endDate: "" },
   });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [receiptType, setReceiptType] = useState("Donation"); // "Donation" or "General"
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("userInfo"));
     setCurrentUser(user);
 
     // Auto-set branch for Managers
-    if (user && user.role === "kba_manager") {
+    if (user.role === "kba_manager") {
       setFormData((prev) => ({ ...prev, branch: "Karunya Bharathi" }));
-    } else if (user && user.role === "ksa_manager") {
+    } else if (user.role === "ksa_manager") {
       setFormData((prev) => ({ ...prev, branch: "Karunya Sindhu" }));
     }
-
     const fetchData = async () => {
-      if (!user) return;
       try {
-        const config = { headers: { Authorization: `Bearer ${user.token}` } };
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        if (!userInfo || !userInfo.token) return;
+        const config = {
+          headers: { Authorization: `Bearer ${userInfo.token}` },
+        };
 
         const schemeRes = await axios.get(`${BASE_URL}/api/schemes`, config);
         setSchemes(schemeRes.data);
@@ -163,158 +177,71 @@ const DonationList = () => {
 
         const occRes = await axios.get(`${BASE_URL}/api/occasions`, config);
         setOccasionsList(occRes.data);
-
+        // --- NEW: FETCH ACCOUNTS & FILTER FOR BANKS/CASH ---
         const accRes = await axios.get(`${BASE_URL}/api/accounts`, config);
+
+        // Filter logic: Check if name contains "Bank" or "Cash"
+        // Adjust this logic if your account codes are specific (e.g., starts with 10)
         const banks = accRes.data.filter(
           (acc) =>
             acc.name.toLowerCase().includes("bank") ||
             acc.name.toLowerCase().includes("cash"),
         );
         setBankAccounts(banks);
+
+        // Set default if available
         if (banks.length > 0) {
           setFormData((prev) => ({ ...prev, depositBank: banks[0]._id }));
         }
+        // ------------
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching dropdown data:", err);
       }
     };
 
-    if (user) fetchData();
+    fetchData();
     fetchDonations();
   }, []);
+  const isBranchLocked =
+    currentUser?.role === "kba_manager" || currentUser?.role === "ksa_manager";
 
   const fetchDonations = useCallback(async () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      if (!userInfo) return;
+      if (!userInfo || !userInfo.token) {
+        setLoading(false);
+        return;
+      }
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const { data } = await axios.get(`${BASE_URL}/api/donations`, config);
       setDonations(data);
       setLoading(false);
     } catch (err) {
       console.error(err);
+      setError("Failed to fetch donations.");
       setLoading(false);
     }
   }, []);
 
-  // --- ACTIONS ---
-
-  const handleCancelClick = (id) => {
-    setCancelData({ id, reason: "" });
-    setShowCancelModal(true);
-  };
-
-  const submitCancellation = async () => {
-    if (!cancelData.reason) return alert("Please provide a reason.");
-    if (!window.confirm("Are you sure? This cannot be undone.")) return;
-
-    try {
-      const config = {
-        headers: { Authorization: `Bearer ${currentUser.token}` },
-      };
-      await axios.put(
-        `${BASE_URL}/api/donations/${cancelData.id}/cancel`,
-        { reason: cancelData.reason },
-        config,
-      );
-
-      alert("Receipt Cancelled Successfully.");
-      setShowCancelModal(false);
-      fetchDonations();
-    } catch (error) {
-      alert(error.response?.data?.message || "Error cancelling receipt");
-    }
-  };
-  // --- NEW: EDIT HANDLER ---
-  const handleEditClick = (donation) => {
-    setIsEditing(true);
-    setEditId(donation._id);
-
-    // Determine Receipt Type
-    if (
-      donation.scheme === "Interest Received" ||
-      donation.donorName === "Bank Interest"
-    ) {
-      setReceiptType("General");
-    } else {
-      setReceiptType("Donation");
+  const filteredDonations = donations.filter((d) => {
+    let matchesCategory = true;
+    if (filterCategory !== "All") {
+      const cat = d.category || "Household";
+      matchesCategory = cat === filterCategory;
     }
 
-    // Helper to format date for input (YYYY-MM-DD)
-    const formatDate = (d) =>
-      d ? new Date(d).toISOString().split("T")[0] : "";
+    let matchesDate = true;
+    if (dateFilter.start) {
+      matchesDate = new Date(d.createdAt) >= new Date(dateFilter.start);
+    }
+    if (matchesDate && dateFilter.end) {
+      const endDate = new Date(dateFilter.end);
+      endDate.setHours(23, 59, 59, 999);
+      matchesDate = new Date(d.createdAt) <= endDate;
+    }
 
-    setFormData({
-      donorName: donation.donorName || "",
-      donorPhone: donation.donorPhone || "",
-      donorEmail: donation.donorEmail || "",
-      donorPan: donation.donorPan || "",
-      donorAadhaar: donation.donorAadhaar || "",
-      amount: donation.amount,
-      scheme: donation.scheme,
-      paymentMode: donation.paymentMode,
-      branch: donation.branch,
-      category: donation.category || "Household",
-      address: donation.address || "",
-      depositBank: donation.depositBank?._id || donation.depositBank || "", // Handle populated or raw ID
-      occasion: donation.occasion || "",
-      inNameOf: donation.inNameOf || "",
-      calendarType: donation.calendarType || "Gregorian",
-      programDate: formatDate(donation.programDate),
-      tithi: donation.tithi || "",
-      isRecurring: donation.isRecurring || false,
-      manualReceiptNo: donation.manualReceiptNo || "",
-      manualReceiptDate: formatDate(donation.manualReceiptDate),
-      paymentDetails: {
-        chequeNo: donation.paymentDetails?.chequeNo || "",
-        chequeDate: formatDate(donation.paymentDetails?.chequeDate),
-        bankName: donation.paymentDetails?.bankName || "",
-        transactionId: donation.paymentDetails?.transactionId || "",
-      },
-      interestPeriod: {
-        startDate: formatDate(donation.interestPeriod?.startDate),
-        endDate: formatDate(donation.interestPeriod?.endDate),
-      },
-    });
-
-    setShowModal(true);
-  };
-
-  const handleOpenAddModal = () => {
-    setIsEditing(false);
-    setEditId(null);
-    // Reset Form
-    setFormData({
-      donorName: "",
-      donorPhone: "",
-      donorEmail: "",
-      donorPan: "",
-      donorAadhaar: "",
-      amount: "",
-      scheme: "Nitya Annadhana",
-      paymentMode: "Cash",
-      branch: "KarunaSri Seva Samithi",
-      category: "Household",
-      address: "",
-      depositBank: bankAccounts.length > 0 ? bankAccounts[0]._id : "",
-      occasion: "",
-      inNameOf: "",
-      calendarType: "Gregorian",
-      programDate: "",
-      tithi: "",
-      isRecurring: false,
-      manualReceiptNo: "",
-      manualReceiptDate: "",
-      paymentDetails: {
-        chequeNo: "",
-        chequeDate: "",
-        bankName: "",
-        transactionId: "",
-      },
-      interestPeriod: { startDate: "", endDate: "" },
-    });
-    setShowModal(true);
-  };
+    return matchesCategory && matchesDate;
+  });
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -343,9 +270,8 @@ const DonationList = () => {
   const handleSearchDonor = async () => {
     if (!formData.donorPhone) return alert("Enter phone number to search.");
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${currentUser.token}` },
-      };
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const { data } = await axios.get(
         `${BASE_URL}/api/donations/search?phone=${formData.donorPhone}`,
         config,
@@ -369,94 +295,203 @@ const DonationList = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitLoading(true);
-
+    // --- NEW LOGIC START ---
+    // If it's a General Receipt (e.g. Interest), auto-fill Donor Details
     let submissionData = { ...formData };
 
-    // --- LOGIC FOR BANK INTEREST / GENERAL ---
     if (receiptType === "General") {
-      submissionData.donorName = formData.donorName || "Bank Interest";
+      submissionData.donorName = formData.donorName || "General Receipt"; // or "Bank Interest"
       submissionData.donorPhone = "0000000000";
       submissionData.category = "Organizational";
-      submissionData.scheme = "Interest Received";
-      submissionData.paymentMode = "Bank Transfer";
+      submissionData.scheme = "General Fund"; // Force scheme for interest
     }
+    // --- NEW LOGIC END ---
 
+    // --- PREPARE DATA ---
     const payload = { ...submissionData };
 
+    // If Telugu, construct the string
     if (payload.calendarType === "Telugu") {
       payload.tithi = `${tithiParts.masam} ${tithiParts.paksha} ${tithiParts.tithi}`;
-      payload.programDate = "";
+      payload.programDate = ""; // Clear English date if Telugu
     } else {
-      payload.tithi = "";
+      payload.tithi = ""; // Clear Telugu if English
     }
 
     try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${currentUser.token}`,
+          Authorization: `Bearer ${userInfo.token}`,
         },
       };
-      if (isEditing) {
-        // UPDATE
-        await axios.put(`${BASE_URL}/api/donations/${editId}`, payload, config);
-        alert("Receipt Updated Successfully!");
-      } else {
-        // CREATE
-        await axios.post(`${BASE_URL}/api/donations`, payload, config);
-        alert("Receipt Created Successfully!");
-      }
-      // await axios.post(`${BASE_URL}/api/donations`, payload, config);
+      await axios.post(`${BASE_URL}/api/donations`, payload, config);
       setShowModal(false);
       fetchDonations();
-      // alert("Receipt Created Successfully!");
 
       // Reset Form
-      // setFormData({
-      //   donorName: "",
-      //   donorPhone: "",
-      //   donorEmail: "",
-      //   donorPan: "",
-      //   donorAadhaar: "",
-      //   amount: "",
-      //   scheme: "Nitya Annadhana",
-      //   paymentMode: "Cash",
-      //   branch: "KarunaSri Seva Samithi",
-      //   category: "Household",
-      //   address: "",
-      //   depositBank: bankAccounts.length > 0 ? bankAccounts[0]._id : "",
-      //   occasion: "",
-      //   inNameOf: "",
-      //   calendarType: "Gregorian",
-      //   programDate: "",
-      //   tithi: "",
-      //   isRecurring: false,
-      //   manualReceiptNo: "",
-      //   manualReceiptDate: "",
-      //   paymentDetails: {
-      //     chequeNo: "",
-      //     chequeDate: "",
-      //     bankName: "",
-      //     transactionId: "",
-      //   },
-      //   interestPeriod: { startDate: "", endDate: "" },
-      // });
+      setFormData({
+        donorName: "",
+        donorPhone: "",
+        donorEmail: "",
+        donorPan: "",
+        donorAadhaar: "",
+        amount: "",
+        scheme: "Nitya Annadhana",
+        paymentMode: "Cash",
+        branch: "Karunya Sindhu",
+        category: "Household",
+        address: "",
+        occasion: "",
+        inNameOf: "",
+        calendarType: "Gregorian",
+        programDate: "",
+        tithi: "",
+        manualReceiptNo: "",
+        manualReceiptDate: "",
+        depositBank: bankAccounts.length > 0 ? bankAccounts[0]._id : "", // Reset to default
+        paymentDetails: {
+          chequeNo: "",
+          chequeDate: "",
+          bankName: "",
+          transactionId: "",
+        },
+      });
     } catch (err) {
-      alert(err.response?.data?.message || "Error adding record");
+      alert(err.response?.data?.message || "Error adding donation");
     }
     setSubmitLoading(false);
   };
 
-  // --- EXPORT HANDLER (FULL COLUMNS RESTORED) ---
+  const renderPaymentFields = () => {
+    const mode = formData.paymentMode;
+    if (mode === "Cheque" || mode === "DD") {
+      return (
+        <Row className="bg-light p-2 rounded mb-3 border">
+          <Col md={4}>
+            <Form.Control
+              size="sm"
+              placeholder={mode === "Cheque" ? "Cheque No" : "DD No"}
+              name="chequeNo"
+              value={formData.paymentDetails.chequeNo}
+              onChange={handleChange}
+            />
+          </Col>
+          <Col md={4}>
+            <Form.Control
+              size="sm"
+              type="date"
+              name="chequeDate"
+              value={formData.paymentDetails.chequeDate}
+              onChange={handleChange}
+            />
+          </Col>
+          <Col md={4}>
+            <Form.Control
+              size="sm"
+              placeholder="Bank Name"
+              name="bankName"
+              value={formData.paymentDetails.bankName}
+              onChange={handleChange}
+            />
+          </Col>
+        </Row>
+      );
+    }
+    if (mode === "Online" || mode === "UPI" || mode === "Bank Transfer") {
+      return (
+        <div className="bg-light p-2 rounded mb-3 border">
+          <Form.Control
+            size="sm"
+            placeholder="Transaction ID / Reference No"
+            name="transactionId"
+            value={formData.paymentDetails.transactionId}
+            onChange={handleChange}
+          />
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // --- HANDLERS ---
+  const handleEmailReceipt = async (id, currentStatus) => {
+    const action = currentStatus === "Sent" ? "Resend" : "Send";
+    if (
+      !window.confirm(
+        `Are you sure you want to ${action} the receipt via Email?`,
+      )
+    )
+      return;
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.post(`${BASE_URL}/api/donations/${id}/email`, {}, config);
+      alert(`Receipt ${action} Successfully!`);
+      fetchDonations();
+    } catch (err) {
+      alert(err.response?.data?.message || "Error sending email.");
+    }
+  };
+
+  // const handleExport = () => {
+  //   if (filteredDonations.length === 0) return alert("No data to export");
+  //   const headers = [
+  //     "Receipt ID",
+  //     "Date",
+  //     "Donor Name",
+  //     "Phone",
+  //     "Category",
+  //     "Amount",
+  //     "Scheme",
+  //     "Mode",
+  //     "Branch",
+  //     "Manual Ref",
+  //   ];
+  //   const rows = filteredDonations.map((d) => [
+  //     d._id.toString().slice(-6).toUpperCase(),
+  //     new Date(d.createdAt).toLocaleDateString(),
+  //     `"${d.donorName}"`,
+  //     `"${d.donorPhone}"`,
+  //     d.category,
+  //     d.amount,
+  //     d.scheme,
+  //     d.paymentMode,
+  //     d.branch,
+  //     d.manualReceiptNo || "-",
+  //   ]);
+  //   const csvContent =
+  //     "data:text/csv;charset=utf-8," +
+  //     headers.join(",") +
+  //     "\n" +
+  //     rows.map((e) => e.join(",")).join("\n");
+  //   const encodedUri = encodeURI(csvContent);
+  //   const link = document.createElement("a");
+  //   link.setAttribute("href", encodedUri);
+  //   link.setAttribute(
+  //     "download",
+  //     `Donations_Export_${new Date().toISOString().split("T")[0]}.csv`,
+  //   );
+  //   document.body.appendChild(link);
+  //   link.click();
+  //   document.body.removeChild(link);
+  // };
+  // --- FILE: client/src/pages/admin/DonationList.jsx ---
+
+  // ... inside DonationList component ...
+
   const handleExport = () => {
     if (filteredDonations.length === 0) return alert("No data to export");
+
+    // 1. Define All Headers (Added Aadhaar)
     const headers = [
       "Receipt ID",
       "Date",
       "Donor Name",
       "Phone",
       "PAN",
-      "Aadhaar",
+      "Aadhaar", // <--- ADDED HEADER
       "Address",
       "Category",
       "Amount",
@@ -466,23 +501,24 @@ const DonationList = () => {
       "Cheque Date",
       "Transaction Ref",
       "Donor Bank",
-      "Deposited To",
+      "Deposited To (Org Account)",
       "Branch",
-      "Status",
       "Manual Ref",
     ];
 
+    // 2. Map Data Rows
     const rows = filteredDonations.map((d) => {
       const pd = d.paymentDetails || {};
       const formatDate = (date) =>
         date ? new Date(date).toLocaleDateString() : "-";
+
       return [
-        d.receiptNo || d._id.slice(-6).toUpperCase(),
+        d.receiptNo || d._id.toString().slice(-6).toUpperCase(),
         formatDate(d.createdAt),
         `"${d.donorName}"`,
         `"${d.donorPhone}"`,
         d.donorPan || "-",
-        d.donorAadhaar || "-",
+        d.donorAadhaar || "-", // <--- ADDED DATA
         `"${d.address ? d.address.replace(/\n/g, " ") : "-"}"`,
         d.category,
         d.amount,
@@ -494,37 +530,43 @@ const DonationList = () => {
         pd.bankName || "-",
         d.depositBank?.name || "-",
         d.branch,
-        d.status,
         d.manualReceiptNo || "-",
       ];
     });
 
+    // 3. Generate CSV
     const csvContent =
       "data:text/csv;charset=utf-8," +
       headers.join(",") +
       "\n" +
       rows.map((e) => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", `Receipts_Export.csv`);
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Donations_Export_${new Date().toISOString().split("T")[0]}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // --- OTHER HANDLERS ---
   const handleImportSubmit = async (e) => {
     e.preventDefault();
-    if (!importFile) return alert("Please select a CSV file.");
+    if (!importFile) return alert("Please select a CSV file first.");
     const fd = new FormData();
     fd.append("file", importFile);
     fd.append("category", importCategory);
+
     setSubmitLoading(true);
     try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${currentUser.token}`,
+          Authorization: `Bearer ${userInfo.token}`,
         },
       };
       const { data } = await axios.post(
@@ -545,36 +587,23 @@ const DonationList = () => {
   const handleDownloadTaxCert = async (e) => {
     e.preventDefault();
     try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const response = await axios.get(
         `${BASE_URL}/api/donations/tax-certificate?phone=${taxPhone}&year=${taxYear}`,
         {
-          headers: { Authorization: `Bearer ${currentUser.token}` },
+          headers: { Authorization: `Bearer ${userInfo.token}` },
           responseType: "blob",
         },
       );
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `TaxCert.pdf`);
+      link.setAttribute("download", `TaxCert_${taxPhone}_${taxYear}.pdf`);
       document.body.appendChild(link);
       link.click();
       setShowTaxModal(false);
     } catch (err) {
-      alert("No records found.");
-    }
-  };
-
-  const handleEmailReceipt = async (id) => {
-    if (!window.confirm("Email Receipt to Donor?")) return;
-    try {
-      const config = {
-        headers: { Authorization: `Bearer ${currentUser.token}` },
-      };
-      await axios.post(`${BASE_URL}/api/donations/${id}/email`, {}, config);
-      alert("Sent!");
-      fetchDonations();
-    } catch (e) {
-      alert("Error sending email");
+      alert("Error: No donations found for this donor in the selected year.");
     }
   };
 
@@ -583,17 +612,19 @@ const DonationList = () => {
     setShowMediaModal(true);
   };
   const handleFileChange = (e) => setFiles(e.target.files);
+
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (files.length === 0) return alert("Select files");
+    if (files.length === 0) return alert("Please select files");
     const fd = new FormData();
     for (let i = 0; i < files.length; i++) fd.append("files", files[i]);
     setUploading(true);
     try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${currentUser.token}`,
+          Authorization: `Bearer ${userInfo.token}`,
         },
       };
       await axios.post(
@@ -601,102 +632,35 @@ const DonationList = () => {
         fd,
         config,
       );
-      alert("Uploaded!");
+      alert("Uploaded Successfully!");
       setFiles([]);
       setShowMediaModal(false);
       fetchDonations();
-    } catch (e) {
-      alert("Upload Failed");
+    } catch (err) {
+      alert("Upload failed");
     }
     setUploading(false);
   };
+
   const handleDeleteMedia = async (filePath) => {
-    if (!window.confirm("Delete file?")) return;
+    if (!window.confirm("Are you sure you want to delete this file?")) return;
     try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = {
-        headers: { Authorization: `Bearer ${currentUser.token}` },
+        headers: { Authorization: `Bearer ${userInfo.token}` },
         data: { filePath },
       };
-      await axios.delete(
+      const { data } = await axios.delete(
         `${BASE_URL}/api/donations/${selectedDonation._id}/media`,
         config,
       );
-      setSelectedDonation({
-        ...selectedDonation,
-        media: selectedDonation.media.filter((m) => m !== filePath),
-      });
+      setSelectedDonation({ ...selectedDonation, media: data.media });
       fetchDonations();
-      alert("Deleted");
+      alert("File Deleted");
     } catch (err) {
-      alert("Error");
+      alert("Error deleting file");
     }
   };
-
-  const renderPaymentFields = () => {
-    const mode = formData.paymentMode;
-    if (mode === "Cheque" || mode === "DD") {
-      return (
-        <Row className="bg-light p-2 rounded mb-3 border">
-          <Col md={4}>
-            <Form.Control
-              size="sm"
-              placeholder="No"
-              name="chequeNo"
-              value={formData.paymentDetails.chequeNo}
-              onChange={handleChange}
-            />
-          </Col>
-          <Col md={4}>
-            <Form.Control
-              size="sm"
-              type="date"
-              name="chequeDate"
-              value={formData.paymentDetails.chequeDate}
-              onChange={handleChange}
-            />
-          </Col>
-          <Col md={4}>
-            <Form.Control
-              size="sm"
-              placeholder="Bank"
-              name="bankName"
-              value={formData.paymentDetails.bankName}
-              onChange={handleChange}
-            />
-          </Col>
-        </Row>
-      );
-    }
-    if (["Online", "UPI", "Bank Transfer"].includes(mode)) {
-      return (
-        <div className="bg-light p-2 rounded mb-3 border">
-          <Form.Control
-            size="sm"
-            placeholder="Transaction ID"
-            name="transactionId"
-            value={formData.paymentDetails.transactionId}
-            onChange={handleChange}
-          />
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const filteredDonations = donations.filter((d) => {
-    let matchesCategory =
-      filterCategory === "All" ||
-      (d.category || "Household") === filterCategory;
-    let matchesDate = true;
-    if (dateFilter.start)
-      matchesDate = new Date(d.createdAt) >= new Date(dateFilter.start);
-    if (matchesDate && dateFilter.end) {
-      const endDate = new Date(dateFilter.end);
-      endDate.setHours(23, 59, 59, 999);
-      matchesDate = new Date(d.createdAt) <= endDate;
-    }
-    return matchesCategory && matchesDate;
-  });
 
   return (
     <div>
@@ -706,10 +670,10 @@ const DonationList = () => {
             className="text-maroon m-0"
             style={{ fontFamily: "Playfair Display" }}
           >
-            Receipts / Donations
+            Donations
           </h2>
           <p className="text-muted m-0 small">
-            Manage all incoming funds (Donations & Other Receipts)
+            Manage incoming funds & receipts
           </p>
         </Col>
         <Col lg={7}>
@@ -740,7 +704,7 @@ const DonationList = () => {
               <FaCertificate /> Tax Cert
             </Button>
             <Button variant="success" size="sm" onClick={handleExport}>
-              <FaFileCsv /> Export
+              <FaFilePdf /> Export
             </Button>
             <Button
               variant="primary"
@@ -748,7 +712,7 @@ const DonationList = () => {
               style={{ backgroundColor: "#581818" }}
               onClick={() => setShowModal(true)}
             >
-              <FaPlus /> Add Receipt
+              <FaPlus /> Add New
             </Button>
           </div>
         </Col>
@@ -811,7 +775,7 @@ const DonationList = () => {
         </Col>
       </Row>
 
-      {/* --- TABLE (RESTORED COLUMNS) --- */}
+      {/* TABLE */}
       <Card className="shadow-sm border-0">
         <Card.Body className="p-0">
           <Table
@@ -822,249 +786,180 @@ const DonationList = () => {
           >
             <thead className="bg-light">
               <tr>
-                <th className="ps-3">Date / ID</th>
-                <th>Donor Name</th>
-                <th>Scheme / Head</th>
-                <th>Category</th>
-                <th>Amount</th>
-                <th>Mode</th>
-                <th>Branch</th>
-                <th>Status</th>
-                <th className="text-center">Actions</th>
+                <th className="ps-3" style={{ width: "12%" }}>
+                  Date / ID
+                </th>
+                <th style={{ width: "20%" }}>Donor</th>
+                <th style={{ width: "20%" }}>Scheme / Head</th>
+                <th style={{ width: "10%" }}>Category</th>
+                <th style={{ width: "10%" }}>Amount</th>
+                <th style={{ width: "15%" }}>Mode</th>
+                <th style={{ width: "15%" }}>Branch</th>
+                <th style={{ width: "18%" }} className="text-center">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filteredDonations.map((d) => {
-                const isCancelled = d.status === "Cancelled";
-                return (
-                  <tr
-                    key={d._id}
-                    style={
-                      isCancelled
-                        ? { opacity: 0.6, backgroundColor: "#f8f9fa" }
-                        : {}
-                    }
-                  >
-                    {/* COL 1: Date & ID */}
-                    <td className="ps-3">
-                      <div
-                        className={
-                          isCancelled
-                            ? "text-decoration-line-through"
-                            : "fw-bold"
+              {filteredDonations.map((d) => (
+                <tr key={d._id}>
+                  <td className="ps-3">
+                    <div className="fw-bold">
+                      {new Date(d.createdAt).toLocaleDateString()}
+                    </div>
+                    <small className="text-muted">
+                      {d._id.slice(-6).toUpperCase()}
+                    </small>
+                    {d.manualReceiptNo && (
+                      <div className="text-danger small">
+                        Ref: {d.manualReceiptNo}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <div
+                      className="fw-bold text-maroon text-truncate"
+                      style={{ maxWidth: "180px" }}
+                      title={d.donorName}
+                    >
+                      {d.donorName}
+                    </div>
+                    <small className="text-muted">{d.donorPhone}</small>
+                  </td>
+                  <td>
+                    <div className="fw-bold text-dark">{d.scheme}</div>
+                    {d.accountHead ? (
+                      <small
+                        className="text-muted"
+                        style={{ fontSize: "0.75rem" }}
+                      >
+                        <strong className="text-success">
+                          {d.accountHead.code}
+                        </strong>{" "}
+                        - {d.accountHead.name}
+                      </small>
+                    ) : (
+                      <Badge
+                        bg="warning"
+                        text="dark"
+                        style={{ fontSize: "0.6rem" }}
+                      >
+                        No Account Mapped
+                      </Badge>
+                    )}
+                  </td>
+
+                  <td>
+                    <Badge bg="light" text="dark" className="border">
+                      {d.category}
+                    </Badge>
+                  </td>
+                  <td className="fw-bold text-success">
+                    ₹{d.amount.toLocaleString()}
+                  </td>
+                  <td>
+                    {d.paymentMode}
+                    {d.paymentDetails?.chequeNo && (
+                      <div className="small text-muted">
+                        #{d.paymentDetails.chequeNo}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <small
+                      className="text-truncate d-block"
+                      style={{ maxWidth: "150px" }}
+                      title={d.branch}
+                    >
+                      {d.branch}
+                    </small>
+                  </td>
+                  <td>
+                    <div className="d-flex gap-1 justify-content-center">
+                      <Button
+                        size="sm"
+                        variant="outline-danger"
+                        onClick={async () => {
+                          try {
+                            const userInfo = JSON.parse(
+                              localStorage.getItem("userInfo"),
+                            );
+                            const response = await axios.get(
+                              `${BASE_URL}/api/donations/${d._id}/receipt`,
+                              {
+                                headers: {
+                                  Authorization: `Bearer ${userInfo.token}`,
+                                },
+                                responseType: "blob",
+                              },
+                            );
+                            const url = window.URL.createObjectURL(
+                              new Blob([response.data]),
+                            );
+                            const link = document.createElement("a");
+                            link.href = url;
+                            link.setAttribute(
+                              "download",
+                              `Receipt_${d.donorName}.pdf`,
+                            );
+                            document.body.appendChild(link);
+                            link.click();
+                          } catch (e) {
+                            alert("Error");
+                          }
+                        }}
+                        title="Download PDF"
+                      >
+                        <FaFilePdf />
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant={
+                          d.receiptStatus === "Sent"
+                            ? "success"
+                            : "outline-primary"
+                        }
+                        onClick={() =>
+                          handleEmailReceipt(d._id, d.receiptStatus)
+                        }
+                        title={
+                          d.receiptStatus === "Sent"
+                            ? "Resend Email"
+                            : "Send Email"
                         }
                       >
-                        {new Date(d.createdAt).toLocaleDateString()}
-                      </div>
-                      <small className="text-muted">
-                        {d.receiptNo || d._id.slice(-6).toUpperCase()}
-                      </small>
-                      {d.manualReceiptNo && (
-                        <div className="text-danger small">
-                          Ref: {d.manualReceiptNo}
-                        </div>
-                      )}
-                    </td>
+                        <FaEnvelope className="me-1" />{" "}
+                        {d.receiptStatus === "Sent" ? "Resend" : "Send"}
+                      </Button>
 
-                    {/* COL 2: Donor */}
-                    <td>
-                      <div
-                        className="fw-bold text-maroon text-truncate"
-                        style={{ maxWidth: "180px" }}
-                        title={d.donorName}
+                      <Button
+                        size="sm"
+                        variant={
+                          d.media?.length > 0 ? "warning" : "outline-secondary"
+                        }
+                        onClick={() => openMediaModal(d)}
+                        title="View Attachments"
                       >
-                        {d.donorName}
-                      </div>
-                      <small className="text-muted">
-                        {d.donorPhone !== "0000000000" ? d.donorPhone : ""}
-                      </small>
-                    </td>
-
-                    {/* COL 3: Scheme / Head */}
-                    <td>
-                      <div className="fw-bold text-dark">{d.scheme}</div>
-                      {d.accountHead ? (
-                        <small
-                          className="text-muted"
-                          style={{ fontSize: "0.75rem" }}
-                        >
-                          <strong className="text-success">
-                            {d.accountHead.code}
-                          </strong>{" "}
-                          - {d.accountHead.name}
-                        </small>
-                      ) : (
-                        <Badge
-                          bg="warning"
-                          text="dark"
-                          style={{ fontSize: "0.6rem" }}
-                        >
-                          No Account Mapped
-                        </Badge>
-                      )}
-                    </td>
-
-                    {/* COL 4: Category */}
-                    <td>
-                      <Badge bg="light" text="dark" className="border">
-                        {d.category}
-                      </Badge>
-                    </td>
-
-                    {/* COL 5: Amount */}
-                    <td
-                      className={`fw-bold ${isCancelled ? "text-decoration-line-through text-muted" : "text-success"}`}
-                    >
-                      ₹{d.amount.toLocaleString()}
-                    </td>
-
-                    {/* COL 6: Mode */}
-                    <td>
-                      {d.paymentMode}
-                      {d.paymentDetails?.chequeNo && (
-                        <div className="small text-muted">
-                          #{d.paymentDetails.chequeNo}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* COL 7: Branch */}
-                    <td>
-                      <small
-                        className="text-truncate d-block"
-                        style={{ maxWidth: "150px" }}
-                        title={d.branch}
-                      >
-                        {d.branch}
-                      </small>
-                    </td>
-
-                    {/* COL 8: Status */}
-                    <td>
-                      {isCancelled ? (
-                        <Badge bg="danger">Cancelled</Badge>
-                      ) : (
-                        <Badge bg="success">Active</Badge>
-                      )}
-                    </td>
-
-                    {/* COL 9: Actions */}
-                    <td className="text-center">
-                      {!isCancelled && (
-                        <div className="d-flex justify-content-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline-primary"
-                            title="Edit Record"
-                            onClick={() => handleEditClick(d)}
-                          >
-                            <FaEdit />
-                          </Button>
-
-                          {/* Cancel Button */}
-                          {(currentUser?.role === "admin" ||
-                            currentUser?.role === "president" ||
-                            currentUser?.role === "secretary") && (
-                            <Button
-                              size="sm"
-                              variant="outline-danger"
-                              title="Void"
-                              onClick={() => handleCancelClick(d._id)}
-                            >
-                              <FaBan />
-                            </Button>
-                          )}
-
-                          {/* PDF Button */}
-                          <Button
-                            size="sm"
-                            variant="outline-dark"
-                            title="PDF"
-                            onClick={async () => {
-                              try {
-                                const config = {
-                                  headers: {
-                                    Authorization: `Bearer ${currentUser.token}`,
-                                  },
-                                  responseType: "blob",
-                                };
-                                const response = await axios.get(
-                                  `${BASE_URL}/api/donations/${d._id}/receipt`,
-                                  config,
-                                );
-                                const url = window.URL.createObjectURL(
-                                  new Blob([response.data]),
-                                );
-                                const link = document.createElement("a");
-                                link.href = url;
-                                link.setAttribute(
-                                  "download",
-                                  `Receipt_${d.donorName}.pdf`,
-                                );
-                                document.body.appendChild(link);
-                                link.click();
-                              } catch (e) {
-                                alert("Error");
-                              }
-                            }}
-                          >
-                            <FaFilePdf />
-                          </Button>
-
-                          {/* Email Button */}
-                          <Button
-                            size="sm"
-                            variant={
-                              d.receiptStatus === "Sent"
-                                ? "success"
-                                : "outline-primary"
-                            }
-                            title="Email"
-                            onClick={() => handleEmailReceipt(d._id)}
-                          >
-                            <FaEnvelope />
-                          </Button>
-
-                          {/* Attachments Button */}
-                          <Button
-                            size="sm"
-                            variant={
-                              d.media?.length > 0
-                                ? "warning"
-                                : "outline-secondary"
-                            }
-                            title="Docs"
-                            onClick={() => {
-                              setSelectedDonation(d);
-                              setShowMediaModal(true);
-                            }}
-                          >
-                            <FaImages />
-                          </Button>
-                        </div>
-                      )}
-                      {isCancelled && (
-                        <small className="text-danger d-block fst-italic">
-                          {d.cancellationReason}
-                        </small>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                        <FaImages />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </Table>
         </Card.Body>
       </Card>
 
-      {/* --- ADD RECEIPT MODAL --- */}
+      {/* --- ADD DONATION MODAL --- */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton className="bg-light">
-          <Modal.Title>New Receipt / Transaction</Modal.Title>
+          <Modal.Title>New Receipt / Donation</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
-            {/* TOGGLE BUTTONS */}
+            {/* --- TOGGLE BUTTONS --- */}
             <div className="d-flex justify-content-center mb-4">
               <ButtonGroup className="w-100 shadow-sm">
                 <Button
@@ -1084,7 +979,7 @@ const DonationList = () => {
               </ButtonGroup>
             </div>
 
-            {/* VIEW 1: DONOR RECEIPT */}
+            {/* --- VIEW 1: DONOR RECEIPT --- */}
             {receiptType === "Donation" && (
               <>
                 <div className="d-flex justify-content-center mb-3">
@@ -1457,7 +1352,6 @@ const DonationList = () => {
                     </Form.Select>
                   </Col>
                 </Row>
-
                 {/* NEW: Branch Selection for Interest */}
                 <Form.Group className="mb-3">
                   <Form.Label className="small fw-bold">Branch *</Form.Label>
@@ -1516,42 +1410,10 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* --- CANCEL MODAL --- */}
-      <Modal show={showCancelModal} onHide={() => setShowCancelModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Cancel Receipt</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Alert variant="danger">
-            <strong>Warning:</strong> This will void the receipt and remove the
-            amount from financial reports.
-          </Alert>
-          <Form.Group>
-            <Form.Label>Reason for Cancellation *</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              value={cancelData.reason}
-              onChange={(e) =>
-                setCancelData({ ...cancelData, reason: e.target.value })
-              }
-            />
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
-            Back
-          </Button>
-          <Button variant="danger" onClick={submitCancellation}>
-            Confirm Void
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* --- IMPORT MODAL --- */}
+      {/* IMPORT MODAL */}
       <Modal show={showImportModal} onHide={() => setShowImportModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>Import CSV</Modal.Title>
+          <Modal.Title>Import Donations</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleImportSubmit}>
@@ -1569,25 +1431,39 @@ const DonationList = () => {
               type="file"
               accept=".csv"
               onChange={(e) => setImportFile(e.target.files[0])}
-              className="mb-3"
+              required
             />
-            <Button type="submit" className="w-100" disabled={submitLoading}>
-              {submitLoading ? "Importing..." : "Upload"}
+            <Button
+              type="submit"
+              variant="warning"
+              className="mt-3 w-100"
+              disabled={submitLoading}
+            >
+              {submitLoading ? "Importing..." : "Upload & Import"}
             </Button>
           </Form>
         </Modal.Body>
       </Modal>
 
-      {/* --- TAX MODAL --- */}
+      {/* TAX CERT MODAL */}
       <Modal show={showTaxModal} onHide={() => setShowTaxModal(false)}>
         <Modal.Body>
           <Form onSubmit={handleDownloadTaxCert}>
             <Form.Control
-              placeholder="Phone"
+              placeholder="Donor Phone"
               value={taxPhone}
               onChange={(e) => setTaxPhone(e.target.value)}
               className="mb-2"
+              required
             />
+            <Form.Select
+              value={taxYear}
+              onChange={(e) => setTaxYear(e.target.value)}
+              className="mb-2"
+            >
+              <option value="2024">2024-25</option>
+              <option value="2025">2025-26</option>
+            </Form.Select>
             <Button type="submit" className="w-100">
               Download Cert
             </Button>
@@ -1595,24 +1471,34 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* --- MEDIA MODAL --- */}
+      {/* MEDIA MODAL */}
       <Modal show={showMediaModal} onHide={() => setShowMediaModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Attachments</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form onSubmit={handleUpload} className="mb-3 d-flex gap-2">
+          <Form onSubmit={handleUpload} className="d-flex gap-2 mb-3">
             <Form.Control type="file" multiple onChange={handleFileChange} />
-            <Button type="submit">Upload</Button>
+            <Button type="submit" disabled={uploading}>
+              {uploading ? "..." : "Upload"}
+            </Button>
           </Form>
           <Row>
             {selectedDonation?.media?.map((path, i) => (
-              <Col xs={6} key={i}>
+              <Col xs={6} key={i} className="mb-2 position-relative">
                 <img
                   src={`${BASE_URL}${path}`}
-                  style={{ width: "100%" }}
+                  style={{ width: "100%", height: "100px", objectFit: "cover" }}
                   alt="doc"
                 />
+                <Button
+                  size="sm"
+                  variant="danger"
+                  className="position-absolute top-0 end-0 py-0 px-1"
+                  onClick={() => handleDeleteMedia(path)}
+                >
+                  x
+                </Button>
               </Col>
             ))}
           </Row>
