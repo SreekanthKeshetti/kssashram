@@ -1,5 +1,1630 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
+// /* eslint-disable react-hooks/exhaustive-deps */
+// /* eslint-disable no-unused-vars */
+// import React, { useEffect, useState, useCallback } from "react";
+// import axios from "axios";
+// import BASE_URL from "../../apiConfig";
+
+// import {
+//   Table,
+//   Button,
+//   Badge,
+//   Card,
+//   Row,
+//   Col,
+//   Modal,
+//   Form,
+//   ButtonGroup,
+//   Alert,
+// } from "react-bootstrap";
+// import {
+//   FaPlus,
+//   FaFilePdf,
+//   FaImages,
+//   FaSearch,
+//   FaCertificate,
+//   FaFileUpload,
+//   FaEnvelope,
+//   FaBan,
+//   FaCheckCircle,
+//   FaFileCsv,
+//   FaUsers,
+//   FaBuilding,
+//   FaClock,
+//   FaEdit,
+// } from "react-icons/fa";
+
+// // Constants for Telugu Date
+// const TELUGU_MASAMS = [
+//   "Chaitra",
+//   "Vaishakha",
+//   "Jyeshtha",
+//   "Ashadha",
+//   "Shravana",
+//   "Bhadrapada",
+//   "Ashwayuja",
+//   "Kartika",
+//   "Margashirsha",
+//   "Pushya",
+//   "Magha",
+//   "Phalguna",
+// ];
+// const PAKSHAS = ["Shukla", "Krishna"];
+// const TITHIS = [
+//   "Padyami",
+//   "Vidiya",
+//   "Tadiya",
+//   "Chavithi",
+//   "Panchami",
+//   "Shasthi",
+//   "Saptami",
+//   "Ashtami",
+//   "Navami",
+//   "Dashami",
+//   "Ekadashi",
+//   "Dwadashi",
+//   "Trayodashi",
+//   "Chaturdashi",
+//   "Pournami",
+//   "Amavasya",
+// ];
+
+// const DonationList = () => {
+//   const [donations, setDonations] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [schemes, setSchemes] = useState([]);
+//   const [bankAccounts, setBankAccounts] = useState([]);
+//   const [occasionsList, setOccasionsList] = useState([]);
+//   const [currentUser, setCurrentUser] = useState(null);
+
+//   // Filters
+//   const [filterCategory, setFilterCategory] = useState("Household");
+//   const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
+
+//   // Modals
+//   const [showModal, setShowModal] = useState(false);
+//   const [showCancelModal, setShowCancelModal] = useState(false);
+//   const [showImportModal, setShowImportModal] = useState(false);
+//   const [showTaxModal, setShowTaxModal] = useState(false);
+//   const [showMediaModal, setShowMediaModal] = useState(false);
+
+//   // States
+//   const [receiptType, setReceiptType] = useState("Donation"); // "Donation" or "General"
+//   const [cancelData, setCancelData] = useState({ id: "", reason: "" });
+//   const [importFile, setImportFile] = useState(null);
+//   const [importCategory, setImportCategory] = useState("Household");
+//   const [submitLoading, setSubmitLoading] = useState(false);
+//   const [taxYear, setTaxYear] = useState(new Date().getFullYear());
+//   const [taxPhone, setTaxPhone] = useState("");
+//   const [selectedDonation, setSelectedDonation] = useState(null);
+//   const [files, setFiles] = useState([]);
+//   const [uploading, setUploading] = useState(false);
+//   // --- NEW: EDIT STATE ---
+//   const [isEditing, setIsEditing] = useState(false);
+//   const [editId, setEditId] = useState(null);
+
+//   // Form DataF
+//   const [tithiParts, setTithiParts] = useState({
+//     masam: TELUGU_MASAMS[0],
+//     paksha: PAKSHAS[0],
+//     tithi: TITHIS[0],
+//   });
+
+//   const [formData, setFormData] = useState({
+//     donorName: "",
+//     donorPhone: "",
+//     donorEmail: "",
+//     donorPan: "",
+//     donorAadhaar: "",
+//     amount: "",
+//     scheme: "Nitya Annadhana",
+//     paymentMode: "Cash",
+//     branch: "KarunaSri Seva Samithi",
+//     category: "Household",
+//     address: "",
+//     depositBank: "",
+//     occasion: "",
+//     inNameOf: "",
+//     calendarType: "Gregorian",
+//     programDate: "",
+//     tithi: "",
+//     isRecurring: false,
+//     manualReceiptNo: "",
+//     manualReceiptDate: "",
+//     paymentDetails: {
+//       chequeNo: "",
+//       chequeDate: "",
+//       bankName: "",
+//       transactionId: "",
+//     },
+//     interestPeriod: { startDate: "", endDate: "" },
+//   });
+
+//   useEffect(() => {
+//     const user = JSON.parse(localStorage.getItem("userInfo"));
+//     setCurrentUser(user);
+
+//     // Auto-set branch for Managers
+//     if (user && user.role === "kba_manager") {
+//       setFormData((prev) => ({ ...prev, branch: "Karunya Bharathi" }));
+//     } else if (user && user.role === "ksa_manager") {
+//       setFormData((prev) => ({ ...prev, branch: "Karunya Sindhu" }));
+//     }
+
+//     const fetchData = async () => {
+//       if (!user) return;
+//       try {
+//         const config = { headers: { Authorization: `Bearer ${user.token}` } };
+
+//         const schemeRes = await axios.get(`${BASE_URL}/api/schemes`, config);
+//         setSchemes(schemeRes.data);
+//         if (schemeRes.data.length > 0) {
+//           setFormData((prev) => ({ ...prev, scheme: schemeRes.data[0].name }));
+//         }
+
+//         const occRes = await axios.get(`${BASE_URL}/api/occasions`, config);
+//         setOccasionsList(occRes.data);
+
+//         const accRes = await axios.get(`${BASE_URL}/api/accounts`, config);
+//         const banks = accRes.data.filter(
+//           (acc) =>
+//             acc.name.toLowerCase().includes("bank") ||
+//             acc.name.toLowerCase().includes("cash"),
+//         );
+//         setBankAccounts(banks);
+//         if (banks.length > 0) {
+//           setFormData((prev) => ({ ...prev, depositBank: banks[0]._id }));
+//         }
+//       } catch (err) {
+//         console.error(err);
+//       }
+//     };
+
+//     if (user) fetchData();
+//     fetchDonations();
+//   }, []);
+
+//   const fetchDonations = useCallback(async () => {
+//     try {
+//       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+//       if (!userInfo) return;
+//       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+//       const { data } = await axios.get(`${BASE_URL}/api/donations`, config);
+//       setDonations(data);
+//       setLoading(false);
+//     } catch (err) {
+//       console.error(err);
+//       setLoading(false);
+//     }
+//   }, []);
+
+//   // --- ACTIONS ---
+
+//   const handleCancelClick = (id) => {
+//     setCancelData({ id, reason: "" });
+//     setShowCancelModal(true);
+//   };
+
+//   const submitCancellation = async () => {
+//     if (!cancelData.reason) return alert("Please provide a reason.");
+//     if (!window.confirm("Are you sure? This cannot be undone.")) return;
+
+//     try {
+//       const config = {
+//         headers: { Authorization: `Bearer ${currentUser.token}` },
+//       };
+//       await axios.put(
+//         `${BASE_URL}/api/donations/${cancelData.id}/cancel`,
+//         { reason: cancelData.reason },
+//         config,
+//       );
+
+//       alert("Receipt Cancelled Successfully.");
+//       setShowCancelModal(false);
+//       fetchDonations();
+//     } catch (error) {
+//       alert(error.response?.data?.message || "Error cancelling receipt");
+//     }
+//   };
+//   // --- NEW: EDIT HANDLER ---
+//   const handleEditClick = (donation) => {
+//     setIsEditing(true);
+//     setEditId(donation._id);
+
+//     // Determine Receipt Type
+//     if (
+//       donation.scheme === "Interest Received" ||
+//       donation.donorName === "Bank Interest"
+//     ) {
+//       setReceiptType("General");
+//     } else {
+//       setReceiptType("Donation");
+//     }
+
+//     // Helper to format date for input (YYYY-MM-DD)
+//     const formatDate = (d) =>
+//       d ? new Date(d).toISOString().split("T")[0] : "";
+
+//     setFormData({
+//       donorName: donation.donorName || "",
+//       donorPhone: donation.donorPhone || "",
+//       donorEmail: donation.donorEmail || "",
+//       donorPan: donation.donorPan || "",
+//       donorAadhaar: donation.donorAadhaar || "",
+//       amount: donation.amount,
+//       scheme: donation.scheme,
+//       paymentMode: donation.paymentMode,
+//       branch: donation.branch,
+//       category: donation.category || "Household",
+//       address: donation.address || "",
+//       depositBank: donation.depositBank?._id || donation.depositBank || "", // Handle populated or raw ID
+//       occasion: donation.occasion || "",
+//       inNameOf: donation.inNameOf || "",
+//       calendarType: donation.calendarType || "Gregorian",
+//       programDate: formatDate(donation.programDate),
+//       tithi: donation.tithi || "",
+//       isRecurring: donation.isRecurring || false,
+//       manualReceiptNo: donation.manualReceiptNo || "",
+//       manualReceiptDate: formatDate(donation.manualReceiptDate),
+//       paymentDetails: {
+//         chequeNo: donation.paymentDetails?.chequeNo || "",
+//         chequeDate: formatDate(donation.paymentDetails?.chequeDate),
+//         bankName: donation.paymentDetails?.bankName || "",
+//         transactionId: donation.paymentDetails?.transactionId || "",
+//       },
+//       interestPeriod: {
+//         startDate: formatDate(donation.interestPeriod?.startDate),
+//         endDate: formatDate(donation.interestPeriod?.endDate),
+//       },
+//     });
+
+//     setShowModal(true);
+//   };
+
+//   const handleOpenAddModal = () => {
+//     setIsEditing(false);
+//     setEditId(null);
+//     // Reset Form
+//     setFormData({
+//       donorName: "",
+//       donorPhone: "",
+//       donorEmail: "",
+//       donorPan: "",
+//       donorAadhaar: "",
+//       amount: "",
+//       scheme: "Nitya Annadhana",
+//       paymentMode: "Cash",
+//       branch: "KarunaSri Seva Samithi",
+//       category: "Household",
+//       address: "",
+//       depositBank: bankAccounts.length > 0 ? bankAccounts[0]._id : "",
+//       occasion: "",
+//       inNameOf: "",
+//       calendarType: "Gregorian",
+//       programDate: "",
+//       tithi: "",
+//       isRecurring: false,
+//       manualReceiptNo: "",
+//       manualReceiptDate: "",
+//       paymentDetails: {
+//         chequeNo: "",
+//         chequeDate: "",
+//         bankName: "",
+//         transactionId: "",
+//       },
+//       interestPeriod: { startDate: "", endDate: "" },
+//     });
+//     setShowModal(true);
+//   };
+
+//   const handleChange = (e) => {
+//     const { name, value, type, checked } = e.target;
+
+//     if (
+//       ["chequeNo", "chequeDate", "bankName", "transactionId"].includes(name)
+//     ) {
+//       setFormData((prev) => ({
+//         ...prev,
+//         paymentDetails: { ...prev.paymentDetails, [name]: value },
+//       }));
+//     } else if (name === "intStartDate" || name === "intEndDate") {
+//       setFormData((prev) => ({
+//         ...prev,
+//         interestPeriod: {
+//           ...prev.interestPeriod,
+//           [name === "intStartDate" ? "startDate" : "endDate"]: value,
+//         },
+//       }));
+//     } else {
+//       const val = type === "checkbox" ? checked : value;
+//       setFormData({ ...formData, [name]: val });
+//     }
+//   };
+
+//   const handleSearchDonor = async () => {
+//     if (!formData.donorPhone) return alert("Enter phone number to search.");
+//     try {
+//       const config = {
+//         headers: { Authorization: `Bearer ${currentUser.token}` },
+//       };
+//       const { data } = await axios.get(
+//         `${BASE_URL}/api/donations/search?phone=${formData.donorPhone}`,
+//         config,
+//       );
+//       if (data.success) {
+//         setFormData((prev) => ({
+//           ...prev,
+//           donorName: data.donor.donorName,
+//           donorEmail: data.donor.donorEmail || "",
+//           donorPan: data.donor.donorPan || "",
+//           donorAadhaar: data.donor.donorAadhaar || "",
+//           address: data.donor.address || "",
+//         }));
+//         alert("Donor Found! Details Autofilled.");
+//       }
+//     } catch (err) {
+//       alert("New Donor. Please enter details.");
+//     }
+//   };
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setSubmitLoading(true);
+
+//     let submissionData = { ...formData };
+
+//     // --- LOGIC FOR BANK INTEREST / GENERAL ---
+//     if (receiptType === "General") {
+//       submissionData.donorName = formData.donorName || "Bank Interest";
+//       submissionData.donorPhone = "0000000000";
+//       submissionData.category = "Organizational";
+//       submissionData.scheme = "Interest Received";
+//       submissionData.paymentMode = "Bank Transfer";
+//     }
+
+//     const payload = { ...submissionData };
+
+//     if (payload.calendarType === "Telugu") {
+//       payload.tithi = `${tithiParts.masam} ${tithiParts.paksha} ${tithiParts.tithi}`;
+//       payload.programDate = "";
+//     } else {
+//       payload.tithi = "";
+//     }
+
+//     try {
+//       const config = {
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Bearer ${currentUser.token}`,
+//         },
+//       };
+//       if (isEditing) {
+//         // UPDATE
+//         await axios.put(`${BASE_URL}/api/donations/${editId}`, payload, config);
+//         alert("Receipt Updated Successfully!");
+//       } else {
+//         // CREATE
+//         await axios.post(`${BASE_URL}/api/donations`, payload, config);
+//         alert("Receipt Created Successfully!");
+//       }
+//       // await axios.post(`${BASE_URL}/api/donations`, payload, config);
+//       setShowModal(false);
+//       fetchDonations();
+//       // alert("Receipt Created Successfully!");
+
+//       // Reset Form
+//       // setFormData({
+//       //   donorName: "",
+//       //   donorPhone: "",
+//       //   donorEmail: "",
+//       //   donorPan: "",
+//       //   donorAadhaar: "",
+//       //   amount: "",
+//       //   scheme: "Nitya Annadhana",
+//       //   paymentMode: "Cash",
+//       //   branch: "KarunaSri Seva Samithi",
+//       //   category: "Household",
+//       //   address: "",
+//       //   depositBank: bankAccounts.length > 0 ? bankAccounts[0]._id : "",
+//       //   occasion: "",
+//       //   inNameOf: "",
+//       //   calendarType: "Gregorian",
+//       //   programDate: "",
+//       //   tithi: "",
+//       //   isRecurring: false,
+//       //   manualReceiptNo: "",
+//       //   manualReceiptDate: "",
+//       //   paymentDetails: {
+//       //     chequeNo: "",
+//       //     chequeDate: "",
+//       //     bankName: "",
+//       //     transactionId: "",
+//       //   },
+//       //   interestPeriod: { startDate: "", endDate: "" },
+//       // });
+//     } catch (err) {
+//       alert(err.response?.data?.message || "Error adding record");
+//     }
+//     setSubmitLoading(false);
+//   };
+
+//   // --- EXPORT HANDLER (FULL COLUMNS RESTORED) ---
+//   const handleExport = () => {
+//     if (filteredDonations.length === 0) return alert("No data to export");
+//     const headers = [
+//       "Receipt ID",
+//       "Date",
+//       "Donor Name",
+//       "Phone",
+//       "PAN",
+//       "Aadhaar",
+//       "Address",
+//       "Category",
+//       "Amount",
+//       "Scheme",
+//       "Mode",
+//       "Cheque/DD No",
+//       "Cheque Date",
+//       "Transaction Ref",
+//       "Donor Bank",
+//       "Deposited To",
+//       "Branch",
+//       "Status",
+//       "Manual Ref",
+//     ];
+
+//     const rows = filteredDonations.map((d) => {
+//       const pd = d.paymentDetails || {};
+//       const formatDate = (date) =>
+//         date ? new Date(date).toLocaleDateString() : "-";
+//       return [
+//         d.receiptNo || d._id.slice(-6).toUpperCase(),
+//         formatDate(d.createdAt),
+//         `"${d.donorName}"`,
+//         `"${d.donorPhone}"`,
+//         d.donorPan || "-",
+//         d.donorAadhaar || "-",
+//         `"${d.address ? d.address.replace(/\n/g, " ") : "-"}"`,
+//         d.category,
+//         d.amount,
+//         d.scheme,
+//         d.paymentMode,
+//         pd.chequeNo || pd.ddNo || "-",
+//         formatDate(pd.chequeDate),
+//         pd.transactionId || "-",
+//         pd.bankName || "-",
+//         d.depositBank?.name || "-",
+//         d.branch,
+//         d.status,
+//         d.manualReceiptNo || "-",
+//       ];
+//     });
+
+//     const csvContent =
+//       "data:text/csv;charset=utf-8," +
+//       headers.join(",") +
+//       "\n" +
+//       rows.map((e) => e.join(",")).join("\n");
+//     const link = document.createElement("a");
+//     link.setAttribute("href", encodeURI(csvContent));
+//     link.setAttribute("download", `Receipts_Export.csv`);
+//     document.body.appendChild(link);
+//     link.click();
+//     document.body.removeChild(link);
+//   };
+
+//   // --- OTHER HANDLERS ---
+//   const handleImportSubmit = async (e) => {
+//     e.preventDefault();
+//     if (!importFile) return alert("Please select a CSV file.");
+//     const fd = new FormData();
+//     fd.append("file", importFile);
+//     fd.append("category", importCategory);
+//     setSubmitLoading(true);
+//     try {
+//       const config = {
+//         headers: {
+//           "Content-Type": "multipart/form-data",
+//           Authorization: `Bearer ${currentUser.token}`,
+//         },
+//       };
+//       const { data } = await axios.post(
+//         `${BASE_URL}/api/donations/import`,
+//         fd,
+//         config,
+//       );
+//       alert(data.message);
+//       setShowImportModal(false);
+//       setImportFile(null);
+//       fetchDonations();
+//     } catch (err) {
+//       alert(err.response?.data?.message || "Import Failed");
+//     }
+//     setSubmitLoading(false);
+//   };
+
+//   const handleDownloadTaxCert = async (e) => {
+//     e.preventDefault();
+//     try {
+//       const response = await axios.get(
+//         `${BASE_URL}/api/donations/tax-certificate?phone=${taxPhone}&year=${taxYear}`,
+//         {
+//           headers: { Authorization: `Bearer ${currentUser.token}` },
+//           responseType: "blob",
+//         },
+//       );
+//       const url = window.URL.createObjectURL(new Blob([response.data]));
+//       const link = document.createElement("a");
+//       link.href = url;
+//       link.setAttribute("download", `TaxCert.pdf`);
+//       document.body.appendChild(link);
+//       link.click();
+//       setShowTaxModal(false);
+//     } catch (err) {
+//       alert("No records found.");
+//     }
+//   };
+
+//   const handleEmailReceipt = async (id) => {
+//     if (!window.confirm("Email Receipt to Donor?")) return;
+//     try {
+//       const config = {
+//         headers: { Authorization: `Bearer ${currentUser.token}` },
+//       };
+//       await axios.post(`${BASE_URL}/api/donations/${id}/email`, {}, config);
+//       alert("Sent!");
+//       fetchDonations();
+//     } catch (e) {
+//       alert("Error sending email");
+//     }
+//   };
+
+//   const openMediaModal = (d) => {
+//     setSelectedDonation(d);
+//     setShowMediaModal(true);
+//   };
+//   const handleFileChange = (e) => setFiles(e.target.files);
+//   const handleUpload = async (e) => {
+//     e.preventDefault();
+//     if (files.length === 0) return alert("Select files");
+//     const fd = new FormData();
+//     for (let i = 0; i < files.length; i++) fd.append("files", files[i]);
+//     setUploading(true);
+//     try {
+//       const config = {
+//         headers: {
+//           "Content-Type": "multipart/form-data",
+//           Authorization: `Bearer ${currentUser.token}`,
+//         },
+//       };
+//       await axios.post(
+//         `${BASE_URL}/api/donations/${selectedDonation._id}/upload`,
+//         fd,
+//         config,
+//       );
+//       alert("Uploaded!");
+//       setFiles([]);
+//       setShowMediaModal(false);
+//       fetchDonations();
+//     } catch (e) {
+//       alert("Upload Failed");
+//     }
+//     setUploading(false);
+//   };
+//   const handleDeleteMedia = async (filePath) => {
+//     if (!window.confirm("Delete file?")) return;
+//     try {
+//       const config = {
+//         headers: { Authorization: `Bearer ${currentUser.token}` },
+//         data: { filePath },
+//       };
+//       await axios.delete(
+//         `${BASE_URL}/api/donations/${selectedDonation._id}/media`,
+//         config,
+//       );
+//       setSelectedDonation({
+//         ...selectedDonation,
+//         media: selectedDonation.media.filter((m) => m !== filePath),
+//       });
+//       fetchDonations();
+//       alert("Deleted");
+//     } catch (err) {
+//       alert("Error");
+//     }
+//   };
+
+//   const renderPaymentFields = () => {
+//     const mode = formData.paymentMode;
+//     if (mode === "Cheque" || mode === "DD") {
+//       return (
+//         <Row className="bg-light p-2 rounded mb-3 border">
+//           <Col md={4}>
+//             <Form.Control
+//               size="sm"
+//               placeholder="No"
+//               name="chequeNo"
+//               value={formData.paymentDetails.chequeNo}
+//               onChange={handleChange}
+//             />
+//           </Col>
+//           <Col md={4}>
+//             <Form.Control
+//               size="sm"
+//               type="date"
+//               name="chequeDate"
+//               value={formData.paymentDetails.chequeDate}
+//               onChange={handleChange}
+//             />
+//           </Col>
+//           <Col md={4}>
+//             <Form.Control
+//               size="sm"
+//               placeholder="Bank"
+//               name="bankName"
+//               value={formData.paymentDetails.bankName}
+//               onChange={handleChange}
+//             />
+//           </Col>
+//         </Row>
+//       );
+//     }
+//     if (["Online", "UPI", "Bank Transfer"].includes(mode)) {
+//       return (
+//         <div className="bg-light p-2 rounded mb-3 border">
+//           <Form.Control
+//             size="sm"
+//             placeholder="Transaction ID"
+//             name="transactionId"
+//             value={formData.paymentDetails.transactionId}
+//             onChange={handleChange}
+//           />
+//         </div>
+//       );
+//     }
+//     return null;
+//   };
+
+//   const filteredDonations = donations.filter((d) => {
+//     let matchesCategory =
+//       filterCategory === "All" ||
+//       (d.category || "Household") === filterCategory;
+//     let matchesDate = true;
+//     if (dateFilter.start)
+//       matchesDate = new Date(d.createdAt) >= new Date(dateFilter.start);
+//     if (matchesDate && dateFilter.end) {
+//       const endDate = new Date(dateFilter.end);
+//       endDate.setHours(23, 59, 59, 999);
+//       matchesDate = new Date(d.createdAt) <= endDate;
+//     }
+//     return matchesCategory && matchesDate;
+//   });
+
+//   return (
+//     <div>
+//       <Row className="mb-4 align-items-center">
+//         <Col lg={5}>
+//           <h2
+//             className="text-maroon m-0"
+//             style={{ fontFamily: "Playfair Display" }}
+//           >
+//             Receipts / Donations
+//           </h2>
+//           <p className="text-muted m-0 small">
+//             Manage all incoming funds (Donations & Other Receipts)
+//           </p>
+//         </Col>
+//         <Col lg={7}>
+//           <div className="d-flex flex-wrap gap-2 justify-content-lg-end">
+//             <input
+//               type="file"
+//               id="donateCsv"
+//               accept=".csv"
+//               style={{ display: "none" }}
+//               onChange={(e) => {
+//                 setImportFile(e.target.files[0]);
+//                 setShowImportModal(true);
+//               }}
+//             />
+//             <Button
+//               variant="warning"
+//               size="sm"
+//               onClick={() => setShowImportModal(true)}
+//             >
+//               <FaFileUpload /> Import
+//             </Button>
+//             <Button
+//               variant="info"
+//               size="sm"
+//               className="text-white"
+//               onClick={() => setShowTaxModal(true)}
+//             >
+//               <FaCertificate /> Tax Cert
+//             </Button>
+//             <Button variant="success" size="sm" onClick={handleExport}>
+//               <FaFileCsv /> Export
+//             </Button>
+//             <Button
+//               variant="primary"
+//               size="sm"
+//               style={{ backgroundColor: "#581818" }}
+//               onClick={() => setShowModal(true)}
+//             >
+//               <FaPlus /> Add Receipt
+//             </Button>
+//           </div>
+//         </Col>
+//       </Row>
+
+//       {/* FILTERS */}
+//       <Row className="mb-3 g-2">
+//         <Col md={6}>
+//           <ButtonGroup>
+//             <Button
+//               variant={filterCategory === "Household" ? "dark" : "outline-dark"}
+//               size="sm"
+//               onClick={() => setFilterCategory("Household")}
+//             >
+//               Household
+//             </Button>
+//             <Button
+//               variant={
+//                 filterCategory === "Organizational"
+//                   ? "warning"
+//                   : "outline-warning"
+//               }
+//               size="sm"
+//               onClick={() => setFilterCategory("Organizational")}
+//             >
+//               Organization
+//             </Button>
+//             <Button
+//               variant={
+//                 filterCategory === "All" ? "secondary" : "outline-secondary"
+//               }
+//               size="sm"
+//               onClick={() => setFilterCategory("All")}
+//             >
+//               All
+//             </Button>
+//           </ButtonGroup>
+//         </Col>
+//         <Col md={6}>
+//           <div className="d-flex gap-2 justify-content-end">
+//             <Form.Control
+//               type="date"
+//               size="sm"
+//               value={dateFilter.start}
+//               onChange={(e) =>
+//                 setDateFilter({ ...dateFilter, start: e.target.value })
+//               }
+//               className="w-auto"
+//             />
+//             <Form.Control
+//               type="date"
+//               size="sm"
+//               value={dateFilter.end}
+//               onChange={(e) =>
+//                 setDateFilter({ ...dateFilter, end: e.target.value })
+//               }
+//               className="w-auto"
+//             />
+//           </div>
+//         </Col>
+//       </Row>
+
+//       {/* --- TABLE (RESTORED COLUMNS) --- */}
+//       <Card className="shadow-sm border-0">
+//         <Card.Body className="p-0">
+//           <Table
+//             hover
+//             responsive
+//             className="align-middle mb-0 text-nowrap"
+//             style={{ fontSize: "0.9rem" }}
+//           >
+//             <thead className="bg-light">
+//               <tr>
+//                 <th className="ps-3">Date / ID</th>
+//                 <th>Donor Name</th>
+//                 <th>Scheme / Head</th>
+//                 <th>Category</th>
+//                 <th>Amount</th>
+//                 <th>Mode</th>
+//                 <th>Branch</th>
+//                 <th>Status</th>
+//                 <th className="text-center">Actions</th>
+//               </tr>
+//             </thead>
+//             <tbody>
+//               {filteredDonations.map((d) => {
+//                 const isCancelled = d.status === "Cancelled";
+//                 return (
+//                   <tr
+//                     key={d._id}
+//                     style={
+//                       isCancelled
+//                         ? { opacity: 0.6, backgroundColor: "#f8f9fa" }
+//                         : {}
+//                     }
+//                   >
+//                     {/* COL 1: Date & ID */}
+//                     <td className="ps-3">
+//                       <div
+//                         className={
+//                           isCancelled
+//                             ? "text-decoration-line-through"
+//                             : "fw-bold"
+//                         }
+//                       >
+//                         {new Date(d.createdAt).toLocaleDateString()}
+//                       </div>
+//                       <small className="text-muted">
+//                         {d.receiptNo || d._id.slice(-6).toUpperCase()}
+//                       </small>
+//                       {d.manualReceiptNo && (
+//                         <div className="text-danger small">
+//                           Ref: {d.manualReceiptNo}
+//                         </div>
+//                       )}
+//                     </td>
+
+//                     {/* COL 2: Donor */}
+//                     <td>
+//                       <div
+//                         className="fw-bold text-maroon text-truncate"
+//                         style={{ maxWidth: "180px" }}
+//                         title={d.donorName}
+//                       >
+//                         {d.donorName}
+//                       </div>
+//                       <small className="text-muted">
+//                         {d.donorPhone !== "0000000000" ? d.donorPhone : ""}
+//                       </small>
+//                     </td>
+
+//                     {/* COL 3: Scheme / Head */}
+//                     <td>
+//                       <div className="fw-bold text-dark">{d.scheme}</div>
+//                       {d.accountHead ? (
+//                         <small
+//                           className="text-muted"
+//                           style={{ fontSize: "0.75rem" }}
+//                         >
+//                           <strong className="text-success">
+//                             {d.accountHead.code}
+//                           </strong>{" "}
+//                           - {d.accountHead.name}
+//                         </small>
+//                       ) : (
+//                         <Badge
+//                           bg="warning"
+//                           text="dark"
+//                           style={{ fontSize: "0.6rem" }}
+//                         >
+//                           No Account Mapped
+//                         </Badge>
+//                       )}
+//                     </td>
+
+//                     {/* COL 4: Category */}
+//                     <td>
+//                       <Badge bg="light" text="dark" className="border">
+//                         {d.category}
+//                       </Badge>
+//                     </td>
+
+//                     {/* COL 5: Amount */}
+//                     <td
+//                       className={`fw-bold ${isCancelled ? "text-decoration-line-through text-muted" : "text-success"}`}
+//                     >
+//                       ₹{d.amount.toLocaleString()}
+//                     </td>
+
+//                     {/* COL 6: Mode */}
+//                     <td>
+//                       {d.paymentMode}
+//                       {d.paymentDetails?.chequeNo && (
+//                         <div className="small text-muted">
+//                           #{d.paymentDetails.chequeNo}
+//                         </div>
+//                       )}
+//                     </td>
+
+//                     {/* COL 7: Branch */}
+//                     <td>
+//                       <small
+//                         className="text-truncate d-block"
+//                         style={{ maxWidth: "150px" }}
+//                         title={d.branch}
+//                       >
+//                         {d.branch}
+//                       </small>
+//                     </td>
+
+//                     {/* COL 8: Status */}
+//                     <td>
+//                       {isCancelled ? (
+//                         <Badge bg="danger">Cancelled</Badge>
+//                       ) : (
+//                         <Badge bg="success">Active</Badge>
+//                       )}
+//                     </td>
+
+//                     {/* COL 9: Actions */}
+//                     <td className="text-center">
+//                       {!isCancelled && (
+//                         <div className="d-flex justify-content-center gap-1">
+//                           <Button
+//                             size="sm"
+//                             variant="outline-primary"
+//                             title="Edit Record"
+//                             onClick={() => handleEditClick(d)}
+//                           >
+//                             <FaEdit />
+//                           </Button>
+
+//                           {/* Cancel Button */}
+//                           {(currentUser?.role === "admin" ||
+//                             currentUser?.role === "president" ||
+//                             currentUser?.role === "secretary") && (
+//                             <Button
+//                               size="sm"
+//                               variant="outline-danger"
+//                               title="Void"
+//                               onClick={() => handleCancelClick(d._id)}
+//                             >
+//                               <FaBan />
+//                             </Button>
+//                           )}
+
+//                           {/* PDF Button */}
+//                           <Button
+//                             size="sm"
+//                             variant="outline-dark"
+//                             title="PDF"
+//                             onClick={async () => {
+//                               try {
+//                                 const config = {
+//                                   headers: {
+//                                     Authorization: `Bearer ${currentUser.token}`,
+//                                   },
+//                                   responseType: "blob",
+//                                 };
+//                                 const response = await axios.get(
+//                                   `${BASE_URL}/api/donations/${d._id}/receipt`,
+//                                   config,
+//                                 );
+//                                 const url = window.URL.createObjectURL(
+//                                   new Blob([response.data]),
+//                                 );
+//                                 const link = document.createElement("a");
+//                                 link.href = url;
+//                                 link.setAttribute(
+//                                   "download",
+//                                   `Receipt_${d.donorName}.pdf`,
+//                                 );
+//                                 document.body.appendChild(link);
+//                                 link.click();
+//                               } catch (e) {
+//                                 alert("Error");
+//                               }
+//                             }}
+//                           >
+//                             <FaFilePdf />
+//                           </Button>
+
+//                           {/* Email Button */}
+//                           <Button
+//                             size="sm"
+//                             variant={
+//                               d.receiptStatus === "Sent"
+//                                 ? "success"
+//                                 : "outline-primary"
+//                             }
+//                             title="Email"
+//                             onClick={() => handleEmailReceipt(d._id)}
+//                           >
+//                             <FaEnvelope />
+//                           </Button>
+
+//                           {/* Attachments Button */}
+//                           <Button
+//                             size="sm"
+//                             variant={
+//                               d.media?.length > 0
+//                                 ? "warning"
+//                                 : "outline-secondary"
+//                             }
+//                             title="Docs"
+//                             onClick={() => {
+//                               setSelectedDonation(d);
+//                               setShowMediaModal(true);
+//                             }}
+//                           >
+//                             <FaImages />
+//                           </Button>
+//                         </div>
+//                       )}
+//                       {isCancelled && (
+//                         <small className="text-danger d-block fst-italic">
+//                           {d.cancellationReason}
+//                         </small>
+//                       )}
+//                     </td>
+//                   </tr>
+//                 );
+//               })}
+//             </tbody>
+//           </Table>
+//         </Card.Body>
+//       </Card>
+
+//       {/* --- ADD RECEIPT MODAL --- */}
+//       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+//         <Modal.Header closeButton className="bg-light">
+//           <Modal.Title>New Receipt / Transaction</Modal.Title>
+//         </Modal.Header>
+//         <Modal.Body>
+//           <Form onSubmit={handleSubmit}>
+//             {/* TOGGLE BUTTONS */}
+//             <div className="d-flex justify-content-center mb-4">
+//               <ButtonGroup className="w-100 shadow-sm">
+//                 <Button
+//                   variant={receiptType === "Donation" ? "dark" : "outline-dark"}
+//                   onClick={() => setReceiptType("Donation")}
+//                 >
+//                   <FaUsers className="me-2" /> Donor Receipt
+//                 </Button>
+//                 <Button
+//                   variant={
+//                     receiptType === "General" ? "warning" : "outline-warning"
+//                   }
+//                   onClick={() => setReceiptType("General")}
+//                 >
+//                   <FaBuilding className="me-2" /> Bank Interest / Misc
+//                 </Button>
+//               </ButtonGroup>
+//             </div>
+
+//             {/* VIEW 1: DONOR RECEIPT */}
+//             {receiptType === "Donation" && (
+//               <>
+//                 <div className="d-flex justify-content-center mb-3">
+//                   <ButtonGroup>
+//                     <Button
+//                       variant={
+//                         formData.category === "Household"
+//                           ? "dark"
+//                           : "outline-dark"
+//                       }
+//                       onClick={() =>
+//                         setFormData({ ...formData, category: "Household" })
+//                       }
+//                       size="sm"
+//                     >
+//                       Household
+//                     </Button>
+//                     <Button
+//                       variant={
+//                         formData.category === "Organizational"
+//                           ? "warning"
+//                           : "outline-warning"
+//                       }
+//                       onClick={() =>
+//                         setFormData({ ...formData, category: "Organizational" })
+//                       }
+//                       size="sm"
+//                     >
+//                       Organization
+//                     </Button>
+//                   </ButtonGroup>
+//                 </div>
+
+//                 <Row className="g-2 mb-2">
+//                   <Col md={6}>
+//                     <Form.Label className="small fw-bold">
+//                       Phone Number *
+//                     </Form.Label>
+//                     <div className="input-group input-group-sm">
+//                       <Form.Control
+//                         name="donorPhone"
+//                         value={formData.donorPhone}
+//                         onChange={handleChange}
+//                         required
+//                         placeholder="Search"
+//                       />
+//                       <Button variant="secondary" onClick={handleSearchDonor}>
+//                         <FaSearch />
+//                       </Button>
+//                     </div>
+//                   </Col>
+//                   <Col md={6}>
+//                     <Form.Label className="small fw-bold">
+//                       Donor Name *
+//                     </Form.Label>
+//                     <Form.Control
+//                       size="sm"
+//                       name="donorName"
+//                       value={formData.donorName}
+//                       onChange={handleChange}
+//                       required
+//                     />
+//                   </Col>
+//                 </Row>
+//                 <Row className="g-2 mb-2">
+//                   <Col md={4}>
+//                     <Form.Control
+//                       size="sm"
+//                       name="donorEmail"
+//                       placeholder="Email"
+//                       value={formData.donorEmail}
+//                       onChange={handleChange}
+//                     />
+//                   </Col>
+//                   <Col md={4}>
+//                     <Form.Control
+//                       size="sm"
+//                       name="donorPan"
+//                       placeholder="PAN"
+//                       value={formData.donorPan}
+//                       onChange={handleChange}
+//                     />
+//                   </Col>
+//                   <Col md={4}>
+//                     <Form.Control
+//                       size="sm"
+//                       name="donorAadhaar"
+//                       placeholder="Aadhaar"
+//                       value={formData.donorAadhaar}
+//                       onChange={handleChange}
+//                     />
+//                   </Col>
+//                 </Row>
+//                 <Form.Control
+//                   size="sm"
+//                   as="textarea"
+//                   rows={1}
+//                   name="address"
+//                   placeholder="Address"
+//                   value={formData.address}
+//                   onChange={handleChange}
+//                   className="mb-3"
+//                 />
+//                 <hr />
+//                 <Row className="g-2 mb-2">
+//                   <Col md={4}>
+//                     <Form.Label className="small fw-bold">
+//                       Amount (₹) *
+//                     </Form.Label>
+//                     <Form.Control
+//                       size="sm"
+//                       type="number"
+//                       name="amount"
+//                       value={formData.amount}
+//                       onChange={handleChange}
+//                       required
+//                       className="fw-bold"
+//                     />
+//                   </Col>
+//                   <Col md={4}>
+//                     <Form.Label className="small fw-bold">Branch</Form.Label>
+//                     <Form.Select
+//                       size="sm"
+//                       name="branch"
+//                       value={formData.branch}
+//                       onChange={handleChange}
+//                       disabled={
+//                         currentUser?.role !== "admin" &&
+//                         currentUser?.role !== "president"
+//                       }
+//                     >
+//                       <option value="KarunaSri Seva Samithi">
+//                         KarunaSri Seva Samithi
+//                       </option>
+//                       <option value="Karunya Sindhu">Karunya Sindhu</option>
+//                       <option value="Karunya Bharathi">Karunya Bharathi</option>
+//                     </Form.Select>
+//                   </Col>
+//                   <Col md={4}>
+//                     <Form.Label className="small fw-bold">Scheme</Form.Label>
+//                     <Form.Select
+//                       size="sm"
+//                       name="scheme"
+//                       value={formData.scheme}
+//                       onChange={handleChange}
+//                     >
+//                       {schemes.map((s) => (
+//                         <option key={s._id} value={s.name}>
+//                           {s.name}
+//                         </option>
+//                       ))}
+//                     </Form.Select>
+//                   </Col>
+//                 </Row>
+//                 <Row className="g-2 mb-2">
+//                   <Col md={6}>
+//                     <Form.Label className="small fw-bold">
+//                       Payment Mode
+//                     </Form.Label>
+//                     <Form.Select
+//                       size="sm"
+//                       name="paymentMode"
+//                       value={formData.paymentMode}
+//                       onChange={handleChange}
+//                     >
+//                       <option>Cash</option>
+//                       <option>Online</option>
+//                       <option>UPI</option>
+//                       <option>Cheque</option>
+//                       <option>Bank Transfer</option>
+//                     </Form.Select>
+//                   </Col>
+//                   <Col md={6}>
+//                     <Form.Label className="small fw-bold">
+//                       Deposited To *
+//                     </Form.Label>
+//                     <Form.Select
+//                       size="sm"
+//                       name="depositBank"
+//                       value={formData.depositBank}
+//                       onChange={handleChange}
+//                       required
+//                     >
+//                       <option value="">-- Select Bank --</option>
+//                       {bankAccounts.map((b) => (
+//                         <option key={b._id} value={b._id}>
+//                           {b.name}
+//                         </option>
+//                       ))}
+//                     </Form.Select>
+//                   </Col>
+//                 </Row>
+//                 <Form.Check
+//                   type="switch"
+//                   label="Is Recurring?"
+//                   name="isRecurring"
+//                   checked={formData.isRecurring}
+//                   onChange={handleChange}
+//                   className="mb-2 text-primary"
+//                 />
+//                 {renderPaymentFields()}
+
+//                 <div className="bg-light p-2 rounded mb-3 border">
+//                   <Row className="g-2 align-items-center">
+//                     <Col md={6}>
+//                       <Form.Control
+//                         size="sm"
+//                         placeholder="Manual Receipt No (Optional)"
+//                         name="manualReceiptNo"
+//                         value={formData.manualReceiptNo}
+//                         onChange={handleChange}
+//                       />
+//                     </Col>
+//                     <Col md={6}>
+//                       <Form.Control
+//                         size="sm"
+//                         type="date"
+//                         name="manualReceiptDate"
+//                         value={formData.manualReceiptDate}
+//                         onChange={handleChange}
+//                       />
+//                     </Col>
+//                   </Row>
+//                 </div>
+
+//                 <Row className="g-2 mb-2">
+//                   <Col md={4}>
+//                     <Form.Select
+//                       size="sm"
+//                       name="occasion"
+//                       value={formData.occasion}
+//                       onChange={handleChange}
+//                     >
+//                       <option value="">-- Occasion --</option>
+//                       {occasionsList.map((o) => (
+//                         <option key={o._id} value={o.name}>
+//                           {o.name}
+//                         </option>
+//                       ))}
+//                       <option value="Other">Other</option>
+//                     </Form.Select>
+//                   </Col>
+//                   <Col md={4}>
+//                     <Form.Select
+//                       size="sm"
+//                       name="calendarType"
+//                       value={formData.calendarType}
+//                       onChange={handleChange}
+//                     >
+//                       <option value="Gregorian">English Date</option>
+//                       <option value="Telugu">Telugu Tithi</option>
+//                     </Form.Select>
+//                   </Col>
+//                   <Col md={4}>
+//                     {formData.calendarType === "Gregorian" ? (
+//                       <Form.Control
+//                         size="sm"
+//                         type="date"
+//                         name="programDate"
+//                         value={formData.programDate}
+//                         onChange={handleChange}
+//                       />
+//                     ) : (
+//                       <div className="d-flex gap-1">
+//                         <Form.Select
+//                           size="sm"
+//                           onChange={(e) =>
+//                             setTithiParts({
+//                               ...tithiParts,
+//                               masam: e.target.value,
+//                             })
+//                           }
+//                         >
+//                           {TELUGU_MASAMS.map((m) => (
+//                             <option key={m}>{m}</option>
+//                           ))}
+//                         </Form.Select>
+//                         <Form.Select
+//                           size="sm"
+//                           onChange={(e) =>
+//                             setTithiParts({
+//                               ...tithiParts,
+//                               paksha: e.target.value,
+//                             })
+//                           }
+//                         >
+//                           {PAKSHAS.map((p) => (
+//                             <option key={p}>{p}</option>
+//                           ))}
+//                         </Form.Select>
+//                         <Form.Select
+//                           size="sm"
+//                           onChange={(e) =>
+//                             setTithiParts({
+//                               ...tithiParts,
+//                               tithi: e.target.value,
+//                             })
+//                           }
+//                         >
+//                           {TITHIS.map((t) => (
+//                             <option key={t}>{t}</option>
+//                           ))}
+//                         </Form.Select>
+//                       </div>
+//                     )}
+//                   </Col>
+//                   <Col md={12}>
+//                     <Form.Control
+//                       size="sm"
+//                       placeholder="In Name Of (Gotram/Name)"
+//                       name="inNameOf"
+//                       value={formData.inNameOf}
+//                       onChange={handleChange}
+//                     />
+//                   </Col>
+//                 </Row>
+//               </>
+//             )}
+
+//             {/* --- VIEW 2: BANK INTEREST --- */}
+//             {receiptType === "General" && (
+//               <div className="bg-light p-3 rounded border mb-3">
+//                 <h6 className="text-maroon fw-bold mb-3">
+//                   Record Bank Interest / Income
+//                 </h6>
+//                 <Form.Group className="mb-3">
+//                   <Form.Label className="small fw-bold">
+//                     Description / Source *
+//                   </Form.Label>
+//                   <Form.Control
+//                     name="donorName"
+//                     value={formData.donorName}
+//                     onChange={handleChange}
+//                     placeholder="e.g. SBI Savings Interest - Q1"
+//                     required
+//                   />
+//                 </Form.Group>
+//                 <Row className="g-2 mb-3">
+//                   <Col md={6}>
+//                     <Form.Label className="small fw-bold">
+//                       Amount Credited (₹) *
+//                     </Form.Label>
+//                     <Form.Control
+//                       type="number"
+//                       name="amount"
+//                       value={formData.amount}
+//                       onChange={handleChange}
+//                       required
+//                       className="fw-bold text-success"
+//                     />
+//                   </Col>
+//                   <Col md={6}>
+//                     <Form.Label className="small fw-bold">
+//                       Credited To Bank *
+//                     </Form.Label>
+//                     <Form.Select
+//                       name="depositBank"
+//                       value={formData.depositBank}
+//                       onChange={handleChange}
+//                       required
+//                     >
+//                       <option value="">-- Select Bank Account --</option>
+//                       {bankAccounts
+//                         .filter((b) => b.name.toLowerCase().includes("bank"))
+//                         .map((b) => (
+//                           <option key={b._id} value={b._id}>
+//                             {b.name}
+//                           </option>
+//                         ))}
+//                     </Form.Select>
+//                   </Col>
+//                 </Row>
+
+//                 {/* NEW: Branch Selection for Interest */}
+//                 <Form.Group className="mb-3">
+//                   <Form.Label className="small fw-bold">Branch *</Form.Label>
+//                   <Form.Select
+//                     size="sm"
+//                     name="branch"
+//                     value={formData.branch}
+//                     onChange={handleChange}
+//                     disabled={
+//                       currentUser?.role !== "admin" &&
+//                       currentUser?.role !== "president"
+//                     }
+//                   >
+//                     <option value="KarunaSri Seva Samithi">
+//                       KarunaSri Seva Samithi
+//                     </option>
+//                     <option value="Karunya Sindhu">Karunya Sindhu</option>
+//                     <option value="Karunya Bharathi">Karunya Bharathi</option>
+//                   </Form.Select>
+//                 </Form.Group>
+
+//                 <label className="small fw-bold mb-1">
+//                   Interest Period (Duration)
+//                 </label>
+//                 <div className="input-group mb-3">
+//                   <span className="input-group-text">From</span>
+//                   <Form.Control
+//                     type="date"
+//                     name="intStartDate"
+//                     value={formData.interestPeriod?.startDate || ""}
+//                     onChange={handleChange}
+//                   />
+//                   <span className="input-group-text">To</span>
+//                   <Form.Control
+//                     type="date"
+//                     name="intEndDate"
+//                     value={formData.interestPeriod?.endDate || ""}
+//                     onChange={handleChange}
+//                   />
+//                 </div>
+//                 <Alert variant="info" className="small py-2">
+//                   <FaClock className="me-2" /> Recorded under{" "}
+//                   <strong>"Interest Received"</strong>.
+//                 </Alert>
+//               </div>
+//             )}
+
+//             <Button type="submit" className="btn-ashram w-100">
+//               {submitLoading
+//                 ? "Saving..."
+//                 : receiptType === "Donation"
+//                   ? "Save Receipt"
+//                   : "Save Transaction"}
+//             </Button>
+//           </Form>
+//         </Modal.Body>
+//       </Modal>
+
+//       {/* --- CANCEL MODAL --- */}
+//       <Modal show={showCancelModal} onHide={() => setShowCancelModal(false)}>
+//         <Modal.Header closeButton>
+//           <Modal.Title>Cancel Receipt</Modal.Title>
+//         </Modal.Header>
+//         <Modal.Body>
+//           <Alert variant="danger">
+//             <strong>Warning:</strong> This will void the receipt and remove the
+//             amount from financial reports.
+//           </Alert>
+//           <Form.Group>
+//             <Form.Label>Reason for Cancellation *</Form.Label>
+//             <Form.Control
+//               as="textarea"
+//               rows={3}
+//               value={cancelData.reason}
+//               onChange={(e) =>
+//                 setCancelData({ ...cancelData, reason: e.target.value })
+//               }
+//             />
+//           </Form.Group>
+//         </Modal.Body>
+//         <Modal.Footer>
+//           <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
+//             Back
+//           </Button>
+//           <Button variant="danger" onClick={submitCancellation}>
+//             Confirm Void
+//           </Button>
+//         </Modal.Footer>
+//       </Modal>
+
+//       {/* --- IMPORT MODAL --- */}
+//       <Modal show={showImportModal} onHide={() => setShowImportModal(false)}>
+//         <Modal.Header closeButton>
+//           <Modal.Title>Import CSV</Modal.Title>
+//         </Modal.Header>
+//         <Modal.Body>
+//           <Form onSubmit={handleImportSubmit}>
+//             <Form.Group className="mb-3">
+//               <Form.Label>Category</Form.Label>
+//               <Form.Select
+//                 value={importCategory}
+//                 onChange={(e) => setImportCategory(e.target.value)}
+//               >
+//                 <option value="Household">Household</option>
+//                 <option value="Organizational">Organizational</option>
+//               </Form.Select>
+//             </Form.Group>
+//             <Form.Control
+//               type="file"
+//               accept=".csv"
+//               onChange={(e) => setImportFile(e.target.files[0])}
+//               className="mb-3"
+//             />
+//             <Button type="submit" className="w-100" disabled={submitLoading}>
+//               {submitLoading ? "Importing..." : "Upload"}
+//             </Button>
+//           </Form>
+//         </Modal.Body>
+//       </Modal>
+
+//       {/* --- TAX MODAL --- */}
+//       <Modal show={showTaxModal} onHide={() => setShowTaxModal(false)}>
+//         <Modal.Body>
+//           <Form onSubmit={handleDownloadTaxCert}>
+//             <Form.Control
+//               placeholder="Phone"
+//               value={taxPhone}
+//               onChange={(e) => setTaxPhone(e.target.value)}
+//               className="mb-2"
+//             />
+//             <Button type="submit" className="w-100">
+//               Download Cert
+//             </Button>
+//           </Form>
+//         </Modal.Body>
+//       </Modal>
+
+//       {/* --- MEDIA MODAL --- */}
+//       <Modal show={showMediaModal} onHide={() => setShowMediaModal(false)}>
+//         <Modal.Header closeButton>
+//           <Modal.Title>Attachments</Modal.Title>
+//         </Modal.Header>
+//         <Modal.Body>
+//           <Form onSubmit={handleUpload} className="mb-3 d-flex gap-2">
+//             <Form.Control type="file" multiple onChange={handleFileChange} />
+//             <Button type="submit">Upload</Button>
+//           </Form>
+//           <Row>
+//             {selectedDonation?.media?.map((path, i) => (
+//               <Col xs={6} key={i}>
+//                 <img
+//                   src={`${BASE_URL}${path}`}
+//                   style={{ width: "100%" }}
+//                   alt="doc"
+//                 />
+//               </Col>
+//             ))}
+//           </Row>
+//         </Modal.Body>
+//       </Modal>
+//     </div>
+//   );
+// };
+
+// export default DonationList;
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
@@ -30,7 +1655,7 @@ import {
   FaUsers,
   FaBuilding,
   FaClock,
-  FaEdit,
+  FaEdit, // Edit Icon
 } from "react-icons/fa";
 
 // Constants for Telugu Date
@@ -98,11 +1723,12 @@ const DonationList = () => {
   const [selectedDonation, setSelectedDonation] = useState(null);
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
-  // --- NEW: EDIT STATE ---
+
+  // --- EDIT STATE ---
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // Form DataF
+  // Form Data
   const [tithiParts, setTithiParts] = useState({
     masam: TELUGU_MASAMS[0],
     paksha: PAKSHAS[0],
@@ -199,91 +1825,13 @@ const DonationList = () => {
 
   // --- ACTIONS ---
 
-  const handleCancelClick = (id) => {
-    setCancelData({ id, reason: "" });
-    setShowCancelModal(true);
-  };
-
-  const submitCancellation = async () => {
-    if (!cancelData.reason) return alert("Please provide a reason.");
-    if (!window.confirm("Are you sure? This cannot be undone.")) return;
-
-    try {
-      const config = {
-        headers: { Authorization: `Bearer ${currentUser.token}` },
-      };
-      await axios.put(
-        `${BASE_URL}/api/donations/${cancelData.id}/cancel`,
-        { reason: cancelData.reason },
-        config,
-      );
-
-      alert("Receipt Cancelled Successfully.");
-      setShowCancelModal(false);
-      fetchDonations();
-    } catch (error) {
-      alert(error.response?.data?.message || "Error cancelling receipt");
-    }
-  };
-  // --- NEW: EDIT HANDLER ---
-  const handleEditClick = (donation) => {
-    setIsEditing(true);
-    setEditId(donation._id);
-
-    // Determine Receipt Type
-    if (
-      donation.scheme === "Interest Received" ||
-      donation.donorName === "Bank Interest"
-    ) {
-      setReceiptType("General");
-    } else {
-      setReceiptType("Donation");
-    }
-
-    // Helper to format date for input (YYYY-MM-DD)
-    const formatDate = (d) =>
-      d ? new Date(d).toISOString().split("T")[0] : "";
-
-    setFormData({
-      donorName: donation.donorName || "",
-      donorPhone: donation.donorPhone || "",
-      donorEmail: donation.donorEmail || "",
-      donorPan: donation.donorPan || "",
-      donorAadhaar: donation.donorAadhaar || "",
-      amount: donation.amount,
-      scheme: donation.scheme,
-      paymentMode: donation.paymentMode,
-      branch: donation.branch,
-      category: donation.category || "Household",
-      address: donation.address || "",
-      depositBank: donation.depositBank?._id || donation.depositBank || "", // Handle populated or raw ID
-      occasion: donation.occasion || "",
-      inNameOf: donation.inNameOf || "",
-      calendarType: donation.calendarType || "Gregorian",
-      programDate: formatDate(donation.programDate),
-      tithi: donation.tithi || "",
-      isRecurring: donation.isRecurring || false,
-      manualReceiptNo: donation.manualReceiptNo || "",
-      manualReceiptDate: formatDate(donation.manualReceiptDate),
-      paymentDetails: {
-        chequeNo: donation.paymentDetails?.chequeNo || "",
-        chequeDate: formatDate(donation.paymentDetails?.chequeDate),
-        bankName: donation.paymentDetails?.bankName || "",
-        transactionId: donation.paymentDetails?.transactionId || "",
-      },
-      interestPeriod: {
-        startDate: formatDate(donation.interestPeriod?.startDate),
-        endDate: formatDate(donation.interestPeriod?.endDate),
-      },
-    });
-
-    setShowModal(true);
-  };
-
+  // 1. OPEN ADD MODAL (RESET FORM)
   const handleOpenAddModal = () => {
     setIsEditing(false);
     setEditId(null);
-    // Reset Form
+    setReceiptType("Donation");
+
+    // Reset Form Data to Default
     setFormData({
       donorName: "",
       donorPhone: "",
@@ -313,7 +1861,86 @@ const DonationList = () => {
       },
       interestPeriod: { startDate: "", endDate: "" },
     });
+
     setShowModal(true);
+  };
+
+  // 2. OPEN EDIT MODAL (PRE-FILL FORM)
+  const handleEditClick = (d) => {
+    setIsEditing(true);
+    setEditId(d._id);
+
+    // Determine type based on scheme or name
+    if (d.scheme === "Interest Received" || d.donorName === "Bank Interest") {
+      setReceiptType("General");
+    } else {
+      setReceiptType("Donation");
+    }
+
+    const formatDate = (date) =>
+      date ? new Date(date).toISOString().split("T")[0] : "";
+
+    setFormData({
+      donorName: d.donorName,
+      donorPhone: d.donorPhone,
+      donorEmail: d.donorEmail,
+      donorPan: d.donorPan,
+      donorAadhaar: d.donorAadhaar,
+      amount: d.amount,
+      scheme: d.scheme,
+      paymentMode: d.paymentMode,
+      branch: d.branch,
+      category: d.category || "Household",
+      address: d.address,
+      depositBank: d.depositBank?._id || d.depositBank || "",
+      occasion: d.occasion,
+      inNameOf: d.inNameOf,
+      calendarType: d.calendarType || "Gregorian",
+      programDate: formatDate(d.programDate),
+      tithi: d.tithi,
+      isRecurring: d.isRecurring || false,
+      manualReceiptNo: d.manualReceiptNo,
+      manualReceiptDate: formatDate(d.manualReceiptDate),
+      paymentDetails: {
+        chequeNo: d.paymentDetails?.chequeNo || "",
+        chequeDate: formatDate(d.paymentDetails?.chequeDate),
+        bankName: d.paymentDetails?.bankName || "",
+        transactionId: d.paymentDetails?.transactionId || "",
+      },
+      interestPeriod: {
+        startDate: formatDate(d.interestPeriod?.startDate),
+        endDate: formatDate(d.interestPeriod?.endDate),
+      },
+    });
+
+    setShowModal(true);
+  };
+
+  const handleCancelClick = (id) => {
+    setCancelData({ id, reason: "" });
+    setShowCancelModal(true);
+  };
+
+  const submitCancellation = async () => {
+    if (!cancelData.reason) return alert("Please provide a reason.");
+    if (!window.confirm("Are you sure? This cannot be undone.")) return;
+
+    try {
+      const config = {
+        headers: { Authorization: `Bearer ${currentUser.token}` },
+      };
+      await axios.put(
+        `${BASE_URL}/api/donations/${cancelData.id}/cancel`,
+        { reason: cancelData.reason },
+        config,
+      );
+
+      alert("Receipt Cancelled Successfully.");
+      setShowCancelModal(false);
+      fetchDonations();
+    } catch (error) {
+      alert(error.response?.data?.message || "Error cancelling receipt");
+    }
   };
 
   const handleChange = (e) => {
@@ -397,6 +2024,7 @@ const DonationList = () => {
           Authorization: `Bearer ${currentUser.token}`,
         },
       };
+
       if (isEditing) {
         // UPDATE
         await axios.put(`${BASE_URL}/api/donations/${editId}`, payload, config);
@@ -406,48 +2034,16 @@ const DonationList = () => {
         await axios.post(`${BASE_URL}/api/donations`, payload, config);
         alert("Receipt Created Successfully!");
       }
-      // await axios.post(`${BASE_URL}/api/donations`, payload, config);
+
       setShowModal(false);
       fetchDonations();
-      // alert("Receipt Created Successfully!");
-
-      // Reset Form
-      // setFormData({
-      //   donorName: "",
-      //   donorPhone: "",
-      //   donorEmail: "",
-      //   donorPan: "",
-      //   donorAadhaar: "",
-      //   amount: "",
-      //   scheme: "Nitya Annadhana",
-      //   paymentMode: "Cash",
-      //   branch: "KarunaSri Seva Samithi",
-      //   category: "Household",
-      //   address: "",
-      //   depositBank: bankAccounts.length > 0 ? bankAccounts[0]._id : "",
-      //   occasion: "",
-      //   inNameOf: "",
-      //   calendarType: "Gregorian",
-      //   programDate: "",
-      //   tithi: "",
-      //   isRecurring: false,
-      //   manualReceiptNo: "",
-      //   manualReceiptDate: "",
-      //   paymentDetails: {
-      //     chequeNo: "",
-      //     chequeDate: "",
-      //     bankName: "",
-      //     transactionId: "",
-      //   },
-      //   interestPeriod: { startDate: "", endDate: "" },
-      // });
     } catch (err) {
-      alert(err.response?.data?.message || "Error adding record");
+      alert(err.response?.data?.message || "Error saving record");
     }
     setSubmitLoading(false);
   };
 
-  // --- EXPORT HANDLER (FULL COLUMNS RESTORED) ---
+  // --- EXPORT ---
   const handleExport = () => {
     if (filteredDonations.length === 0) return alert("No data to export");
     const headers = [
@@ -512,7 +2108,6 @@ const DonationList = () => {
     document.body.removeChild(link);
   };
 
-  // --- OTHER HANDLERS ---
   const handleImportSubmit = async (e) => {
     e.preventDefault();
     if (!importFile) return alert("Please select a CSV file.");
@@ -555,7 +2150,7 @@ const DonationList = () => {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `TaxCert.pdf`);
+      link.setAttribute("download", `TaxCert_${taxPhone}.pdf`);
       document.body.appendChild(link);
       link.click();
       setShowTaxModal(false);
@@ -565,7 +2160,7 @@ const DonationList = () => {
   };
 
   const handleEmailReceipt = async (id) => {
-    if (!window.confirm("Email Receipt to Donor?")) return;
+    if (!window.confirm("Email Receipt?")) return;
     try {
       const config = {
         headers: { Authorization: `Bearer ${currentUser.token}` },
@@ -601,12 +2196,12 @@ const DonationList = () => {
         fd,
         config,
       );
-      alert("Uploaded!");
+      alert("Uploaded Successfully!");
       setFiles([]);
       setShowMediaModal(false);
       fetchDonations();
     } catch (e) {
-      alert("Upload Failed");
+      alert("Upload failed");
     }
     setUploading(false);
   };
@@ -628,7 +2223,7 @@ const DonationList = () => {
       fetchDonations();
       alert("Deleted");
     } catch (err) {
-      alert("Error");
+      alert("Error deleting file");
     }
   };
 
@@ -658,7 +2253,7 @@ const DonationList = () => {
           <Col md={4}>
             <Form.Control
               size="sm"
-              placeholder="Bank"
+              placeholder="Bank Name"
               name="bankName"
               value={formData.paymentDetails.bankName}
               onChange={handleChange}
@@ -672,7 +2267,7 @@ const DonationList = () => {
         <div className="bg-light p-2 rounded mb-3 border">
           <Form.Control
             size="sm"
-            placeholder="Transaction ID"
+            placeholder="Transaction ID / Reference No"
             name="transactionId"
             value={formData.paymentDetails.transactionId}
             onChange={handleChange}
@@ -684,9 +2279,11 @@ const DonationList = () => {
   };
 
   const filteredDonations = donations.filter((d) => {
-    let matchesCategory =
-      filterCategory === "All" ||
-      (d.category || "Household") === filterCategory;
+    let matchesCategory = true;
+    if (filterCategory !== "All") {
+      const cat = d.category || "Household";
+      matchesCategory = cat === filterCategory;
+    }
     let matchesDate = true;
     if (dateFilter.start)
       matchesDate = new Date(d.createdAt) >= new Date(dateFilter.start);
@@ -708,9 +2305,7 @@ const DonationList = () => {
           >
             Receipts / Donations
           </h2>
-          <p className="text-muted m-0 small">
-            Manage all incoming funds (Donations & Other Receipts)
-          </p>
+          <p className="text-muted m-0 small">Manage all incoming funds</p>
         </Col>
         <Col lg={7}>
           <div className="d-flex flex-wrap gap-2 justify-content-lg-end">
@@ -742,11 +2337,12 @@ const DonationList = () => {
             <Button variant="success" size="sm" onClick={handleExport}>
               <FaFileCsv /> Export
             </Button>
+            {/* FIXED: BUTTON NOW CALLS HANDLEOPENADDMODAL */}
             <Button
               variant="primary"
               size="sm"
               style={{ backgroundColor: "#581818" }}
-              onClick={() => setShowModal(true)}
+              onClick={handleOpenAddModal}
             >
               <FaPlus /> Add Receipt
             </Button>
@@ -754,7 +2350,6 @@ const DonationList = () => {
         </Col>
       </Row>
 
-      {/* FILTERS */}
       <Row className="mb-3 g-2">
         <Col md={6}>
           <ButtonGroup>
@@ -811,7 +2406,7 @@ const DonationList = () => {
         </Col>
       </Row>
 
-      {/* --- TABLE (RESTORED COLUMNS) --- */}
+      {/* TABLE */}
       <Card className="shadow-sm border-0">
         <Card.Body className="p-0">
           <Table
@@ -845,7 +2440,6 @@ const DonationList = () => {
                         : {}
                     }
                   >
-                    {/* COL 1: Date & ID */}
                     <td className="ps-3">
                       <div
                         className={
@@ -865,8 +2459,6 @@ const DonationList = () => {
                         </div>
                       )}
                     </td>
-
-                    {/* COL 2: Donor */}
                     <td>
                       <div
                         className="fw-bold text-maroon text-truncate"
@@ -879,8 +2471,6 @@ const DonationList = () => {
                         {d.donorPhone !== "0000000000" ? d.donorPhone : ""}
                       </small>
                     </td>
-
-                    {/* COL 3: Scheme / Head */}
                     <td>
                       <div className="fw-bold text-dark">{d.scheme}</div>
                       {d.accountHead ? (
@@ -903,32 +2493,24 @@ const DonationList = () => {
                         </Badge>
                       )}
                     </td>
-
-                    {/* COL 4: Category */}
                     <td>
                       <Badge bg="light" text="dark" className="border">
                         {d.category}
                       </Badge>
                     </td>
-
-                    {/* COL 5: Amount */}
                     <td
                       className={`fw-bold ${isCancelled ? "text-decoration-line-through text-muted" : "text-success"}`}
                     >
                       ₹{d.amount.toLocaleString()}
                     </td>
-
-                    {/* COL 6: Mode */}
                     <td>
-                      {d.paymentMode}
+                      {d.paymentMode}{" "}
                       {d.paymentDetails?.chequeNo && (
                         <div className="small text-muted">
                           #{d.paymentDetails.chequeNo}
                         </div>
                       )}
                     </td>
-
-                    {/* COL 7: Branch */}
                     <td>
                       <small
                         className="text-truncate d-block"
@@ -938,8 +2520,6 @@ const DonationList = () => {
                         {d.branch}
                       </small>
                     </td>
-
-                    {/* COL 8: Status */}
                     <td>
                       {isCancelled ? (
                         <Badge bg="danger">Cancelled</Badge>
@@ -947,21 +2527,19 @@ const DonationList = () => {
                         <Badge bg="success">Active</Badge>
                       )}
                     </td>
-
-                    {/* COL 9: Actions */}
                     <td className="text-center">
                       {!isCancelled && (
                         <div className="d-flex justify-content-center gap-1">
+                          {/* Edit Button */}
                           <Button
                             size="sm"
                             variant="outline-primary"
-                            title="Edit Record"
+                            title="Edit"
                             onClick={() => handleEditClick(d)}
                           >
                             <FaEdit />
                           </Button>
 
-                          {/* Cancel Button */}
                           {(currentUser?.role === "admin" ||
                             currentUser?.role === "president" ||
                             currentUser?.role === "secretary") && (
@@ -975,7 +2553,6 @@ const DonationList = () => {
                             </Button>
                           )}
 
-                          {/* PDF Button */}
                           <Button
                             size="sm"
                             variant="outline-dark"
@@ -1011,7 +2588,6 @@ const DonationList = () => {
                             <FaFilePdf />
                           </Button>
 
-                          {/* Email Button */}
                           <Button
                             size="sm"
                             variant={
@@ -1024,8 +2600,6 @@ const DonationList = () => {
                           >
                             <FaEnvelope />
                           </Button>
-
-                          {/* Attachments Button */}
                           <Button
                             size="sm"
                             variant={
@@ -1057,14 +2631,15 @@ const DonationList = () => {
         </Card.Body>
       </Card>
 
-      {/* --- ADD RECEIPT MODAL --- */}
+      {/* --- ADD/EDIT RECEIPT MODAL --- */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton className="bg-light">
-          <Modal.Title>New Receipt / Transaction</Modal.Title>
+          <Modal.Title>
+            {isEditing ? "Edit" : "New"} Receipt / Transaction
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSubmit}>
-            {/* TOGGLE BUTTONS */}
             <div className="d-flex justify-content-center mb-4">
               <ButtonGroup className="w-100 shadow-sm">
                 <Button
@@ -1084,7 +2659,6 @@ const DonationList = () => {
               </ButtonGroup>
             </div>
 
-            {/* VIEW 1: DONOR RECEIPT */}
             {receiptType === "Donation" && (
               <>
                 <div className="d-flex justify-content-center mb-3">
@@ -1117,7 +2691,6 @@ const DonationList = () => {
                     </Button>
                   </ButtonGroup>
                 </div>
-
                 <Row className="g-2 mb-2">
                   <Col md={6}>
                     <Form.Label className="small fw-bold">
@@ -1286,7 +2859,6 @@ const DonationList = () => {
                   className="mb-2 text-primary"
                 />
                 {renderPaymentFields()}
-
                 <div className="bg-light p-2 rounded mb-3 border">
                   <Row className="g-2 align-items-center">
                     <Col md={6}>
@@ -1309,7 +2881,6 @@ const DonationList = () => {
                     </Col>
                   </Row>
                 </div>
-
                 <Row className="g-2 mb-2">
                   <Col md={4}>
                     <Form.Select
@@ -1404,7 +2975,6 @@ const DonationList = () => {
               </>
             )}
 
-            {/* --- VIEW 2: BANK INTEREST --- */}
             {receiptType === "General" && (
               <div className="bg-light p-3 rounded border mb-3">
                 <h6 className="text-maroon fw-bold mb-3">
@@ -1457,8 +3027,6 @@ const DonationList = () => {
                     </Form.Select>
                   </Col>
                 </Row>
-
-                {/* NEW: Branch Selection for Interest */}
                 <Form.Group className="mb-3">
                   <Form.Label className="small fw-bold">Branch *</Form.Label>
                   <Form.Select
@@ -1478,7 +3046,6 @@ const DonationList = () => {
                     <option value="Karunya Bharathi">Karunya Bharathi</option>
                   </Form.Select>
                 </Form.Group>
-
                 <label className="small fw-bold mb-1">
                   Interest Period (Duration)
                 </label>
@@ -1506,11 +3073,7 @@ const DonationList = () => {
             )}
 
             <Button type="submit" className="btn-ashram w-100">
-              {submitLoading
-                ? "Saving..."
-                : receiptType === "Donation"
-                  ? "Save Receipt"
-                  : "Save Transaction"}
+              {submitLoading ? "Saving..." : isEditing ? "Update" : "Save"}
             </Button>
           </Form>
         </Modal.Body>
@@ -1578,18 +3141,35 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* --- TAX MODAL --- */}
+      {/* --- TAX MODAL (FIXED) --- */}
       <Modal show={showTaxModal} onHide={() => setShowTaxModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Download Tax Certificate</Modal.Title>
+        </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleDownloadTaxCert}>
+            <Form.Label>Donor Phone Number</Form.Label>
             <Form.Control
-              placeholder="Phone"
+              placeholder="Enter Phone"
               value={taxPhone}
               onChange={(e) => setTaxPhone(e.target.value)}
-              className="mb-2"
+              className="mb-3"
+              required
             />
-            <Button type="submit" className="w-100">
-              Download Cert
+
+            <Form.Label>Financial Year</Form.Label>
+            <Form.Select
+              value={taxYear}
+              onChange={(e) => setTaxYear(e.target.value)}
+              className="mb-3"
+            >
+              <option value="2024">FY 2024-25</option>
+              <option value="2025">FY 2025-26</option>
+              <option value="2023">FY 2023-24</option>
+            </Form.Select>
+
+            <Button type="submit" className="w-100 btn-ashram">
+              Download Certificate
             </Button>
           </Form>
         </Modal.Body>

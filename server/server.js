@@ -20,6 +20,8 @@ const accountRoutes = require("./routes/accountRoutes"); // Import
 const runScheduler = require("./utils/reminderScheduler"); // <--- Import
 const occasionRoutes = require("./routes/occasionRoutes");
 
+const backupRoutes = require("./routes/backupRoutes"); // <--- Add this
+
 dotenv.config();
 connectDB();
 
@@ -48,6 +50,6 @@ app.use("/api/occasions", occasionRoutes);
 app.get("/", (req, res) => {
   res.send("Karunasri Backend is Running...");
 });
-
+app.use("/api/backup", backupRoutes); // <--- Add this route
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

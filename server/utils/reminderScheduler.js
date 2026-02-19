@@ -2,6 +2,8 @@ const cron = require("node-cron");
 const nodemailer = require("nodemailer");
 const Donation = require("../models/Donation");
 
+const { emailBackupInternal } = require("../controllers/backupController");
+
 const runScheduler = () => {
   // Run every day at 10:00 AM
   cron.schedule("0 10 * * *", async () => {
@@ -95,6 +97,10 @@ const runScheduler = () => {
     } catch (error) {
       console.error("❌ Scheduler Error:", error);
     }
+  });
+  cron.schedule("0 22 * * 0", async () => {
+    console.log("📦 Starting Weekly Auto-Backup...");
+    await emailBackupInternal();
   });
 };
 

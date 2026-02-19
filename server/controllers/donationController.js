@@ -203,7 +203,7 @@ const getDonations = async (req, res) => {
     const donations = await Donation.find(query)
       .populate("accountHead", "code name")
       .populate("depositBank", "name")
-      .sort({ createdAt: -1 }); // <--- FIX: Sorts recent first
+      .sort({ createdAt: -1, _id: -1 }); // <--- FIX: Sorts recent first
 
     res.json(donations);
   } catch (error) {
@@ -434,7 +434,145 @@ const getDailySevaList = async (req, res) => {
   }
 };
 
-// --- IMPORT DONATIONS (FIXED: SCHEME MAPPING & INDIVIDUAL SAVE) ---
+// --- IMPORT DONATIONS (FIXED: SCHEME MAPPING & INDIVIDUAL SAVE) NO Sequnce code ---
+// const importDonations = async (req, res) => {
+//   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+//   const results = [];
+//   const filePath = req.file.path;
+//   const userSelectedCategory = req.body.category || "Household";
+
+//   // Pre-load Account Heads
+//   const accountHeads = await AccountHead.find({});
+//   const accountMap = {};
+//   accountHeads.forEach((acc) => {
+//     accountMap[acc.code.toString()] = acc._id;
+//     accountMap[acc.name.toLowerCase()] = acc._id;
+//   });
+
+//   try {
+//     console.log("--- STARTING CSV IMPORT ---"); // DEBUG LOG
+
+//     fs.createReadStream(filePath)
+//       .pipe(csv())
+//       .on("data", (row) => {
+//         // Log the first row to see what headers the server sees
+//         if (results.length === 0) {
+//           console.log("CSV Headers detected:", Object.keys(row));
+//         }
+
+//         // Helper to find value loosely
+//         const getValue = (keywords) => {
+//           const rowKeys = Object.keys(row);
+//           // Check if any key contains the keyword (case insensitive)
+//           const match = rowKeys.find((key) =>
+//             keywords.some((k) => key.toLowerCase().includes(k.toLowerCase())),
+//           );
+//           return match ? row[match] : "";
+//         };
+
+//         // 1. EXTRACT DATA
+//         // Broader keywords for Name
+//         const dName =
+//           getValue(["Name", "Donor", "First Name", "StudentName", "Devotee"]) ||
+//           "Unknown Donor";
+
+//         // Broader keywords for Phone
+//         const dPhone =
+//           getValue(["Phone", "Mobile", "Contact", "Cell"]) || "0000000000";
+
+//         // Broader keywords for Amount
+//         const dAmountStr = getValue(["Amount", "Price", "Donation", "Paid"]);
+//         const dAmount = Number(dAmountStr.replace(/[^0-9.-]+/g, "")) || 0; // Clean currency symbols if any
+
+//         // Broader keywords for Scheme
+//         const rawScheme = getValue([
+//           "Scheme",
+//           "Category",
+//           "Purpose",
+//           "Towards",
+//           "Seva",
+//         ]);
+//         const dScheme =
+//           rawScheme && rawScheme.trim() !== "" ? rawScheme : "General Donation";
+
+//         // 2. ACCOUNT HEAD MAPPING
+//         let matchedAccountId = null;
+//         if (dScheme && accountMap[dScheme.toLowerCase()]) {
+//           matchedAccountId = accountMap[dScheme.toLowerCase()];
+//         }
+
+//         // 3. DATE PARSING
+//         const rawDate = getValue(["Date", "Created", "Day"]);
+//         let dDate = new Date();
+//         if (rawDate) {
+//           dDate = new Date(rawDate);
+//           // If invalid date, fallback to today
+//           if (isNaN(dDate.getTime())) dDate = new Date();
+//         }
+//         // Broader keywords for PAN
+//         const dPan = getValue(["PAN", "Pan Number", "PanCard", "Tax ID"]) || "";
+
+//         // Broader keywords for Aadhaar
+//         const dAadhaar =
+//           getValue(["Aadhaar", "Adhar", "UID", "Aadhar Number"]) || "";
+
+//         // 4. FILTERING
+//         // Only add if we have a Name or a substantial Amount
+//         if (dName !== "Unknown Donor" || dAmount > 0) {
+//           results.push({
+//             donorName: dName,
+//             donorPhone: dPhone,
+//             donorEmail: getValue(["Email", "Mail"]) || "",
+//             donorPan: dPan, // <--- Ensure this is mapped
+//             donorAadhaar: dAadhaar, // <--- Ensure this is mapped
+//             amount: dAmount,
+//             scheme: dScheme,
+//             accountHead: matchedAccountId,
+//             paymentMode: "Cash",
+//             category: userSelectedCategory, // Force user selected category
+//             branch: "KarunaSri Seva Samithi",
+//             createdAt: dDate,
+//             receiptStatus: "Generated",
+//             collectedBy: req.user._id,
+//           });
+//         } else {
+//           console.log("Skipping Row (Invalid Name/Amount):", row);
+//         }
+//       })
+//       .on("end", async () => {
+//         try {
+//           console.log(`Processing ${results.length} valid rows...`); // DEBUG LOG
+
+//           if (results.length > 0) {
+//             let count = 0;
+//             for (const doc of results) {
+//               try {
+//                 await Donation.create(doc);
+//                 count++;
+//               } catch (e) {
+//                 console.error("Save Error:", e.message);
+//               }
+//             }
+
+//             fs.unlinkSync(filePath);
+//             res.json({ message: `Successfully imported ${count} donations.` });
+//           } else {
+//             fs.unlinkSync(filePath);
+//             res
+//               .status(400)
+//               .json({ message: "No valid data found. Check CSV headers." });
+//           }
+//         } catch (err) {
+//           if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+//           res.status(500).json({ message: "DB Error: " + err.message });
+//         }
+//       });
+//   } catch (error) {
+//     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 const importDonations = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -451,41 +589,31 @@ const importDonations = async (req, res) => {
   });
 
   try {
-    console.log("--- STARTING CSV IMPORT ---"); // DEBUG LOG
-
     fs.createReadStream(filePath)
       .pipe(csv())
       .on("data", (row) => {
-        // Log the first row to see what headers the server sees
-        if (results.length === 0) {
-          console.log("CSV Headers detected:", Object.keys(row));
-        }
-
-        // Helper to find value loosely
+        // ... (Keep existing getValue logic) ...
         const getValue = (keywords) => {
           const rowKeys = Object.keys(row);
-          // Check if any key contains the keyword (case insensitive)
           const match = rowKeys.find((key) =>
             keywords.some((k) => key.toLowerCase().includes(k.toLowerCase())),
           );
           return match ? row[match] : "";
         };
 
-        // 1. EXTRACT DATA
-        // Broader keywords for Name
         const dName =
           getValue(["Name", "Donor", "First Name", "StudentName", "Devotee"]) ||
           "Unknown Donor";
-
-        // Broader keywords for Phone
         const dPhone =
           getValue(["Phone", "Mobile", "Contact", "Cell"]) || "0000000000";
 
-        // Broader keywords for Amount
+        // Clean Amount
         const dAmountStr = getValue(["Amount", "Price", "Donation", "Paid"]);
-        const dAmount = Number(dAmountStr.replace(/[^0-9.-]+/g, "")) || 0; // Clean currency symbols if any
+        let dAmount = 0;
+        if (dAmountStr) {
+          dAmount = Number(dAmountStr.replace(/[^0-9.-]+/g, ""));
+        }
 
-        // Broader keywords for Scheme
         const rawScheme = getValue([
           "Scheme",
           "Category",
@@ -496,56 +624,52 @@ const importDonations = async (req, res) => {
         const dScheme =
           rawScheme && rawScheme.trim() !== "" ? rawScheme : "General Donation";
 
-        // 2. ACCOUNT HEAD MAPPING
         let matchedAccountId = null;
         if (dScheme && accountMap[dScheme.toLowerCase()]) {
           matchedAccountId = accountMap[dScheme.toLowerCase()];
         }
 
-        // 3. DATE PARSING
+        // Date Parsing
         const rawDate = getValue(["Date", "Created", "Day"]);
         let dDate = new Date();
         if (rawDate) {
           dDate = new Date(rawDate);
-          // If invalid date, fallback to today
           if (isNaN(dDate.getTime())) dDate = new Date();
         }
-        // Broader keywords for PAN
-        const dPan = getValue(["PAN", "Pan Number", "PanCard", "Tax ID"]) || "";
 
-        // Broader keywords for Aadhaar
+        const dPan = getValue(["PAN", "Pan Number", "PanCard", "Tax ID"]) || "";
         const dAadhaar =
           getValue(["Aadhaar", "Adhar", "UID", "Aadhar Number"]) || "";
 
-        // 4. FILTERING
-        // Only add if we have a Name or a substantial Amount
         if (dName !== "Unknown Donor" || dAmount > 0) {
           results.push({
             donorName: dName,
             donorPhone: dPhone,
             donorEmail: getValue(["Email", "Mail"]) || "",
-            donorPan: dPan, // <--- Ensure this is mapped
-            donorAadhaar: dAadhaar, // <--- Ensure this is mapped
+            donorPan: dPan,
+            donorAadhaar: dAadhaar,
             amount: dAmount,
             scheme: dScheme,
             accountHead: matchedAccountId,
             paymentMode: "Cash",
-            category: userSelectedCategory, // Force user selected category
+            category: userSelectedCategory,
             branch: "KarunaSri Seva Samithi",
             createdAt: dDate,
             receiptStatus: "Generated",
             collectedBy: req.user._id,
           });
-        } else {
-          console.log("Skipping Row (Invalid Name/Amount):", row);
         }
       })
       .on("end", async () => {
         try {
-          console.log(`Processing ${results.length} valid rows...`); // DEBUG LOG
+          // --- FIX: SORT BY DATE (OLDEST FIRST) BEFORE INSERTING ---
+          // This ensures Receipt KSS-0001 is the oldest donation
+          results.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          // -------------------------------------------------------
 
           if (results.length > 0) {
             let count = 0;
+            // Insert sequentially to maintain receipt order
             for (const doc of results) {
               try {
                 await Donation.create(doc);
@@ -559,9 +683,7 @@ const importDonations = async (req, res) => {
             res.json({ message: `Successfully imported ${count} donations.` });
           } else {
             fs.unlinkSync(filePath);
-            res
-              .status(400)
-              .json({ message: "No valid data found. Check CSV headers." });
+            res.status(400).json({ message: "No valid data found." });
           }
         } catch (err) {
           if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -573,6 +695,7 @@ const importDonations = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 // @desc    Cancel a Donation (Void)
 // @route   PUT /api/donations/:id/cancel
 const cancelDonation = async (req, res) => {
