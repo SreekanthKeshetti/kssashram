@@ -15,6 +15,7 @@ const donationSchema = mongoose.Schema(
     // Basic Details
     donorName: { type: String, required: true },
     donorPhone: { type: String, required: true },
+    donorLandline: { type: String },
     donorEmail: { type: String },
     donorPan: { type: String }, // For Tax Benefit (80G)
     donorAadhaar: { type: String },
