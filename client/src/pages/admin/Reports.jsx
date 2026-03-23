@@ -498,6 +498,7 @@ const Reports = () => {
     startDate: new Date().toISOString().split("T")[0],
     endDate: new Date().toISOString().split("T")[0],
     reportType: "All",
+    branch: "All Branches",
   });
   const [customReport, setCustomReport] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
@@ -549,7 +550,8 @@ const Reports = () => {
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const query = `startDate=${reportParams.startDate}&endDate=${reportParams.endDate}&reportType=${reportParams.reportType}`;
+      // const query = `startDate=${reportParams.startDate}&endDate=${reportParams.endDate}&reportType=${reportParams.reportType}`;
+      const query = `startDate=${reportParams.startDate}&endDate=${reportParams.endDate}&reportType=${reportParams.reportType}&branch=${reportParams.branch}`;
       const { data } = await axios.get(
         `${BASE_URL}/api/reports/custom?${query}`,
         config,
@@ -962,6 +964,26 @@ const Reports = () => {
                       }
                       required
                     />
+                  </Col>
+                  <Col md={3}>
+                    <Form.Label>Branch</Form.Label>
+                    <Form.Select
+                      value={reportParams.branch}
+                      onChange={(e) =>
+                        setReportParams({
+                          ...reportParams,
+                          branch: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="All Branches">All Branches</option>
+                      <option value="Headquarters">Headquarters</option>
+                      <option value="KarunaSri Seva Samithi">
+                        KarunaSri Seva Samithi
+                      </option>
+                      <option value="Karunya Sindhu">Karunya Sindhu</option>
+                      <option value="Karunya Bharathi">Karunya Bharathi</option>
+                    </Form.Select>
                   </Col>
                   <Col md={3}>
                     <Form.Label>Report Type</Form.Label>

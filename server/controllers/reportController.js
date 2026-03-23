@@ -285,11 +285,23 @@ const getCustomFinanceReport = async (req, res) => {
     let expenseItems = [];
 
     // Filter Logic based on User Role (Hub & Spoke)
+    // let branchFilter = {};
+    // if (req.user.role === "kba_manager")
+    //   branchFilter = { branch: "Karunya Bharathi" };
+    // else if (req.user.role === "ksa_manager")
+    //   branchFilter = { branch: "Karunya Sindhu" };
+    // Above is before demo3 to get branch wise we do this below.
+    // Replace the branchFilter logic inside getCustomFinanceReport:
+
     let branchFilter = {};
-    if (req.user.role === "kba_manager")
+    if (req.user.role === "kba_manager") {
       branchFilter = { branch: "Karunya Bharathi" };
-    else if (req.user.role === "ksa_manager")
+    } else if (req.user.role === "ksa_manager") {
       branchFilter = { branch: "Karunya Sindhu" };
+    } else if (req.query.branch && req.query.branch !== "All Branches") {
+      // Allow Admin/Committee to filter by specific branch
+      branchFilter = { branch: req.query.branch };
+    }
 
     if (reportType === "Income" || reportType === "All") {
       const donations = await Donation.find({

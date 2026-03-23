@@ -39,14 +39,11 @@ const DashboardLayout = () => {
       "ksa_manager",
     ];
 
-    // 1. Check Auth
     if (!userInfo || !allowedRoles.includes(userInfo.role)) {
       navigate("/login");
       return;
     }
 
-    // 2. RESTRICTION: Redirect Managers away from "Overview"
-    // If they land on "/dashboard", send them straight to "Donations"
     if (
       location.pathname === "/dashboard" &&
       ["kba_manager", "ksa_manager"].includes(userInfo.role)
@@ -65,19 +62,15 @@ const DashboardLayout = () => {
   if (!user) return null;
 
   const isActive = (path) => (location.pathname.includes(path) ? "active" : "");
-
-  // Helper to check if user is a Branch Manager
   const isBranchManager = ["kba_manager", "ksa_manager"].includes(user.role);
 
   return (
     <div className="dashboard-container">
-      {/* Mobile Overlay */}
       <div
         className={`sidebar-overlay ${showSidebar ? "show" : ""}`}
         onClick={() => setShowSidebar(false)}
       ></div>
 
-      {/* SIDEBAR */}
       <aside className={`sidebar ${showSidebar ? "show" : ""}`}>
         <div className="sidebar-header d-flex justify-content-between align-items-center">
           <div>
@@ -97,7 +90,6 @@ const DashboardLayout = () => {
         </div>
 
         <ul className="sidebar-menu">
-          {/* 1. OVERVIEW - HIDDEN FOR MANAGERS */}
           {!isBranchManager && (
             <li>
               <Link
@@ -109,7 +101,6 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 2. DONATIONS (Visible to All) */}
           <li>
             <Link
               to="/dashboard/donations"
@@ -119,7 +110,7 @@ const DashboardLayout = () => {
             </Link>
           </li>
 
-          {/* 3. STUDENTS (Warden, Clerk, Admin, Committee) */}
+          {/* --- UPDATED: ADDED MANAGERS TO STUDENT VIEW --- */}
           {[
             "admin",
             "president",
@@ -128,6 +119,8 @@ const DashboardLayout = () => {
             "warden",
             "clerk",
             "employee",
+            "kba_manager",
+            "ksa_manager",
           ].includes(user.role) && (
             <li>
               <Link
@@ -139,7 +132,6 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 4. INVENTORY (Visible to Managers + HQ Staff) */}
           {[
             "admin",
             "president",
@@ -161,7 +153,6 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 5. FINANCE (Accountant, Admin, Committee, Managers) */}
           {[
             "admin",
             "president",
@@ -182,7 +173,6 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 6. EVENTS (Visible to All) */}
           <li>
             <Link
               to="/dashboard/events"
@@ -192,7 +182,6 @@ const DashboardLayout = () => {
             </Link>
           </li>
 
-          {/* 7. DAILY SEVA (Visible to All) */}
           <li>
             <Link
               to="/dashboard/daily-seva"
@@ -202,7 +191,6 @@ const DashboardLayout = () => {
             </Link>
           </li>
 
-          {/* 8. MEMBERS (HQ Only) */}
           {[
             "admin",
             "president",
@@ -221,7 +209,6 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 9. REPORTS (HQ Only - Managers don't need global reports) */}
           {[
             "admin",
             "president",
@@ -240,7 +227,6 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 10. SETTINGS (Committee Only) */}
           {["admin", "president", "secretary", "treasurer"].includes(
             user.role,
           ) && (
@@ -254,7 +240,6 @@ const DashboardLayout = () => {
             </li>
           )}
 
-          {/* 11. AUDIT (Admin Only) */}
           {user.role === "admin" && (
             <li>
               <Link
