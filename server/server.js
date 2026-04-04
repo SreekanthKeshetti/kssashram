@@ -35,7 +35,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173", // For your local testing
-      "https://kssashram.vercel.app/", // <--- MUST REPLACE WITH YOUR ACTUAL VERCEL URL
+      "https://kssashram.vercel.app/",
+      // <--- MUST REPLACE WITH YOUR ACTUAL VERCEL URL
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,

@@ -3,6 +3,7 @@ import axios from "axios";
 import BASE_URL from "../../apiConfig";
 import { Table, Badge, Card, Row, Col, Spinner, Form } from "react-bootstrap";
 import { FaShieldAlt, FaSearch } from "react-icons/fa";
+// This is the System Audit Trail page for admins to view all user activities and data changes in the system. It fetches audit logs from the backend and displays them in a searchable table format.
 
 const SystemAudit = () => {
   const [logs, setLogs] = useState([]);
