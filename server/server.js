@@ -35,7 +35,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173", // For your local testing
-      "https://kssashram.vercel.app/",
+      "https://kssashram.vercel.app",
       // <--- MUST REPLACE WITH YOUR ACTUAL VERCEL URL
     ],
     // this allows cookies to be sent from the frontend to the backend for authentication
