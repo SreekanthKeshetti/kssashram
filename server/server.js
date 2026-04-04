@@ -38,6 +38,7 @@ app.use(
       "https://kssashram.vercel.app/",
       // <--- MUST REPLACE WITH YOUR ACTUAL VERCEL URL
     ],
+    // this allows cookies to be sent from the frontend to the backend for authentication
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   }),
