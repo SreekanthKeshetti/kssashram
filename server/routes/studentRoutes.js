@@ -1,8 +1,111 @@
+// const express = require("express");
+// const router = express.Router();
+
+// const multer = require("multer");
+// const path = require("path");
+// const fs = require("fs");
+// const {
+//   createStudent,
+//   getStudents,
+//   approveStudent,
+//   updateStudent,
+//   getStudentById,
+//   deleteStudent,
+//   uploadDocuments,
+//   deleteDocument,
+//   addStudentLeave,
+//   updateLeaveStatus,
+//   emailProgressReport,
+//   updateStatutoryInfo,
+//   importStudents,
+//   approveAlumniExit,
+//   approveTransfer,
+//   downloadBlankForm,
+// } = require("../controllers/studentController");
+// const { protect, admin, staff } = require("../middleware/authMiddleware");
+// // --- MULTER CONFIG (Same as Donation) ---
+
+// const storage = multer.diskStorage({
+//   destination(req, file, cb) {
+//     const uploadPath = "uploads/";
+
+//     // Check if folder exists, if not, create it
+//     if (!fs.existsSync(uploadPath)) {
+//       fs.mkdirSync(uploadPath, { recursive: true });
+//     }
+
+//     cb(null, uploadPath);
+//   },
+//   filename(req, file, cb) {
+//     // Keep original name for CSVs or timestamp it
+//     cb(null, `STU-${Date.now()}${path.extname(file.originalname)}`);
+//   },
+// });
+// // -----------------------
+
+// const checkFileType = (file, cb) => {
+//   const filetypes = /jpg|jpeg|png|pdf|doc|docx|csv/; // Added doc/docx support
+//   const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+//   if (extname) return cb(null, true);
+//   cb("Images,Documents or CSVs only!");
+// };
+
+// const upload = multer({
+//   storage,
+//   fileFilter: function (req, file, cb) {
+//     checkFileType(file, cb);
+//   },
+// });
+// // ----------------------------------------
+
+// router.route("/").post(protect, createStudent).get(protect, getStudents);
+// router.get("/blank-form", protect, staff, downloadBlankForm);
+// router
+//   .route("/:id")
+//   .get(protect, getStudentById)
+//   .put(protect, updateStudent)
+//   .delete(protect, admin, deleteStudent); // For updating profile
+// router.route("/:id/approve").put(protect, approveStudent);
+// // --- NEW DOCUMENT ROUTES ---
+// router.post("/:id/upload", protect, upload.array("files", 5), uploadDocuments);
+// router.delete("/:id/documents", protect, deleteDocument);
+
+// // Leave Management Routes
+// router.post("/:id/leave", protect, addStudentLeave);
+// router.put("/:id/leave/:leaveId", protect, updateLeaveStatus);
+// // Email Sponsor Route
+// router.post("/:id/email-sponsor", protect, emailProgressReport);
+// // New Route for Legal/Statutory Updates
+// router.put("/:id/statutory", protect, staff, updateStatutoryInfo);
+// // NEW: Import Route (Admin Only)
+// // Note: 'upload' is the multer middleware defined in your file
+// router.post("/import", protect, admin, upload.single("file"), importStudents);
+// router.route("/:id/approve-exit").put(protect, approveAlumniExit);
+// router.route("/:id/approve-transfer").put(protect, approveTransfer);
+
+// module.exports = router;
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const path = require("path");
 const fs = require("fs");
+const path = require("path");
+
+// --- NEW: Import Cloudinary Storage ---
+const { uploadCloud } = require("../config/cloudinaryConfig");
+// 2. Local Uploader (For temporary CSV imports)
+const storageLocal = multer.diskStorage({
+  destination(req, file, cb) {
+    const uploadPath = "uploads/";
+    if (!fs.existsSync(uploadPath))
+      fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename(req, file, cb) {
+    cb(null, `TEMP-STU-${Date.now()}${path.extname(file.originalname)}`);
+  },
+});
+const uploadLocal = multer({ storage: storageLocal });
+
 const {
   createStudent,
   getStudents,
@@ -22,63 +125,48 @@ const {
   downloadBlankForm,
 } = require("../controllers/studentController");
 const { protect, admin, staff } = require("../middleware/authMiddleware");
-// --- MULTER CONFIG (Same as Donation) ---
 
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    const uploadPath = "uploads/";
-
-    // Check if folder exists, if not, create it
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-
-    cb(null, uploadPath);
-  },
-  filename(req, file, cb) {
-    // Keep original name for CSVs or timestamp it
-    cb(null, `STU-${Date.now()}${path.extname(file.originalname)}`);
-  },
-});
-// -----------------------
-
-const checkFileType = (file, cb) => {
-  const filetypes = /jpg|jpeg|png|pdf|doc|docx|csv/; // Added doc/docx support
-  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  if (extname) return cb(null, true);
-  cb("Images,Documents or CSVs only!");
-};
-
-const upload = multer({
-  storage,
-  fileFilter: function (req, file, cb) {
-    checkFileType(file, cb);
-  },
-});
-// ----------------------------------------
+// --- ROUTES ---
 
 router.route("/").post(protect, createStudent).get(protect, getStudents);
 router.get("/blank-form", protect, staff, downloadBlankForm);
+
 router
   .route("/:id")
   .get(protect, getStudentById)
   .put(protect, updateStudent)
   .delete(protect, admin, deleteStudent); // For updating profile
+
 router.route("/:id/approve").put(protect, approveStudent);
-// --- NEW DOCUMENT ROUTES ---
-router.post("/:id/upload", protect, upload.array("files", 5), uploadDocuments);
+
+// --- NEW DOCUMENT ROUTES (Using Cloudinary) ---
+router.post(
+  "/:id/upload",
+  protect,
+  uploadCloud.array("files", 5),
+  uploadDocuments,
+);
 router.delete("/:id/documents", protect, deleteDocument);
 
 // Leave Management Routes
 router.post("/:id/leave", protect, addStudentLeave);
 router.put("/:id/leave/:leaveId", protect, updateLeaveStatus);
+
 // Email Sponsor Route
 router.post("/:id/email-sponsor", protect, emailProgressReport);
+
 // New Route for Legal/Statutory Updates
 router.put("/:id/statutory", protect, staff, updateStatutoryInfo);
-// NEW: Import Route (Admin Only)
-// Note: 'upload' is the multer middleware defined in your file
-router.post("/import", protect, admin, upload.single("file"), importStudents);
+
+// Local for temporary CSV reading
+router.post(
+  "/import",
+  protect,
+  admin,
+  uploadLocal.single("file"),
+  importStudents,
+);
+
 router.route("/:id/approve-exit").put(protect, approveAlumniExit);
 router.route("/:id/approve-transfer").put(protect, approveTransfer);
 

@@ -2934,7 +2934,7 @@ const StudentProfile = () => {
                         Upload
                       </Button>
                     </Form>
-                    <Row>
+                    {/* <Row>
                       {student.documents?.map((path, idx) => (
                         <Col xs={4} key={idx} className="mb-2">
                           <div className="border p-2 text-center position-relative">
@@ -2946,6 +2946,29 @@ const StudentProfile = () => {
                               target="_blank"
                               rel="noreferrer"
                             >
+                              View
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              className="position-absolute top-0 end-0 p-0 px-1"
+                              onClick={() => handleDeleteDoc(path)}
+                            >
+                              x
+                            </Button>
+                          </div>
+                        </Col>
+                      ))}
+                    </Row> */}
+                    <Row>
+                      {student.documents?.map((path, idx) => (
+                        <Col xs={4} key={idx} className="mb-2">
+                          <div className="border p-2 text-center position-relative">
+                            <small className="d-block text-truncate">
+                              Doc {idx + 1}
+                            </small>
+                            {/* --- REMOVED BASE_URL --- */}
+                            <a href={path} target="_blank" rel="noreferrer">
                               View
                             </a>
                             <Button

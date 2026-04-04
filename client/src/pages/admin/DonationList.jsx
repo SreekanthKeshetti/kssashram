@@ -1604,8 +1604,8 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* MEDIA MODAL */}
-      <Modal show={showMediaModal} onHide={() => setShowMediaModal(false)}>
+      {/* MEDIA MODAL old*/}
+      {/* <Modal show={showMediaModal} onHide={() => setShowMediaModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Attachments</Modal.Title>
         </Modal.Header>
@@ -1622,6 +1622,49 @@ const DonationList = () => {
                   style={{ width: "100%" }}
                   alt="doc"
                 />
+              </Col>
+            ))}
+          </Row>
+        </Modal.Body>
+      </Modal> */}
+      {/* MEDIA MODAL */}
+      {/* MEDIA MODAL */}
+      <Modal show={showMediaModal} onHide={() => setShowMediaModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Attachments</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleUpload} className="mb-3 d-flex gap-2">
+            <Form.Control type="file" multiple onChange={handleFileChange} />
+            <Button type="submit" disabled={uploading}>
+              {uploading ? "..." : "Upload"}
+            </Button>
+          </Form>
+          <Row>
+            {selectedDonation?.media?.map((path, i) => (
+              <Col xs={6} key={i} className="mb-2 position-relative">
+                {/* --- FIX: Removed BASE_URL --- */}
+                <a href={path} target="_blank" rel="noreferrer">
+                  <img
+                    src={path}
+                    style={{
+                      width: "100%",
+                      height: "150px",
+                      objectFit: "cover",
+                      borderRadius: "5px",
+                      border: "1px solid #ddd",
+                    }}
+                    alt="attachment"
+                  />
+                </a>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  className="position-absolute top-0 end-0 p-0 px-2 m-1 shadow-sm"
+                  onClick={() => handleDeleteMedia(path)}
+                >
+                  x
+                </Button>
               </Col>
             ))}
           </Row>

@@ -7,6 +7,7 @@ const Scheme = require("../models/Scheme");
 const nodemailer = require("nodemailer");
 const { buildReceipt, buildTaxCertificate } = require("../utils/generatePDF");
 const { logAudit } = require("../utils/auditLogger");
+const { sendWhatsAppMessage } = require("../utils/whatsappService"); // <--- NEW IMPORT
 
 const getAccountHeadForScheme = async (schemeName) => {
   if (!schemeName) return null;
@@ -16,12 +17,14 @@ const getAccountHeadForScheme = async (schemeName) => {
   return schemeObj ? schemeObj.accountHead : null;
 };
 
+// @desc    Create new donation
 const createDonation = async (req, res) => {
   try {
     const {
+      donationDate,
       donorName,
       donorPhone,
-      donorLandline, // <--- NEW
+      donorLandline,
       donorEmail,
       donorPan,
       donorAadhaar,
@@ -37,12 +40,12 @@ const createDonation = async (req, res) => {
       category,
       address,
       paymentDetails,
-      manualReceiptNo,
-      manualReceiptDate,
       calendarType,
       tithi,
       depositBank,
       interestPeriod,
+      comments,
+      manualReceiptNo,
     } = req.body;
 
     let finalBranch = "KarunaSri Seva Samithi";
@@ -52,17 +55,32 @@ const createDonation = async (req, res) => {
 
     let nextDate = null;
     if (isRecurring) {
-      const baseDate = programDate ? new Date(programDate) : new Date();
+      const baseDate = programDate
+        ? new Date(programDate)
+        : new Date(donationDate);
       baseDate.setFullYear(baseDate.getFullYear() + 1);
       nextDate = baseDate;
     }
 
     const accountHeadId = await getAccountHeadForScheme(scheme);
 
+    // --- SMART DATE FIX: Preserve time if the date is Today ---
+    let parsedDate = new Date();
+    if (donationDate) {
+      const inputDate = new Date(donationDate);
+      const todayStr = parsedDate.toISOString().split("T")[0];
+      const inputStr = inputDate.toISOString().split("T")[0];
+
+      if (inputStr !== todayStr) {
+        parsedDate = inputDate;
+      }
+    }
+
     const donation = await Donation.create({
+      createdAt: parsedDate,
       donorName,
       donorPhone,
-      donorLandline, // <--- NEW
+      donorLandline,
       donorEmail,
       donorPan,
       donorAadhaar,
@@ -78,8 +96,6 @@ const createDonation = async (req, res) => {
       occasion,
       inNameOf,
       programDate: programDate || null,
-      manualReceiptNo,
-      manualReceiptDate,
       category: category || "Household",
       address,
       isRecurring: isRecurring || false,
@@ -87,6 +103,8 @@ const createDonation = async (req, res) => {
       calendarType: calendarType || "Gregorian",
       tithi: tithi || "",
       interestPeriod: interestPeriod || null,
+      comments,
+      manualReceiptNo,
     });
 
     await logAudit(
@@ -134,8 +152,7 @@ const createDonation = async (req, res) => {
               <h3>Namaste ${fullDonation.donorName},</h3>
               <p>Thank you for your generous donation of <strong>Rs. ${fullDonation.amount}</strong>.</p>
               <p>Please find your official 80G tax-exempt receipt attached to this email.</p>
-              <br/>
-              <p>Regards,<br/>Karunasri Team</p>
+              <br/><p>Regards,<br/>Karunasri Team</p>
             `,
             attachments: [
               {
@@ -153,6 +170,18 @@ const createDonation = async (req, res) => {
         console.error("❌ Auto-Email Failed:", emailError.message);
       }
     }
+    // ==========================================
+    // --- NEW: SEND WHATSAPP RECEIPT ALERT ---
+    // ==========================================
+    if (donation.donorPhone && donation.donorPhone !== "0000000000") {
+      await sendWhatsAppMessage(donation.donorPhone, "donation_receipt", {
+        name: donation.donorName,
+        amount: donation.amount,
+        scheme: donation.scheme,
+        receiptNo: donation.receiptNo,
+      });
+    }
+
     res.status(201).json(donation);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -177,7 +206,8 @@ const getDonations = async (req, res) => {
     const donations = await Donation.find(query)
       .populate("accountHead", "code name")
       .populate("depositBank", "name")
-      .sort({ createdAt: -1, _id: -1 });
+      // --- CORE FIX: Sort purely by _id so newest entries ALWAYS show at the top ---
+      .sort({ _id: -1 });
 
     res.json(donations);
   } catch (error) {
@@ -263,17 +293,19 @@ const createPublicDonation = async (req, res) => {
       amount,
       scheme,
       paymentMode,
+      comments,
     } = req.body;
     const accountHeadId = await getAccountHeadForScheme(scheme);
     const donation = await Donation.create({
       donorName,
       donorPhone,
-      donorLandline, // <--- NEW
+      donorLandline,
       donorEmail,
       amount,
       scheme,
       accountHead: accountHeadId,
       paymentMode,
+      comments,
       branch: "KarunaSri Seva Samithi",
       receiptStatus: "Generated",
     });
@@ -283,13 +315,28 @@ const createPublicDonation = async (req, res) => {
   }
 };
 
+// const uploadMedia = async (req, res) => {
+//   try {
+//     const donation = await Donation.findById(req.params.id);
+//     if (!donation) return res.status(404).json({ message: "Not found" });
+//     const filePaths = req.files.map(
+//       (file) => `/${file.path.replace(/\\/g, "/")}`,
+//     );
+//     donation.media.push(...filePaths);
+//     await donation.save();
+//     res.json({ message: "Uploaded", media: donation.media });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 const uploadMedia = async (req, res) => {
   try {
     const donation = await Donation.findById(req.params.id);
     if (!donation) return res.status(404).json({ message: "Not found" });
-    const filePaths = req.files.map(
-      (file) => `/${file.path.replace(/\\/g, "/")}`,
-    );
+
+    // --- THE FIX: Just map the path exactly as Cloudinary returns it ---
+    const filePaths = req.files.map((file) => file.path);
+
     donation.media.push(...filePaths);
     await donation.save();
     res.json({ message: "Uploaded", media: donation.media });
@@ -298,26 +345,42 @@ const uploadMedia = async (req, res) => {
   }
 };
 
+// const deleteMedia = async (req, res) => {
+//   try {
+//     const { filePath } = req.body;
+//     const donation = await Donation.findById(req.params.id);
+//     if (!donation) return res.status(404).json({ message: "Not found" });
+//     donation.media = donation.media.filter((file) => file !== filePath);
+//     await donation.save();
+//     const absolutePath = path.join(__dirname, "..", filePath);
+//     if (fs.existsSync(absolutePath)) fs.unlinkSync(absolutePath);
+//     res.json({ message: "Deleted", media: donation.media });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 const deleteMedia = async (req, res) => {
   try {
     const { filePath } = req.body;
     const donation = await Donation.findById(req.params.id);
     if (!donation) return res.status(404).json({ message: "Not found" });
+
+    // Remove the URL from the database array
     donation.media = donation.media.filter((file) => file !== filePath);
     await donation.save();
-    const absolutePath = path.join(__dirname, "..", filePath);
-    if (fs.existsSync(absolutePath)) fs.unlinkSync(absolutePath);
-    res.json({ message: "Deleted", media: donation.media });
+
+    // We no longer use fs.unlinkSync because the file is on Cloudinary!
+
+    res.json({ message: "File link removed", media: donation.media });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 const getMyDonations = async (req, res) => {
   try {
     const donations = await Donation.find({
       $or: [{ donor: req.user._id }, { donorEmail: req.user.email }],
-    }).sort({ createdAt: -1 });
+    }).sort({ _id: -1 }); // <--- CORE FIX
     res.json(donations);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -329,7 +392,7 @@ const getDonorByPhone = async (req, res) => {
     const { phone } = req.query;
     const donation = await Donation.findOne({
       donorPhone: { $regex: new RegExp(phone.trim(), "i") },
-    }).sort({ createdAt: -1 });
+    }).sort({ _id: -1 }); // <--- CORE FIX
     if (donation) res.json({ success: true, donor: donation });
     else res.status(404).json({ success: false, message: "Not found" });
   } catch (error) {
@@ -404,9 +467,7 @@ const getDailySevaList = async (req, res) => {
     ];
     if (tithi) conditions.push({ calendarType: "Telugu", tithi: tithi });
 
-    let donations = await Donation.find({ $or: conditions }).sort({
-      createdAt: 1,
-    });
+    let donations = await Donation.find({ $or: conditions }).sort({ _id: 1 }); // <--- CORE FIX
     res.json(donations);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -444,7 +505,10 @@ const importDonations = async (req, res) => {
           "Unknown Donor";
         const dPhone =
           getValue(["Phone", "Mobile", "Contact", "Cell"]) || "0000000000";
-        const dLandline = getValue(["Landline", "Telephone", "Tel"]) || ""; // <--- NEW
+        const dLandline = getValue(["Landline", "Telephone", "Tel"]) || "";
+        const dComments = getValue(["Comments", "Remarks", "Notes"]) || "";
+        const dManualRef =
+          getValue(["Manual", "Ref", "Book", "Old Receipt"]) || "";
 
         const dAmountStr = getValue(["Amount", "Price", "Donation", "Paid"]);
         let dAmount = 0;
@@ -478,28 +542,87 @@ const importDonations = async (req, res) => {
         const dAadhaar =
           getValue(["Aadhaar", "Adhar", "UID", "Aadhar Number"]) || "";
 
+        let normalizedBranch = "KarunaSri Seva Samithi";
+        const rawBranch = getValue(["Branch", "branch", "Location", "Center"]);
+        if (rawBranch) {
+          const lowerBranch = rawBranch.toLowerCase();
+          if (lowerBranch.includes("sindhu") || lowerBranch.includes("sindu")) {
+            normalizedBranch = "Karunya Sindhu";
+          } else if (lowerBranch.includes("bharathi")) {
+            normalizedBranch = "Karunya Bharathi";
+          } else if (lowerBranch.includes("jyothi")) {
+            normalizedBranch = "Karunya Jyothi";
+          } else if (
+            lowerBranch.includes("headquarters") ||
+            lowerBranch.includes("hq")
+          ) {
+            normalizedBranch = "Headquarters";
+          }
+        }
+
+        let normalizedMode = "Cash";
+        const rawMode = getValue([
+          "Payment Mode",
+          "Mode",
+          "Payment_Mode",
+          "Method",
+        ]);
+        if (rawMode) {
+          const lowerMode = rawMode.toLowerCase();
+          if (
+            lowerMode.includes("online") ||
+            lowerMode.includes("transfer") ||
+            lowerMode.includes("neft") ||
+            lowerMode.includes("rtgs")
+          ) {
+            normalizedMode = "Bank Transfer";
+          } else if (
+            lowerMode.includes("upi") ||
+            lowerMode.includes("gpay") ||
+            lowerMode.includes("phonepe") ||
+            lowerMode.includes("paytm")
+          ) {
+            normalizedMode = "UPI";
+          } else if (
+            lowerMode.includes("cheque") ||
+            lowerMode.includes("check")
+          ) {
+            normalizedMode = "Cheque";
+          } else if (
+            lowerMode.includes("dd") ||
+            lowerMode.includes("demand draft")
+          ) {
+            normalizedMode = "DD";
+          } else if (lowerMode.includes("foreign")) {
+            normalizedMode = "Foreign Currency";
+          }
+        }
+
         if (dName !== "Unknown Donor" || dAmount > 0) {
           results.push({
             donorName: dName,
             donorPhone: dPhone,
-            donorLandline: dLandline, // <--- NEW
+            donorLandline: dLandline,
             donorEmail: getValue(["Email", "Mail"]) || "",
             donorPan: dPan,
             donorAadhaar: dAadhaar,
             amount: dAmount,
             scheme: dScheme,
             accountHead: matchedAccountId,
-            paymentMode: "Cash",
+            paymentMode: normalizedMode,
             category: userSelectedCategory,
-            branch: "KarunaSri Seva Samithi",
+            branch: normalizedBranch,
             createdAt: dDate,
             receiptStatus: "Generated",
             collectedBy: req.user._id,
+            comments: dComments,
+            manualReceiptNo: dManualRef,
           });
         }
       })
       .on("end", async () => {
         try {
+          // --- We still sort CSV imports by Date so Receipts numbers stay chronological ---
           results.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
           if (results.length > 0) {
             let count = 0;
@@ -580,7 +703,20 @@ const cancelDonation = async (req, res) => {
             </div>
           `,
         });
-      } catch (emailErr) {}
+      } catch (emailErr) {
+        console.error("Email failed:", emailErr.message);
+      }
+    }
+    // ==========================================
+    // --- NEW: SEND WHATSAPP CANCEL ALERT ---
+    // ==========================================
+    if (donation.donorPhone && donation.donorPhone !== "0000000000") {
+      await sendWhatsAppMessage(donation.donorPhone, "donation_cancelled", {
+        name: donation.donorName,
+        amount: donation.amount,
+        receiptNo: donation.receiptNo,
+        reason: reason,
+      });
     }
 
     res.json({ message: "Donation Cancelled and Donor Notified", donation });
@@ -601,6 +737,10 @@ const updateDonation = async (req, res) => {
     Object.keys(updates).forEach((key) => {
       donation[key] = updates[key];
     });
+
+    if (updates.donationDate) {
+      donation.createdAt = new Date(updates.donationDate);
+    }
 
     await donation.save();
 

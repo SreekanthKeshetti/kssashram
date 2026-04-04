@@ -1,33 +1,26 @@
 const mongoose = require("mongoose");
-const Counter = require("./Counter"); // <--- Import the Counter model
+const Counter = require("./Counter");
 
 const donationSchema = mongoose.Schema(
   {
-    // Link to a registered user (optional, can be Guest)
     donor: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: false,
     },
-    // --- NEW: SYSTEM GENERATED RECEIPT ID ---
     receiptNo: { type: String, unique: true },
 
-    // Basic Details
     donorName: { type: String, required: true },
     donorPhone: { type: String, required: true },
     donorLandline: { type: String },
     donorEmail: { type: String },
-    donorPan: { type: String }, // For Tax Benefit (80G)
+    donorPan: { type: String },
     donorAadhaar: { type: String },
 
-    // Billing Address
     address: { type: String },
-
-    // Donation Details
     amount: { type: Number, required: true },
-    scheme: { type: String, required: true }, // e.g. Nitya Annadhana
+    scheme: { type: String, required: true },
 
-    // Account Head Link
     accountHead: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AccountHead",
@@ -35,7 +28,7 @@ const donationSchema = mongoose.Schema(
     depositBank: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AccountHead",
-      required: false, // Optional for now to support old records
+      required: false,
     },
 
     paymentMode: {
@@ -52,29 +45,25 @@ const donationSchema = mongoose.Schema(
       required: true,
     },
 
-    // Detailed Payment Info (For Cheque/DD/UPI)
     paymentDetails: {
       chequeNo: String,
       chequeDate: Date,
       bankName: String,
       ddNo: String,
       ddDate: Date,
-      transactionId: String, // For UPI/Online
+      transactionId: String,
     },
 
-    // Manual Receipt Logging (Legacy Sync)
     manualReceiptNo: { type: String },
     manualReceiptDate: { type: Date },
     paymentReference: { type: String },
 
-    // Donation Category
     category: {
       type: String,
       enum: ["Household", "Organizational"],
       default: "Household",
     },
 
-    // Reminders
     isRecurring: { type: Boolean, default: false },
     reminderFrequency: {
       type: String,
@@ -83,25 +72,24 @@ const donationSchema = mongoose.Schema(
     },
     nextReminderDate: { type: Date },
 
-    // Expiry for Permanent Schemes
     schemeExpiryDate: { type: Date },
 
-    // Special Occasion Fields (Tithi/Seva)
-    occasion: { type: String }, // e.g. "Birthday", "Wedding Anniversary"
-    inNameOf: { type: String }, // e.g. "Sairam" or "Late Father Name"
+    occasion: { type: String },
+    inNameOf: { type: String },
     calendarType: {
       type: String,
       enum: ["Gregorian", "Telugu"],
       default: "Gregorian",
     },
-    programDate: { type: Date }, // English Date
-    tithi: { type: String }, // Telugu Tithi string
+    programDate: { type: Date },
+    tithi: { type: String },
     interestPeriod: {
       startDate: { type: Date },
       endDate: { type: Date },
     },
 
-    // System Details
+    comments: { type: String },
+
     branch: {
       type: String,
       required: true,
@@ -110,7 +98,7 @@ const donationSchema = mongoose.Schema(
         "Karunya Sindhu",
         "Karunya Bharathi",
         "Karunya Jyothi",
-        "KarunaSri Seva Samithi", // <--- Corrected Spelling
+        "KarunaSri Seva Samithi",
       ],
       default: "Headquarters",
     },
@@ -119,7 +107,6 @@ const donationSchema = mongoose.Schema(
       enum: ["Generated", "Sent", "Pending"],
       default: "Pending",
     },
-    // --- NEW FIELDS FOR CANCELLATION ---
     status: {
       type: String,
       enum: ["Active", "Cancelled"],
@@ -127,14 +114,11 @@ const donationSchema = mongoose.Schema(
     },
     cancellationReason: { type: String },
     cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    // -----------------------------------
     media: [
       {
-        type: String, // Stores the URL/Path of the file
+        type: String,
       },
     ],
-
-    // Audit Trail
     collectedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -145,46 +129,18 @@ const donationSchema = mongoose.Schema(
   },
 );
 
-// --- PRE-SAVE HOOK FOR AUTO-INCREMENT RECEIPT NO ---
-// donationSchema.pre("save", async function (next) {
-//   // Only generate if it's a new document
-//   if (!this.isNew) return next();
-
-//   try {
-//     const counter = await Counter.findOneAndUpdate(
-//       { id: "donation_id" }, // Identifier for this sequence
-//       { $inc: { seq: 1 } }, // Increment by 1
-//       { new: true, upsert: true }, // Create if doesn't exist
-//     );
-
-//     // Format: "KSS-0001", "KSS-0002"
-//     // padStart(4, "0") ensures we get 0001 instead of 1
-//     this.receiptNo = `KSS-${counter.seq.toString().padStart(4, "0")}`;
-//     next();
-//   } catch (error) {
-//     next(error);
-//   }
-// });
-// --- PRE-SAVE HOOK FOR AUTO-INCREMENT RECEIPT NO ---
 donationSchema.pre("save", async function () {
-  // 1. Remove 'next' from arguments above ^^^
-
-  // Only generate if it's a new document
-  if (!this.isNew) return; // Just return, don't call next()
+  if (!this.isNew) return;
 
   try {
     const counter = await Counter.findOneAndUpdate(
-      { id: "donation_id" }, // Identifier for this sequence
-      { $inc: { seq: 1 } }, // Increment by 1
-      { new: true, upsert: true }, // Create if doesn't exist
+      { id: "donation_id" },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true },
     );
-
-    // Format: "KSS-0001", "KSS-0002"
     this.receiptNo = `KSS-${counter.seq.toString().padStart(4, "0")}`;
-
-    // No need to call next() here, the async function resolving acts as next()
   } catch (error) {
-    throw error; // Just throw the error, Mongoose will catch it
+    throw error;
   }
 });
 

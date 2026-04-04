@@ -29,7 +29,18 @@ const app = express();
 // Start the Scheduler
 runScheduler(); // <--- Add this line
 
-app.use(cors());
+// app.use(cors());
+// Replace app.use(cors()); with:
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173", // For your local testing
+      "https://kssashram.vercel.app/", // <--- MUST REPLACE WITH YOUR ACTUAL VERCEL URL
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

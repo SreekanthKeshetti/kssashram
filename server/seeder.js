@@ -13,13 +13,13 @@ const importData = async () => {
     await connectDB();
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash("123456", salt);
+    
 
     const staffUsers = [
       {
         name: "System Admin",
         email: "admin@karunasri.org",
-        password: hashedPassword,
+        plainPassword: "Admin@2026",
         phone: "9999999999",
         role: "admin",
         branch: "KarunaSri Seva Samithi",
@@ -27,7 +27,7 @@ const importData = async () => {
       {
         name: "Ashram Manager",
         email: "manager@karunasri.org",
-        password: hashedPassword,
+        plainPassword: "Manager@2026", 
         phone: "8888888888",
         role: "employee",
         branch: "Saroornagar",
@@ -35,7 +35,7 @@ const importData = async () => {
       {
         name: "Trust President",
         email: "president@karunasri.org",
-        password: hashedPassword,
+        plainPassword: "President@2026",
         phone: "1111111111",
         role: "president",
         branch: "KarunaSri Seva Samithi",
@@ -43,7 +43,7 @@ const importData = async () => {
       {
         name: "Trust Secretary",
         email: "secretary@karunasri.org",
-        password: hashedPassword,
+        plainPassword: "Secretary@2026",
         phone: "2222222222",
         role: "secretary",
         branch: "KarunaSri Seva Samithi",
@@ -51,7 +51,7 @@ const importData = async () => {
       {
         name: "Trust Treasurer",
         email: "treasurer@karunasri.org",
-        password: hashedPassword,
+        plainPassword: "Treasurer@2026",
         phone: "3333333333",
         role: "treasurer",
         branch: "KarunaSri Seva Samithi",
@@ -60,7 +60,7 @@ const importData = async () => {
       {
         name: "KBA Manager",
         email: "kba@karunasri.org",
-        password: hashedPassword,
+        plainPassword: "Kba@2026", 
         phone: "4444444444",
         role: "kba_manager",
         branch: "Karunya Bharathi", // Hardcoded Branch
@@ -68,7 +68,7 @@ const importData = async () => {
       {
         name: "KSA Manager",
         email: "ksa@karunasri.org",
-        password: hashedPassword,
+        plainPassword: "Ksa@2026",
         phone: "5555555555",
         role: "ksa_manager",
         branch: "Karunya Sindhu", // Hardcoded Branch
@@ -76,17 +76,27 @@ const importData = async () => {
     ];
 
     console.log("Checking for staff accounts...");
-
     for (const user of staffUsers) {
       const userExists = await User.findOne({ email: user.email });
       if (userExists) {
         console.log(`Skipping: ${user.name} (${user.email}) already exists.`);
       } else {
-        await User.create(user);
+        // --- NEW: Hash the specific password for this user ---
+        const hashedPassword = await bcrypt.hash(user.plainPassword, salt);
+        
+        await User.create({
+          name: user.name,
+          email: user.email,
+          password: hashedPassword, // Save the hashed version
+          phone: user.phone,
+          role: user.role,
+          branch: user.branch,
+        });
         console.log(`Created: ${user.name} (${user.email})`);
       }
     }
 
+   
     console.log("Seeding Account Codes...");
     await AccountHead.deleteMany();
     const accountCodes = [
