@@ -105,9 +105,10 @@ const DonationList = () => {
   });
 
   const [formData, setFormData] = useState({
+    donationDate: new Date().toISOString().split("T")[0],
     donorName: "",
     donorPhone: "",
-    donorLandline: "", // <--- NEW FIELD
+    donorLandline: "",
     donorEmail: "",
     donorPan: "",
     donorAadhaar: "",
@@ -124,8 +125,8 @@ const DonationList = () => {
     programDate: "",
     tithi: "",
     isRecurring: false,
+    comments: "",
     manualReceiptNo: "",
-    manualReceiptDate: "",
     paymentDetails: {
       chequeNo: "",
       chequeDate: "",
@@ -197,9 +198,10 @@ const DonationList = () => {
     setReceiptType("Donation");
 
     setFormData({
+      donationDate: new Date().toISOString().split("T")[0],
       donorName: "",
       donorPhone: "",
-      donorLandline: "", // <--- Reset new field
+      donorLandline: "",
       donorEmail: "",
       donorPan: "",
       donorAadhaar: "",
@@ -216,8 +218,8 @@ const DonationList = () => {
       programDate: "",
       tithi: "",
       isRecurring: false,
+      comments: "",
       manualReceiptNo: "",
-      manualReceiptDate: "",
       paymentDetails: {
         chequeNo: "",
         chequeDate: "",
@@ -243,9 +245,10 @@ const DonationList = () => {
       date ? new Date(date).toISOString().split("T")[0] : "";
 
     setFormData({
+      donationDate: formatDate(d.createdAt),
       donorName: d.donorName,
       donorPhone: d.donorPhone,
-      donorLandline: d.donorLandline || "", // <--- Populate new field
+      donorLandline: d.donorLandline || "",
       donorEmail: d.donorEmail,
       donorPan: d.donorPan,
       donorAadhaar: d.donorAadhaar,
@@ -262,8 +265,8 @@ const DonationList = () => {
       programDate: formatDate(d.programDate),
       tithi: d.tithi,
       isRecurring: d.isRecurring || false,
-      manualReceiptNo: d.manualReceiptNo,
-      manualReceiptDate: formatDate(d.manualReceiptDate),
+      comments: d.comments || "",
+      manualReceiptNo: d.manualReceiptNo || "",
       paymentDetails: {
         chequeNo: d.paymentDetails?.chequeNo || "",
         chequeDate: formatDate(d.paymentDetails?.chequeDate),
@@ -341,7 +344,7 @@ const DonationList = () => {
         setFormData((prev) => ({
           ...prev,
           donorName: data.donor.donorName,
-          donorLandline: data.donor.donorLandline || "", // <--- Autofill Landline
+          donorLandline: data.donor.donorLandline || "",
           donorEmail: data.donor.donorEmail || "",
           donorPan: data.donor.donorPan || "",
           donorAadhaar: data.donor.donorAadhaar || "",
@@ -404,7 +407,6 @@ const DonationList = () => {
   const handleExport = () => {
     if (filteredDonations.length === 0) return alert("No data to export");
 
-    // --- UPDATED EXPORT HEADERS ---
     const headers = [
       "Receipt ID",
       "Date",
@@ -418,8 +420,8 @@ const DonationList = () => {
       "Category",
       "Amount",
       "Scheme",
-      "Occasion", // <--- NEW: Added Occasion
-      "In Name Of", // <--- NEW: Added In Name Of
+      "Occasion",
+      "In Name Of",
       "Mode",
       "Cheque/DD No",
       "Cheque Date",
@@ -428,6 +430,7 @@ const DonationList = () => {
       "Deposited To (Org Account)",
       "Branch",
       "Manual Ref",
+      "Comments",
     ];
 
     const rows = filteredDonations.map((d) => {
@@ -448,8 +451,8 @@ const DonationList = () => {
         d.category,
         d.amount,
         d.scheme,
-        `"${d.occasion || "-"}"`, // <--- NEW: Row Data
-        `"${d.inNameOf || "-"}"`, // <--- NEW: Row Data
+        `"${d.occasion || "-"}"`,
+        `"${d.inNameOf || "-"}"`,
         d.paymentMode,
         pd.chequeNo || pd.ddNo || "-",
         formatDate(pd.chequeDate),
@@ -458,6 +461,7 @@ const DonationList = () => {
         d.depositBank?.name || "-",
         d.branch,
         d.manualReceiptNo || "-",
+        `"${d.comments ? d.comments.replace(/\n/g, " ") : "-"}"`,
       ];
     });
 
@@ -826,8 +830,9 @@ const DonationList = () => {
                       <small className="text-muted">
                         {d.receiptNo || d._id.slice(-6).toUpperCase()}
                       </small>
+
                       {d.manualReceiptNo && (
-                        <div className="text-danger small">
+                        <div className="text-danger small mt-1">
                           Ref: {d.manualReceiptNo}
                         </div>
                       )}
@@ -843,7 +848,6 @@ const DonationList = () => {
                       <small className="text-muted">
                         {d.donorPhone !== "0000000000" ? d.donorPhone : ""}
                       </small>
-                      {/* --- NEW: Show Landline in table if available --- */}
                       {d.donorLandline && (
                         <div className="small text-muted">
                           Tel: {d.donorLandline}
@@ -1066,8 +1070,22 @@ const DonationList = () => {
                   </ButtonGroup>
                 </div>
 
-                {/* --- ROW 1: Mobile & Landline --- */}
+                {/* --- ROW 1: Date, Mobile & Landline --- */}
                 <Row className="g-2 mb-2">
+                  <Col md={4}>
+                    <Form.Label className="small fw-bold text-maroon">
+                      Donation Date *
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      size="sm"
+                      name="donationDate"
+                      value={formData.donationDate}
+                      onChange={handleChange}
+                      required
+                      className="fw-bold"
+                    />
+                  </Col>
                   <Col md={4}>
                     <Form.Label className="small fw-bold">
                       Mobile Number *
@@ -1085,7 +1103,6 @@ const DonationList = () => {
                       </Button>
                     </div>
                   </Col>
-                  {/* --- NEW FIELD: Landline --- */}
                   <Col md={4}>
                     <Form.Label className="small fw-bold">
                       Landline Number
@@ -1098,7 +1115,11 @@ const DonationList = () => {
                       placeholder="e.g. 040-24073204"
                     />
                   </Col>
-                  <Col md={4}>
+                </Row>
+
+                {/* --- ROW 2: Name, Email, PAN & Aadhaar --- */}
+                <Row className="g-2 mb-2">
+                  <Col md={3}>
                     <Form.Label className="small fw-bold">
                       Donor Name *
                     </Form.Label>
@@ -1110,11 +1131,8 @@ const DonationList = () => {
                       required
                     />
                   </Col>
-                </Row>
-
-                {/* --- ROW 2: IDs & Email --- */}
-                <Row className="g-2 mb-2">
-                  <Col md={4}>
+                  <Col md={3}>
+                    <Form.Label className="small fw-bold">Email</Form.Label>
                     <Form.Control
                       size="sm"
                       name="donorEmail"
@@ -1123,7 +1141,8 @@ const DonationList = () => {
                       onChange={handleChange}
                     />
                   </Col>
-                  <Col md={4}>
+                  <Col md={3}>
+                    <Form.Label className="small fw-bold">PAN</Form.Label>
                     <Form.Control
                       size="sm"
                       name="donorPan"
@@ -1132,7 +1151,8 @@ const DonationList = () => {
                       onChange={handleChange}
                     />
                   </Col>
-                  <Col md={4}>
+                  <Col md={3}>
+                    <Form.Label className="small fw-bold">Aadhaar</Form.Label>
                     <Form.Control
                       size="sm"
                       name="donorAadhaar"
@@ -1151,7 +1171,7 @@ const DonationList = () => {
                   placeholder="Address"
                   value={formData.address}
                   onChange={handleChange}
-                  className="mb-3"
+                  className="mb-3 mt-2"
                 />
                 <hr />
                 <Row className="g-2 mb-2">
@@ -1251,28 +1271,7 @@ const DonationList = () => {
                   className="mb-2 text-primary"
                 />
                 {renderPaymentFields()}
-                <div className="bg-light p-2 rounded mb-3 border">
-                  <Row className="g-2 align-items-center">
-                    <Col md={6}>
-                      <Form.Control
-                        size="sm"
-                        placeholder="Manual Receipt No (Optional)"
-                        name="manualReceiptNo"
-                        value={formData.manualReceiptNo}
-                        onChange={handleChange}
-                      />
-                    </Col>
-                    <Col md={6}>
-                      <Form.Control
-                        size="sm"
-                        type="date"
-                        name="manualReceiptDate"
-                        value={formData.manualReceiptDate}
-                        onChange={handleChange}
-                      />
-                    </Col>
-                  </Row>
-                </div>
+
                 <Row className="g-2 mb-2">
                   <Col md={4}>
                     <Form.Select
@@ -1364,6 +1363,28 @@ const DonationList = () => {
                     />
                   </Col>
                 </Row>
+
+                {/* --- RESTORED: MANUAL RECEIPT NO WITH COMMENTS --- */}
+                <Row className="mt-3 g-2">
+                  <Col md={4}>
+                    <Form.Control
+                      size="sm"
+                      placeholder="Legacy / Manual Receipt No"
+                      name="manualReceiptNo"
+                      value={formData.manualReceiptNo}
+                      onChange={handleChange}
+                    />
+                  </Col>
+                  <Col md={8}>
+                    <Form.Control
+                      size="sm"
+                      placeholder="Additional Comments / Notes (Optional)"
+                      name="comments"
+                      value={formData.comments}
+                      onChange={handleChange}
+                    />
+                  </Col>
+                </Row>
               </>
             )}
 
@@ -1372,6 +1393,24 @@ const DonationList = () => {
                 <h6 className="text-maroon fw-bold mb-3">
                   Record Bank Interest / Income
                 </h6>
+
+                <Row className="mb-3">
+                  <Col md={12}>
+                    <Form.Label className="small fw-bold text-maroon">
+                      Transaction Date *
+                    </Form.Label>
+                    <Form.Control
+                      type="date"
+                      size="sm"
+                      name="donationDate"
+                      value={formData.donationDate}
+                      onChange={handleChange}
+                      required
+                      className="fw-bold"
+                    />
+                  </Col>
+                </Row>
+
                 <Form.Group className="mb-3">
                   <Form.Label className="small fw-bold">
                     Description / Source *
@@ -1464,7 +1503,7 @@ const DonationList = () => {
               </div>
             )}
 
-            <Button type="submit" className="btn-ashram w-100">
+            <Button type="submit" className="btn-ashram w-100 mt-3">
               {submitLoading ? "Saving..." : isEditing ? "Update" : "Save"}
             </Button>
           </Form>
