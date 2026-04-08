@@ -13,7 +13,6 @@ const importData = async () => {
     await connectDB();
 
     const salt = await bcrypt.genSalt(10);
-    
 
     const staffUsers = [
       {
@@ -27,7 +26,7 @@ const importData = async () => {
       {
         name: "Ashram Manager",
         email: "manager@karunasri.org",
-        plainPassword: "Manager@2026", 
+        plainPassword: "Manager@2026",
         phone: "8888888888",
         role: "employee",
         branch: "Saroornagar",
@@ -60,7 +59,7 @@ const importData = async () => {
       {
         name: "KBA Manager",
         email: "kba@karunasri.org",
-        plainPassword: "Kba@2026", 
+        plainPassword: "Kba@2026",
         phone: "4444444444",
         role: "kba_manager",
         branch: "Karunya Bharathi", // Hardcoded Branch
@@ -83,7 +82,7 @@ const importData = async () => {
       } else {
         // --- NEW: Hash the specific password for this user ---
         const hashedPassword = await bcrypt.hash(user.plainPassword, salt);
-        
+
         await User.create({
           name: user.name,
           email: user.email,
@@ -96,14 +95,15 @@ const importData = async () => {
       }
     }
 
-   
     console.log("Seeding Account Codes...");
     await AccountHead.deleteMany();
     const accountCodes = [
       { code: "201", name: "NITYA ANNADHANAMU NIDHI", type: "Credit" },
+      { code: "201A", name: "NITYA ANNADHANAMU NIDHI", type: "Credit" },
       { code: "202", name: "SHASWITHA ANNADHANAMU NIDHI", type: "Credit" },
       { code: "203", name: "VIDYARTHI PATASHALA RUSUMU NIDHI", type: "Credit" },
       { code: "204", name: "VIDYARTHI POSHAKA NIDHI", type: "Credit" },
+      { code: "204A", name: "VIDYARTHI SAMRAKSHANA NIDHI", type: "Credit" },
       { code: "205", name: "INTEREST RECEIVED", type: "Credit" },
       { code: "206", name: "DONATIONS", type: "Credit" },
       { code: "207", name: "KARUNYA BHARATHI BUILDING FUND", type: "Credit" },
@@ -176,9 +176,11 @@ const importData = async () => {
     // We exclude things like "Interest Received" or "Tax Refund" as they are not user-selectable schemes
     const schemesToSeed = [
       { name: "Nitya Annadhana Nidhi", code: "201" },
+      { name: "Nitya Annadhana Nidhi SPECIAL", code: "201A" },
       { name: "Shasvitha Annadhana Nidhi", code: "202" },
       { name: "Vidyarthi Pathashala Rusumu Nidhi", code: "203" },
       { name: "Vidyarthi Poshaka Nidhi", code: "204" },
+      { name: "Vidyarthi Samarakshana Nidhi", code: "204A" },
       { name: "General Donations", code: "206" },
       { name: "Karunya Bharathi Building Fund", code: "207" },
       { name: "Vidyarthi Kaushalya Nidhi", code: "208" },

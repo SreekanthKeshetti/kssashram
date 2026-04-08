@@ -13,7 +13,7 @@ const memberSchema = mongoose.Schema(
     otherOrgPositions: { type: String }, // Positions held in other orgs
     references: { type: String }, // Names of references (e.g. "Sri R. Satyanarayana")
     // -------------------------------------
-    phone: { type: String, required: true, unique: true },
+    phone: { type: String, required: true },
     email: { type: String },
     address: { type: String, required: true },
     pan: { type: String },

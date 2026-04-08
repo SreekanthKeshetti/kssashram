@@ -432,6 +432,12 @@ const DonationList = () => {
       "Manual Ref",
       "Comments",
     ];
+    // Helper to prevent commas and quotes in data from breaking Excel columns
+    const safeString = (str) => {
+      if (!str) return `"-"`;
+      // Replace line breaks with spaces, and escape double quotes
+      return `"${String(str).replace(/"/g, '""').replace(/\n/g, " ")}"`;
+    };
 
     const rows = filteredDonations.map((d) => {
       const pd = d.paymentDetails || {};
@@ -439,29 +445,29 @@ const DonationList = () => {
         date ? new Date(date).toLocaleDateString() : "-";
 
       return [
-        d.receiptNo || d._id.toString().slice(-6).toUpperCase(),
+        safeString(d.receiptNo || d._id.toString().slice(-6).toUpperCase()),
         formatDate(d.createdAt),
-        `"${d.donorName}"`,
-        `"${d.donorPhone}"`,
-        `"${d.donorLandline || "-"}"`,
-        `"${d.donorEmail || "-"}"`,
-        d.donorPan || "-",
-        d.donorAadhaar || "-",
-        `"${d.address ? d.address.replace(/\n/g, " ") : "-"}"`,
+        safeString(d.donorName),
+        safeString(d.donorPhone),
+        safeString(d.donorLandline),
+        safeString(d.donorEmail),
+        safeString(d.donorPan),
+        safeString(d.donorAadhaar),
+        safeString(d.address),
         d.category,
         d.amount,
-        d.scheme,
-        `"${d.occasion || "-"}"`,
-        `"${d.inNameOf || "-"}"`,
+        safeString(d.scheme),
+        safeString(d.occasion),
+        safeString(d.inNameOf),
         d.paymentMode,
-        pd.chequeNo || pd.ddNo || "-",
+        safeString(pd.chequeNo || pd.ddNo),
         formatDate(pd.chequeDate),
-        pd.transactionId || "-",
-        pd.bankName || "-",
-        d.depositBank?.name || "-",
-        d.branch,
-        d.manualReceiptNo || "-",
-        `"${d.comments ? d.comments.replace(/\n/g, " ") : "-"}"`,
+        safeString(pd.transactionId),
+        safeString(pd.bankName),
+        safeString(d.depositBank?.name),
+        safeString(d.branch),
+        safeString(d.manualReceiptNo),
+        safeString(d.comments),
       ];
     });
 
@@ -470,10 +476,12 @@ const DonationList = () => {
       headers.join(",") +
       "\n" +
       rows.map((e) => e.join(",")).join("\n");
+    // --- THE FIX: USE A BLOB FOR UNLIMITED DATA CAPACITY ---
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
 
-    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute(
       "download",
       `Donations_Export_${new Date().toISOString().split("T")[0]}.csv`,

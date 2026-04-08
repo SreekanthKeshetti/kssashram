@@ -1,3 +1,277 @@
+// const Member = require("../models/Member");
+// const Voucher = require("../models/Voucher"); // <--- Import Voucher
+// const { logAudit } = require("../utils/auditLogger"); // Ensure this is imported
+// const AccountHead = require("../models/AccountHead"); // <--- Import AccountHead
+// const { buildMemberProfile } = require("../utils/generateMemberPDF"); // <--- IMPORT
+
+// // @desc    Get all members
+// // @route   GET /api/members
+// const getMembers = async (req, res) => {
+//   try {
+//     const members = await Member.find({}).sort({ createdAt: -1 });
+//     res.json(members);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Register new member & Auto-Journal Fee
+// // @route   POST /api/members
+// const createMember = async (req, res) => {
+//   try {
+//     const {
+//       firstName,
+//       lastName,
+//       phone,
+//       email,
+//       address,
+//       membershipType,
+//       feeAmount,
+//       feeStatus,
+//       branch, // <--- Destructure Branch
+//       pan,
+//       aadhaar,
+//       category,
+//       spouseName,
+//       dob,
+//       qualification,
+//       profession,
+//       otherOrgPositions,
+//       references,
+//     } = req.body;
+
+//     // Calculate Validity (e.g., 1 year for Annual)
+//     let validUntil = null;
+//     if (membershipType === "Annual") {
+//       const d = new Date();
+//       d.setFullYear(d.getFullYear() + 1);
+//       validUntil = d;
+//     }
+
+//     const member = await Member.create({
+//       firstName,
+//       lastName,
+//       phone,
+//       email,
+//       address,
+//       membershipType,
+//       feeAmount,
+//       feeStatus,
+//       validUntil,
+//       branch: branch || "Headquarters", // <--- Save Branch
+//       pan,
+//       aadhaar,
+//       category, // Save new fields
+//       spouseName,
+//       dob,
+//       qualification,
+//       profession,
+//       otherOrgPositions,
+//       references,
+//       membershipStatus: "Pending",
+//       approvals: {
+//         president: { status: "Pending" },
+//         secretary: { status: "Pending" },
+//         treasurer: { status: "Pending" },
+//       },
+//       createdBy: req.user._id,
+//     });
+
+//     // --- AUTO-CREATE VOUCHER IF PAID ---
+//     if (feeStatus === "Paid" && Number(feeAmount) > 0) {
+//       // 1. Find Account Code for Membership (Usually "220" - Corpus Fund or General)
+//       // If code 220 not found, fallback to any Credit account
+//       let account = await AccountHead.findOne({ code: "220" });
+//       if (!account) account = await AccountHead.findOne({ type: "Credit" });
+
+//       if (account) {
+//         await Voucher.create({
+//           voucherType: "Credit",
+//           voucherNo: "VCH-MEM-" + Date.now().toString().slice(-6), // Unique Voucher ID
+//           accountHead: account._id,
+//           amount: Number(feeAmount),
+//           description: `Membership Fee: ${firstName} ${lastName} (${membershipType})`,
+
+//           paymentMode: "Cash", // Assuming Cash collection at counter
+//           branch: branch || "Headquarters",
+//           status: "Approved", // Auto-approve since money is collected
+//           preparedBy: req.user._id,
+//           approvedBy: [req.user._id], // Auto-sign by creator
+//         });
+//         console.log("✅ Auto-Voucher created for Membership Fee");
+//       }
+//     }
+//     // -----------------------------------
+
+//     res.status(201).json(member);
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// };
+// // --- NEW FUNCTION: APPROVE MEMBER ---
+// // @route   PUT /api/members/:id/approve
+// const approveMember = async (req, res) => {
+//   try {
+//     const member = await Member.findById(req.params.id);
+//     if (!member) return res.status(404).json({ message: "Member not found" });
+
+//     const { role } = req.user;
+//     const { status, remark } = req.body; // 'Approved' or 'Rejected'
+
+//     // 1. Update Specific Approval based on Role
+//     if (role === "president" || role === "admin") {
+//       member.approvals.president = { status, date: Date.now(), remark };
+//     } else if (role === "secretary") {
+//       member.approvals.secretary = { status, date: Date.now(), remark };
+//     } else if (role === "treasurer") {
+//       member.approvals.treasurer = { status, date: Date.now(), remark };
+//     } else {
+//       return res
+//         .status(403)
+//         .json({ message: "Not authorized to approve members." });
+//     }
+
+//     // 2. Check Consensus
+//     const p = member.approvals.president.status;
+//     const s = member.approvals.secretary.status;
+//     const t = member.approvals.treasurer.status;
+
+//     if (p === "Approved" && s === "Approved" && t === "Approved") {
+//       member.membershipStatus = "Active"; // All 3 said Yes
+//     } else if (p === "Rejected" || s === "Rejected" || t === "Rejected") {
+//       member.membershipStatus = "Rejected"; // At least one said No
+//     }
+
+//     await member.save();
+
+//     await logAudit(
+//       req,
+//       "APPROVE",
+//       "Member",
+//       member._id,
+//       `Membership Approval by ${role}: ${status}`,
+//     );
+
+//     res.json(member);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Add Activity to Member
+// // @route   POST /api/members/:id/activity
+// const addMemberActivity = async (req, res) => {
+//   try {
+//     const member = await Member.findById(req.params.id);
+//     if (!member) return res.status(404).json({ message: "Member not found" });
+
+//     const { eventName, role, date } = req.body;
+
+//     member.activities.push({
+//       eventName,
+//       role,
+//       date: date || Date.now(),
+//     });
+
+//     await member.save();
+//     res.json(member);
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Get Single Member by ID
+// // @route   GET /api/members/:id
+// const getMemberById = async (req, res) => {
+//   try {
+//     const member = await Member.findById(req.params.id);
+//     if (member) {
+//       res.json(member);
+//     } else {
+//       res.status(404).json({ message: "Member not found" });
+//     }
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+// // @desc    Download Member Application Form
+// // @route   GET /api/members/:id/download
+// const downloadMemberForm = async (req, res) => {
+//   try {
+//     const member = await Member.findById(req.params.id);
+//     if (!member) return res.status(404).json({ message: "Member not found" });
+
+//     const filename = `Application_${member.firstName}.pdf`;
+//     res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+//     res.setHeader("Content-type", "application/pdf");
+
+//     buildMemberProfile(
+//       member,
+//       (chunk) => res.write(chunk),
+//       () => res.end(),
+//     );
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+// // @desc    Download Blank Membership Form (For offline filling)
+// // @route   GET /api/members/blank-form
+// const downloadBlankForm = async (req, res) => {
+//   try {
+//     // Create a "Dummy" member object with lines for writing
+//     const blankMember = {
+//       firstName: "_______________________",
+//       lastName: "_______________________",
+//       spouseName: "_______________________________________",
+//       dob: null, // Logic in PDF generator handles null dates
+//       qualification: "_______________________",
+//       profession: "_______________________",
+//       otherOrgPositions: "_______________________________________",
+//       references: "_______________________________________",
+//       aadhaar: "_______________________",
+//       pan: "_______________________",
+//       phone: "_______________________",
+//       email: "_______________________",
+//       address:
+//         "______________________________________________________________________________\n______________________________________________________________________________",
+//       branch: "_______________________",
+//       category: "_______________",
+//       membershipType: "_______________",
+//       feeAmount: "_______",
+//       feeStatus: "_______",
+//       joinDate: new Date(), // Uses today's date for "Date" field
+//       createdAt: new Date(),
+//     };
+
+//     const filename = "Blank_Membership_Application.pdf";
+//     res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+//     res.setHeader("Content-type", "application/pdf");
+
+//     // Reuse the existing PDF generator!
+//     // It works perfectly because it just expects an object with these keys.
+//     const { buildMemberProfile } = require("../utils/generateMemberPDF");
+
+//     buildMemberProfile(
+//       blankMember,
+//       (chunk) => res.write(chunk),
+//       () => res.end(),
+//     );
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // Export
+// module.exports = {
+//   getMembers,
+//   createMember,
+//   addMemberActivity,
+//   getMemberById,
+//   downloadMemberForm,
+//   downloadBlankForm,
+//   approveMember,
+// };
+// Above is code before we implement the import button for the memebers import.
 const fs = require("fs");
 const csv = require("csv-parser");
 const Member = require("../models/Member");
@@ -55,7 +329,7 @@ const createMember = async (req, res) => {
       feeAmount,
       feeStatus,
       validUntil,
-      branch: branch || "KarunaSri Seva Samithi", // <--- FIXED DEFAULT
+      branch: branch || "Headquarters",
       pan,
       aadhaar,
       category,
@@ -86,7 +360,7 @@ const createMember = async (req, res) => {
           amount: Number(feeAmount),
           description: `Membership Fee: ${firstName} ${lastName} (${membershipType})`,
           paymentMode: "Cash",
-          branch: branch || "KarunaSri Seva Samithi", // <--- FIXED DEFAULT
+          branch: branch || "Headquarters",
           status: "Approved",
           preparedBy: req.user._id,
           approvedBy: [req.user._id],
@@ -238,7 +512,7 @@ const downloadBlankForm = async (req, res) => {
   }
 };
 
-// --- IMPORT FUNCTION ---
+// --- NEW IMPORT FUNCTION ---
 const importMembers = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -249,6 +523,7 @@ const importMembers = async (req, res) => {
     fs.createReadStream(filePath)
       .pipe(csv())
       .on("data", (row) => {
+        // Helper to grab values flexibly based on possible column headers
         const getValue = (keywords) => {
           const rowKeys = Object.keys(row);
           const match = rowKeys.find((key) =>
@@ -263,6 +538,7 @@ const importMembers = async (req, res) => {
           "Unknown";
         let lName = getValue(["LastName", "Last", "Surname"]) || ".";
 
+        // If they only provided one "Name" column, split it
         if (fName !== "Unknown" && lName === ".") {
           const parts = fName.trim().split(" ");
           if (parts.length > 1) {
@@ -271,6 +547,7 @@ const importMembers = async (req, res) => {
           }
         }
 
+        // Categories & Enums
         let category = "Ordinary";
         const rawCat = getValue(["Category", "Type"]);
         if (rawCat) {
@@ -290,8 +567,9 @@ const importMembers = async (req, res) => {
             membershipType = "Volunteer";
         }
 
-        let branch = "KarunaSri Seva Samithi";
-        const rawBranch = getValue(["Branch", "Center", "Location"]);
+        // Branch
+        let branch = "Headquarters";
+        const rawBranch = getValue(["Branch"]);
         if (rawBranch) {
           if (
             rawBranch.toLowerCase().includes("sindhu") ||
@@ -300,10 +578,9 @@ const importMembers = async (req, res) => {
             branch = "Karunya Sindhu";
           else if (rawBranch.toLowerCase().includes("bharathi"))
             branch = "Karunya Bharathi";
-          else if (rawBranch.toLowerCase().includes("jyothi"))
-            branch = "Karunya Jyothi";
         }
 
+        // Dates
         let joinDate = new Date();
         const rawJoin = getValue(["Join", "Date"]);
         if (rawJoin && !isNaN(new Date(rawJoin))) joinDate = new Date(rawJoin);
@@ -312,28 +589,15 @@ const importMembers = async (req, res) => {
         const rawDob = getValue(["DOB", "Birth"]);
         if (rawDob && !isNaN(new Date(rawDob))) dob = new Date(rawDob);
 
-        // --- THE FIX: Unique Dummy Phone Numbers ---
-        let phone = getValue([
-          "Phone",
-          "Mobile",
-          "Contact",
-          "Mobile No.",
-          "PHONE NO.",
-        ]);
-        if (!phone || phone.trim() === "") {
-          // Generates a random 10 digit string starting with 000 so MongoDB doesn't throw a duplicate error
-          phone =
-            "000" + Math.floor(1000000 + Math.random() * 9000000).toString();
-        }
-
+        // Only add if there is at least a name
         if (fName !== "Unknown") {
           results.push({
             firstName: fName,
             lastName: lName,
-            spouseName: getValue(["Spouse", "Father", "FATHER / SPOUSE NAME"]),
+            spouseName: getValue(["Spouse", "Father"]),
             dob: dob,
             qualification: getValue(["Qualification", "Edu"]),
-            profession: getValue(["Profession", "Job", "Work", "PROFESSSION"]),
+            profession: getValue(["Profession", "Job", "Work"]),
             otherOrgPositions: getValue([
               "Other",
               "Org",
@@ -341,18 +605,19 @@ const importMembers = async (req, res) => {
               "Designation",
             ]),
             references: getValue(["Reference", "Introduced"]),
-            aadhaar: getValue(["Aadhaar", "UID", "AADHAR NO."]),
-            pan: getValue(["PAN", "PAN No.", "PAN NO."]),
-            phone: phone, // <--- Now guaranteed to be unique
-            email: getValue(["Email", "Mail", "EMAIL ID"]),
+            aadhaar: getValue(["Aadhaar", "UID"]),
+            pan: getValue(["PAN", "PAN No."]),
+            phone: getValue(["Phone", "Mobile", "Contact"]) || "0000000000",
+            email: getValue(["Email", "Mail"]),
             address: getValue(["Address", "Location"]) || "Not Provided",
             category: category,
             membershipType: membershipType,
-            feeAmount: Number(getValue(["Fee", "Amount", "AMOUNT"])) || 0,
-            feeStatus: "Paid",
+            feeAmount: Number(getValue(["Fee", "Amount"])) || 0,
+            feeStatus: "Paid", // Auto-set imported members to paid
             branch: branch,
             joinDate: joinDate,
 
+            // --- AUTOMATIC APPROVAL FOR LEGACY IMPORTS ---
             membershipStatus: "Active",
             approvals: {
               president: {
@@ -388,18 +653,9 @@ const importMembers = async (req, res) => {
             res.status(400).json({ message: "No valid data found in CSV." });
           }
         } catch (dbError) {
-          // If a duplicate phone somehow sneaks through, catch it specifically
-          if (dbError.code === 11000) {
-            res.status(500).json({
-              message:
-                "Database Error: A member with this Phone Number already exists in the system.",
-            });
-          } else {
-            res
-              .status(500)
-              .json({ message: "Database Error: " + dbError.message });
-          }
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          res
+            .status(500)
+            .json({ message: "Database Error: " + dbError.message });
         }
       });
   } catch (error) {
@@ -416,5 +672,5 @@ module.exports = {
   downloadMemberForm,
   downloadBlankForm,
   approveMember,
-  importMembers,
+  importMembers, // <--- Exported
 };

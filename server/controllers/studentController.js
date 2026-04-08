@@ -597,8 +597,19 @@ const importStudents = async (req, res) => {
           "CWC_Allotted_No",
           "CWC_Number",
         ]);
-        const mobile = getValue(["PersonMobile", "MobilePhone", "Contact"]);
-        const altMobile = getValue(["KSS_Mobile", "Mobile_2"]);
+        const mobile = getValue([
+          "PersonMobile",
+          "MobilePhone",
+          "Contact",
+          "Mobile",
+          "Phone",
+        ]);
+        const altMobile = getValue([
+          "KSS_Mobile",
+          "Mobile_2",
+          "AltMobile",
+          "Alternate",
+        ]);
         const cls = getValue(["class", "std", "grade"]);
 
         if (rawName) {
