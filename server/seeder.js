@@ -106,6 +106,8 @@ const importData = async () => {
       { code: "204A", name: "VIDYARTHI SAMRAKSHANA NIDHI", type: "Credit" },
       { code: "205", name: "INTEREST RECEIVED", type: "Credit" },
       { code: "206", name: "DONATIONS", type: "Credit" },
+      // --- NEW ACCOUNT ADDED HERE ---
+      { code: "206A", name: "MEMBERSHIP FEE", type: "Credit" },
       { code: "207", name: "KARUNYA BHARATHI BUILDING FUND", type: "Credit" },
       { code: "208", name: "VIDYARTHI KAUSHALYA NIDHI", type: "Credit" },
       { code: "209", name: "SAMAJA SEVA KARYAKRAMALA NIDHI", type: "Credit" },
@@ -182,6 +184,7 @@ const importData = async () => {
       { name: "Vidyarthi Poshaka Nidhi", code: "204" },
       { name: "Vidyarthi Samarakshana Nidhi", code: "204A" },
       { name: "General Donations", code: "206" },
+      { name: "Membership Fee", code: "206A" },
       { name: "Karunya Bharathi Building Fund", code: "207" },
       { name: "Vidyarthi Kaushalya Nidhi", code: "208" },
       { name: "Samaja Seva Karyakramala Nidhi", code: "209" },

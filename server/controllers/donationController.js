@@ -488,6 +488,16 @@ const getDailySevaList = async (req, res) => {
 //     accountMap[acc.name.toLowerCase()] = acc._id;
 //   });
 
+//   const schemeAbbreviations = {
+//     NAN: "Nitya Annadhana Nidhi",
+//     NANS: "Nitya Annadanam Special",
+//     SAN: "Shasvitha Annadhana Nidhi",
+//     VSN: "Vidyarthi Samrakshana Nidhi",
+//     VPN: "Vidyarthi Poshaka Nidhi",
+//     VPRN: "Vidyarthi Pathashala Rusumu Nidhi",
+//     KBBF: "Karunya Bharathi Building Fund",
+//   };
+
 //   try {
 //     fs.createReadStream(filePath)
 //       .pipe(csv())
@@ -500,15 +510,37 @@ const getDailySevaList = async (req, res) => {
 //           return match ? row[match] : "";
 //         };
 
-//         const dName =
+//         const rawName =
 //           getValue(["Name", "Donor", "First Name", "StudentName", "Devotee"]) ||
 //           "Unknown Donor";
+//         let dName = rawName.trim();
+
+//         let isCancelled = false;
+//         if (dName.toLowerCase().includes("cancel")) {
+//           isCancelled = true;
+//           dName = "CANCELLED RECEIPT";
+//         }
+
 //         const dPhone =
 //           getValue(["Phone", "Mobile", "Contact", "Cell"]) || "0000000000";
 //         const dLandline = getValue(["Landline", "Telephone", "Tel"]) || "";
 //         const dComments = getValue(["Comments", "Remarks", "Notes"]) || "";
 //         const dManualRef =
-//           getValue(["Manual", "Ref", "Book", "Old Receipt"]) || "";
+//           getValue([
+//             "Manual",
+//             "Ref",
+//             "Book",
+//             "Old Receipt",
+//             "Receipt ID",
+//             "Receipt",
+//           ]) || "";
+
+//         const dOccasion = getValue(["Occasion"]);
+//         const dInNameOf = getValue(["In Name Of", "Name Of"]);
+//         const dChequeNo = getValue(["Cheque/DD No", "Cheque No"]);
+//         const dTransRef = getValue(["Transaction Ref", "UTR", "UPI ID"]);
+//         const dDonorBank = getValue(["Donor Bank", "Bank"]);
+//         const dDepositTo = getValue(["Deposited To", "Org Account", "Deposit"]);
 
 //         const dAmountStr = getValue(["Amount", "Price", "Donation", "Paid"]);
 //         let dAmount = 0;
@@ -516,27 +548,55 @@ const getDailySevaList = async (req, res) => {
 //           dAmount = Number(dAmountStr.replace(/[^0-9.-]+/g, ""));
 //         }
 
-//         const rawScheme = getValue([
+//         if (isCancelled) dAmount = 0;
+
+//         let rawScheme = getValue([
 //           "Scheme",
 //           "Category",
 //           "Purpose",
 //           "Towards",
 //           "Seva",
 //         ]);
-//         const dScheme =
-//           rawScheme && rawScheme.trim() !== "" ? rawScheme : "General Donation";
+//         rawScheme = rawScheme ? rawScheme.trim() : "General Donations";
+
+//         let dScheme = schemeAbbreviations[rawScheme.toUpperCase()] || rawScheme;
 
 //         let matchedAccountId = null;
 //         if (dScheme && accountMap[dScheme.toLowerCase()]) {
 //           matchedAccountId = accountMap[dScheme.toLowerCase()];
 //         }
 
-//         const rawDate = getValue(["Date", "Created", "Day"]);
-//         let dDate = new Date();
-//         if (rawDate) {
-//           dDate = new Date(rawDate);
-//           if (isNaN(dDate.getTime())) dDate = new Date();
+//         let depositBankId = null;
+//         if (dDepositTo && accountMap[dDepositTo.toLowerCase()]) {
+//           depositBankId = accountMap[dDepositTo.toLowerCase()];
 //         }
+
+//         // --- NEW: INDIAN DATE PARSER (DD-MM-YYYY) ---
+//         const parseIndianDate = (dateStr) => {
+//           if (!dateStr) return null;
+//           const parts = dateStr.trim().split(/[-/]/); // Splits by "-" or "/"
+//           if (parts.length === 3) {
+//             const day = parseInt(parts[0], 10);
+//             const month = parseInt(parts[1], 10) - 1; // JS Months are 0-11
+//             let year = parseInt(parts[2], 10);
+//             if (year < 100) year += 2000; // Fixes '25' to '2025'
+
+//             if (month >= 0 && month <= 11) {
+//               const parsed = new Date(year, month, day);
+//               if (!isNaN(parsed.getTime())) return parsed;
+//             }
+//           }
+//           // Fallback if it's a standard format
+//           const fallback = new Date(dateStr);
+//           return isNaN(fallback.getTime()) ? null : fallback;
+//         };
+
+//         const rawDate = getValue(["Date", "Created", "Day"]);
+//         const dDate = parseIndianDate(rawDate) || new Date(); // Fallback to today if completely blank
+
+//         const rawChequeDate = getValue(["Cheque Date"]);
+//         const dChequeDate = parseIndianDate(rawChequeDate);
+//         // ---------------------------------------------
 
 //         const dPan = getValue(["PAN", "Pan Number", "PanCard", "Tax ID"]) || "";
 //         const dAadhaar =
@@ -573,16 +633,10 @@ const getDailySevaList = async (req, res) => {
 //             lowerMode.includes("online") ||
 //             lowerMode.includes("transfer") ||
 //             lowerMode.includes("neft") ||
-//             lowerMode.includes("rtgs")
+//             lowerMode.includes("rtgs") ||
+//             lowerMode.includes("upi")
 //           ) {
-//             normalizedMode = "Bank Transfer";
-//           } else if (
-//             lowerMode.includes("upi") ||
-//             lowerMode.includes("gpay") ||
-//             lowerMode.includes("phonepe") ||
-//             lowerMode.includes("paytm")
-//           ) {
-//             normalizedMode = "UPI";
+//             normalizedMode = "UPI"; // Grouping online transfers to UPI/Online
 //           } else if (
 //             lowerMode.includes("cheque") ||
 //             lowerMode.includes("check")
@@ -593,12 +647,10 @@ const getDailySevaList = async (req, res) => {
 //             lowerMode.includes("demand draft")
 //           ) {
 //             normalizedMode = "DD";
-//           } else if (lowerMode.includes("foreign")) {
-//             normalizedMode = "Foreign Currency";
 //           }
 //         }
 
-//         if (dName !== "Unknown Donor" || dAmount > 0) {
+//         if (dAmount > 0 || isCancelled) {
 //           results.push({
 //             donorName: dName,
 //             donorPhone: dPhone,
@@ -609,20 +661,40 @@ const getDailySevaList = async (req, res) => {
 //             amount: dAmount,
 //             scheme: dScheme,
 //             accountHead: matchedAccountId,
+//             depositBank: depositBankId,
 //             paymentMode: normalizedMode,
+
+//             paymentDetails: {
+//               chequeNo: dChequeNo,
+//               chequeDate: dChequeDate, // <--- Now uses parsed date
+//               bankName: dDonorBank,
+//               transactionId: dTransRef,
+//             },
+
+//             occasion: dOccasion,
+//             inNameOf: dInNameOf,
 //             category: userSelectedCategory,
 //             branch: normalizedBranch,
-//             createdAt: dDate,
+//             createdAt: dDate, // <--- Now uses parsed date
 //             receiptStatus: "Generated",
 //             collectedBy: req.user._id,
 //             comments: dComments,
 //             manualReceiptNo: dManualRef,
+
+//             status: isCancelled ? "Cancelled" : "Active",
+//             cancellationReason: isCancelled
+//               ? "Cancelled during legacy data import"
+//               : "",
 //           });
+//         } else {
+//           // --- NEW: LOG THE SKIPPED ROW TO THE TERMINAL ---
+//           console.log(
+//             `❌ SKIPPED ROW -> Name: "${dName}", Amount Found: "${dAmountStr}"`,
+//           );
 //         }
 //       })
 //       .on("end", async () => {
 //         try {
-//           // --- We still sort CSV imports by Date so Receipts numbers stay chronological ---
 //           results.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 //           if (results.length > 0) {
 //             let count = 0;
@@ -635,7 +707,9 @@ const getDailySevaList = async (req, res) => {
 //               }
 //             }
 //             fs.unlinkSync(filePath);
-//             res.json({ message: `Successfully imported ${count} donations.` });
+//             res.json({
+//               message: `Successfully imported ${count} donations (including cancelled records).`,
+//             });
 //           } else {
 //             fs.unlinkSync(filePath);
 //             res.status(400).json({ message: "No valid data found." });
@@ -650,17 +724,14 @@ const getDailySevaList = async (req, res) => {
 //     res.status(500).json({ message: error.message });
 //   }
 // };
-
 // --- REPLACE ONLY YOUR importDonations FUNCTION WITH THIS ---
-
-// --- REPLACE YOUR importDonations FUNCTION WITH THIS ---
 
 const importDonations = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
   const results = [];
   const filePath = req.file.path;
-  const userSelectedCategory = req.body.category || "Household";
+  const defaultCategory = req.body.category || "Household"; // Fallback from UI
 
   const accountHeads = await AccountHead.find({});
   const accountMap = {};
@@ -677,6 +748,8 @@ const importDonations = async (req, res) => {
     VPN: "Vidyarthi Poshaka Nidhi",
     VPRN: "Vidyarthi Pathashala Rusumu Nidhi",
     KBBF: "Karunya Bharathi Building Fund",
+    MF: "Membership Fee", // <--- NEW CODE ADDED
+    CSR: "Corpus Fund", // Treat CSR as Corpus or General based on your org rules
   };
 
   try {
@@ -702,17 +775,22 @@ const importDonations = async (req, res) => {
           dName = "CANCELLED RECEIPT";
         }
 
-        const dPhone =
-          getValue(["Phone", "Mobile", "Contact", "Cell"]) || "0000000000";
+        // --- PREVENT DUPLICATE PHONE ERRORS ---
+        let dPhone = getValue(["Phone", "Mobile", "Contact", "Cell"]);
+        if (!dPhone || dPhone.trim() === "") {
+          dPhone =
+            "000" + Math.floor(1000000 + Math.random() * 9000000).toString();
+        }
+
         const dLandline = getValue(["Landline", "Telephone", "Tel"]) || "";
         const dComments = getValue(["Comments", "Remarks", "Notes"]) || "";
         const dManualRef =
           getValue([
+            "Receipt ID",
             "Manual",
             "Ref",
             "Book",
             "Old Receipt",
-            "Receipt ID",
             "Receipt",
           ]) || "";
 
@@ -731,15 +809,8 @@ const importDonations = async (req, res) => {
 
         if (isCancelled) dAmount = 0;
 
-        let rawScheme = getValue([
-          "Scheme",
-          "Category",
-          "Purpose",
-          "Towards",
-          "Seva",
-        ]);
+        let rawScheme = getValue(["Scheme", "Purpose", "Towards", "Seva"]);
         rawScheme = rawScheme ? rawScheme.trim() : "General Donations";
-
         let dScheme = schemeAbbreviations[rawScheme.toUpperCase()] || rawScheme;
 
         let matchedAccountId = null;
@@ -752,36 +823,44 @@ const importDonations = async (req, res) => {
           depositBankId = accountMap[dDepositTo.toLowerCase()];
         }
 
-        // --- NEW: INDIAN DATE PARSER (DD-MM-YYYY) ---
+        // --- INDIAN DATE PARSER ---
         const parseIndianDate = (dateStr) => {
           if (!dateStr) return null;
-          const parts = dateStr.trim().split(/[-/]/); // Splits by "-" or "/"
+          const parts = dateStr.trim().split(/[-/]/);
           if (parts.length === 3) {
             const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1; // JS Months are 0-11
+            const month = parseInt(parts[1], 10) - 1;
             let year = parseInt(parts[2], 10);
-            if (year < 100) year += 2000; // Fixes '25' to '2025'
+            if (year < 100) year += 2000;
 
             if (month >= 0 && month <= 11) {
               const parsed = new Date(year, month, day);
               if (!isNaN(parsed.getTime())) return parsed;
             }
           }
-          // Fallback if it's a standard format
           const fallback = new Date(dateStr);
           return isNaN(fallback.getTime()) ? null : fallback;
         };
 
         const rawDate = getValue(["Date", "Created", "Day"]);
-        const dDate = parseIndianDate(rawDate) || new Date(); // Fallback to today if completely blank
+        const dDate = parseIndianDate(rawDate) || new Date();
 
         const rawChequeDate = getValue(["Cheque Date"]);
         const dChequeDate = parseIndianDate(rawChequeDate);
-        // ---------------------------------------------
 
         const dPan = getValue(["PAN", "Pan Number", "PanCard", "Tax ID"]) || "";
         const dAadhaar =
           getValue(["Aadhaar", "Adhar", "UID", "Aadhar Number"]) || "";
+
+        // --- DYNAMIC CATEGORY LOGIC ---
+        let dCategory = defaultCategory;
+        const rawCategory = getValue(["Category", "Type"]);
+        if (rawCategory) {
+          if (rawCategory.toLowerCase().includes("org"))
+            dCategory = "Organizational";
+          else if (rawCategory.toLowerCase().includes("house"))
+            dCategory = "Household";
+        }
 
         let normalizedBranch = "KarunaSri Seva Samithi";
         const rawBranch = getValue(["Branch", "branch", "Location", "Center"]);
@@ -795,29 +874,36 @@ const importDonations = async (req, res) => {
             normalizedBranch = "Karunya Jyothi";
           } else if (
             lowerBranch.includes("headquarters") ||
-            lowerBranch.includes("hq")
+            lowerBranch.includes("hq") ||
+            lowerBranch.includes("seva samithi")
           ) {
-            normalizedBranch = "Headquarters";
+            normalizedBranch = "KarunaSri Seva Samithi";
           }
         }
 
         let normalizedMode = "Cash";
         const rawMode = getValue([
-          "Payment Mode",
           "Mode",
+          "Payment Mode",
           "Payment_Mode",
           "Method",
         ]);
         if (rawMode) {
           const lowerMode = rawMode.toLowerCase();
           if (
+            lowerMode.includes("upi") ||
+            lowerMode.includes("gpay") ||
+            lowerMode.includes("phonepe") ||
+            lowerMode.includes("paytm")
+          ) {
+            normalizedMode = "UPI";
+          } else if (
             lowerMode.includes("online") ||
             lowerMode.includes("transfer") ||
             lowerMode.includes("neft") ||
-            lowerMode.includes("rtgs") ||
-            lowerMode.includes("upi")
+            lowerMode.includes("rtgs")
           ) {
-            normalizedMode = "UPI"; // Grouping online transfers to UPI/Online
+            normalizedMode = "Bank Transfer";
           } else if (
             lowerMode.includes("cheque") ||
             lowerMode.includes("check")
@@ -847,16 +933,16 @@ const importDonations = async (req, res) => {
 
             paymentDetails: {
               chequeNo: dChequeNo,
-              chequeDate: dChequeDate, // <--- Now uses parsed date
+              chequeDate: dChequeDate,
               bankName: dDonorBank,
               transactionId: dTransRef,
             },
 
             occasion: dOccasion,
             inNameOf: dInNameOf,
-            category: userSelectedCategory,
+            category: dCategory, // <--- Safely captures Household vs Organizational
             branch: normalizedBranch,
-            createdAt: dDate, // <--- Now uses parsed date
+            createdAt: dDate,
             receiptStatus: "Generated",
             collectedBy: req.user._id,
             comments: dComments,
@@ -868,7 +954,6 @@ const importDonations = async (req, res) => {
               : "",
           });
         } else {
-          // --- NEW: LOG THE SKIPPED ROW TO THE TERMINAL ---
           console.log(
             `❌ SKIPPED ROW -> Name: "${dName}", Amount Found: "${dAmountStr}"`,
           );
