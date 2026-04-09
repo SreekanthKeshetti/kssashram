@@ -99,7 +99,7 @@ const importData = async () => {
     await AccountHead.deleteMany();
     const accountCodes = [
       { code: "201", name: "NITYA ANNADHANAMU NIDHI", type: "Credit" },
-      { code: "201A", name: "NITYA ANNADHANAMU NIDHI", type: "Credit" },
+      { code: "201A", name: "NITYA ANNADHANAMU NIDHI SPECIAL", type: "Credit" },
       { code: "202", name: "SHASWITHA ANNADHANAMU NIDHI", type: "Credit" },
       { code: "203", name: "VIDYARTHI PATASHALA RUSUMU NIDHI", type: "Credit" },
       { code: "204", name: "VIDYARTHI POSHAKA NIDHI", type: "Credit" },
