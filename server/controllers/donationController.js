@@ -731,13 +731,21 @@ const importDonations = async (req, res) => {
 
   const results = [];
   const filePath = req.file.path;
-  const defaultCategory = req.body.category || "Household"; // Fallback from UI
+  const userSelectedCategory = req.body.category || "Household";
 
+  // 1. Fetch Account Heads
   const accountHeads = await AccountHead.find({});
   const accountMap = {};
   accountHeads.forEach((acc) => {
     accountMap[acc.code.toString()] = acc._id;
     accountMap[acc.name.toLowerCase()] = acc._id;
+  });
+
+  // 2. Fetch Schemes (For Bridge Mapping)
+  const dbSchemes = await Scheme.find({});
+  const schemeMap = {};
+  dbSchemes.forEach((s) => {
+    schemeMap[s.name.toLowerCase()] = s.accountHead;
   });
 
   const schemeAbbreviations = {
@@ -748,8 +756,8 @@ const importDonations = async (req, res) => {
     VPN: "Vidyarthi Poshaka Nidhi",
     VPRN: "Vidyarthi Pathashala Rusumu Nidhi",
     KBBF: "Karunya Bharathi Building Fund",
-    MF: "Membership Fee", // <--- NEW CODE ADDED
-    CSR: "Corpus Fund", // Treat CSR as Corpus or General based on your org rules
+    MF: "Membership Fee",
+    CSR: "Corpus Fund",
   };
 
   try {
@@ -775,7 +783,6 @@ const importDonations = async (req, res) => {
           dName = "CANCELLED RECEIPT";
         }
 
-        // --- PREVENT DUPLICATE PHONE ERRORS ---
         let dPhone = getValue(["Phone", "Mobile", "Contact", "Cell"]);
         if (!dPhone || dPhone.trim() === "") {
           dPhone =
@@ -814,7 +821,9 @@ const importDonations = async (req, res) => {
         let dScheme = schemeAbbreviations[rawScheme.toUpperCase()] || rawScheme;
 
         let matchedAccountId = null;
-        if (dScheme && accountMap[dScheme.toLowerCase()]) {
+        if (dScheme && schemeMap[dScheme.toLowerCase()]) {
+          matchedAccountId = schemeMap[dScheme.toLowerCase()];
+        } else if (dScheme && accountMap[dScheme.toLowerCase()]) {
           matchedAccountId = accountMap[dScheme.toLowerCase()];
         }
 
@@ -823,7 +832,6 @@ const importDonations = async (req, res) => {
           depositBankId = accountMap[dDepositTo.toLowerCase()];
         }
 
-        // --- INDIAN DATE PARSER ---
         const parseIndianDate = (dateStr) => {
           if (!dateStr) return null;
           const parts = dateStr.trim().split(/[-/]/);
@@ -852,8 +860,7 @@ const importDonations = async (req, res) => {
         const dAadhaar =
           getValue(["Aadhaar", "Adhar", "UID", "Aadhar Number"]) || "";
 
-        // --- DYNAMIC CATEGORY LOGIC ---
-        let dCategory = defaultCategory;
+        let dCategory = userSelectedCategory;
         const rawCategory = getValue(["Category", "Type"]);
         if (rawCategory) {
           if (rawCategory.toLowerCase().includes("org"))
@@ -940,7 +947,7 @@ const importDonations = async (req, res) => {
 
             occasion: dOccasion,
             inNameOf: dInNameOf,
-            category: dCategory, // <--- Safely captures Household vs Organizational
+            category: dCategory,
             branch: normalizedBranch,
             createdAt: dDate,
             receiptStatus: "Generated",
@@ -961,6 +968,7 @@ const importDonations = async (req, res) => {
       })
       .on("end", async () => {
         try {
+          // NO SORTING HAPPENS HERE! Preserves exact Excel Row order!
           results.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
           if (results.length > 0) {
             let count = 0;

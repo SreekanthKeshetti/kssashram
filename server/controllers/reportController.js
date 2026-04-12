@@ -23,14 +23,13 @@ const getDashboardStats = async (req, res) => {
     } else if (role === "ksa_manager") {
       query.branch = "Karunya Sindhu";
     } else {
-      query.branch = branch || "KarunaSri Seva Samithi";
+      // FIX 3: If staff belongs to HQ, let them see both naming conventions
+      query.branch = { $in: ["KarunaSri Seva Samithi", "Headquarters"] };
     }
 
+    // FIX 2: Strictly pull only ACTIVE donations
     const donations = await Donation.find({ ...query, status: "Active" });
-    const allVouchers = await Voucher.find({
-      ...query,
-      status: "Approved",
-    });
+    const allVouchers = await Voucher.find({ ...query, status: "Approved" });
 
     const studentCount = await Student.countDocuments({
       ...query,
@@ -41,12 +40,12 @@ const getDashboardStats = async (req, res) => {
       quantity: { $lt: 10 },
     });
 
-    const getFeeIncome = (branchName) => {
+    const getFeeIncome = (branchName1, branchName2 = null) => {
       return allVouchers
         .filter(
           (v) =>
             v.voucherType === "Credit" &&
-            v.branch === branchName &&
+            (v.branch === branchName1 || v.branch === branchName2) &&
             v.description &&
             !v.description.includes("Funds Received from HQ"),
         )
@@ -76,11 +75,18 @@ const getDashboardStats = async (req, res) => {
     const feeJyothi = getFeeIncome("Karunya Jyothi");
     const totalJyothi = donationJyothi + feeJyothi;
 
+    // FIX 3: Combine BOTH names for the HQ Card!
     const donationKarunaSree = donations
-      .filter((d) => d.branch && d.branch.includes("KarunaSri"))
+      .filter(
+        (d) =>
+          d.branch &&
+          (d.branch.includes("KarunaSri") || d.branch.includes("Headquarters")),
+      )
       .reduce((acc, item) => acc + item.amount, 0);
-    const feeKarunaSree =
-      getFeeIncome("KarunaSri Seva Samithi") + getFeeIncome("Headquarters");
+    const feeKarunaSree = getFeeIncome(
+      "KarunaSri Seva Samithi",
+      "Headquarters",
+    );
 
     const totalFeeIncome = allVouchers
       .filter(
@@ -140,8 +146,8 @@ const getDashboardStats = async (req, res) => {
       }
     }
 
-    const recentDonations = await Donation.find(query)
-      .sort({ createdAt: -1 })
+    const recentDonations = await Donation.find({ ...query, status: "Active" })
+      .sort({ _id: -1 })
       .limit(5)
       .select("donorName amount scheme createdAt branch");
 
@@ -174,9 +180,8 @@ const getCustomFinanceReport = async (req, res) => {
   try {
     const { startDate, endDate, reportType, branch } = req.query;
 
-    if (!startDate || !endDate) {
+    if (!startDate || !endDate)
       return res.status(400).json({ message: "Please select a date range" });
-    }
 
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
@@ -188,6 +193,11 @@ const getCustomFinanceReport = async (req, res) => {
       branchFilter = { branch: "Karunya Bharathi" };
     } else if (req.user.role === "ksa_manager") {
       branchFilter = { branch: "Karunya Sindhu" };
+    } else if (branch && branch === "KarunaSri Seva Samithi") {
+      // FIX 3: Include Headquarters when HQ is selected in the dropdown
+      branchFilter = {
+        branch: { $in: ["KarunaSri Seva Samithi", "Headquarters"] },
+      };
     } else if (branch && branch !== "All Branches") {
       branchFilter = { branch: branch };
     }
@@ -198,7 +208,7 @@ const getCustomFinanceReport = async (req, res) => {
     if (reportType === "Income" || reportType === "All") {
       const donations = await Donation.find({
         createdAt: { $gte: start, $lte: end },
-        status: "Active",
+        status: "Active", // FIX 2: Only Active
         ...branchFilter,
       }).populate("accountHead", "name code");
 
@@ -211,12 +221,9 @@ const getCustomFinanceReport = async (req, res) => {
 
       incomeItems = [
         ...donations.map((d) => {
-          // --- NEW: Add "inNameOf" to the description if it exists ---
           let descText = `${d.donorName} (${d.branch})`;
-          if (d.inNameOf) {
+          if (d.inNameOf)
             descText = `${d.donorName} in name of ${d.inNameOf} (${d.branch})`;
-          }
-
           return {
             date: d.createdAt,
             type: "Donation",
@@ -414,18 +421,23 @@ const getLedgerReport = async (req, res) => {
     const account = await AccountHead.findById(accountId);
     if (!account) return res.status(404).json({ message: "Account not found" });
 
+    // FIX 3: Include Headquarters when HQ is selected in the dropdown
     let branchFilter = {};
     if (req.user.role === "kba_manager") {
       branchFilter = { branch: "Karunya Bharathi" };
     } else if (req.user.role === "ksa_manager") {
       branchFilter = { branch: "Karunya Sindhu" };
+    } else if (branch && branch === "KarunaSri Seva Samithi") {
+      branchFilter = {
+        branch: { $in: ["KarunaSri Seva Samithi", "Headquarters"] },
+      };
     } else if (branch && branch !== "All Branches") {
       branchFilter = { branch: branch };
     }
 
     const prevDonations = await Donation.find({
       accountHead: accountId,
-      status: "Active",
+      status: "Active", // FIX 2
       createdAt: { $lt: start },
       ...branchFilter,
     });
@@ -445,7 +457,7 @@ const getLedgerReport = async (req, res) => {
 
     const rangeDonations = await Donation.find({
       accountHead: accountId,
-      status: "Active",
+      status: "Active", // FIX 2
       createdAt: { $gte: start, $lte: end },
       ...branchFilter,
     });
@@ -462,7 +474,6 @@ const getLedgerReport = async (req, res) => {
         date: d.createdAt,
         type: "Donation",
         refNo: d.receiptNo || "N/A",
-        // --- NEW: Add "inNameOf" to ledger description ---
         description: d.inNameOf
           ? `Received from ${d.donorName} in name of ${d.inNameOf} (${d.branch})`
           : `Received from ${d.donorName} (${d.branch})`,
