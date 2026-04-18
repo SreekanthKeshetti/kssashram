@@ -968,7 +968,6 @@ const importDonations = async (req, res) => {
       })
       .on("end", async () => {
         try {
-          // NO SORTING HAPPENS HERE! Preserves exact Excel Row order!
           results.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
           if (results.length > 0) {
             let count = 0;
