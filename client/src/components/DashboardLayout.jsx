@@ -77,7 +77,8 @@ const DashboardLayout = () => {
             <Link to="/" className="sidebar-brand">
               Karunasri ERP
             </Link>
-            <div className="text-muted small mt-1">
+            {/* Removing the text-muted  */}
+            <div className=" small mt-1">
               Branch: {user.branch || "Headquarters"}
             </div>
           </div>
