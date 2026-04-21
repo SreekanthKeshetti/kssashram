@@ -119,7 +119,8 @@ const createDonation = async (req, res) => {
       try {
         const fullDonation = await Donation.findById(donation._id)
           .populate("depositBank", "name")
-          .populate("accountHead", "code name");
+          .populate("accountHead", "code name")
+          .populate("collectedBy", "name"); // <--- ADDED THIS LINE
 
         if (fullDonation) {
           let buffers = [];
@@ -219,7 +220,8 @@ const downloadReceipt = async (req, res) => {
   try {
     const donation = await Donation.findById(req.params.id)
       .populate("depositBank", "name")
-      .populate("accountHead", "code name");
+      .populate("accountHead", "code name")
+      .populate("collectedBy", "name");
     if (!donation)
       return res.status(404).json({ message: "Donation not found" });
 
@@ -241,7 +243,8 @@ const emailReceipt = async (req, res) => {
   try {
     const donation = await Donation.findById(req.params.id)
       .populate("depositBank", "name")
-      .populate("accountHead", "code name");
+      .populate("accountHead", "code name")
+      .populate("collectedBy", "name");
 
     if (!donation || !donation.donorEmail)
       return res.status(400).json({ message: "Donation/Email missing" });

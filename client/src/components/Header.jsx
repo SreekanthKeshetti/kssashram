@@ -33,7 +33,8 @@ const Header = () => {
     "president",
     "secretary",
     "treasurer",
-    "warden",
+    "warden_food",
+    "warden_nonfood",
     "accountant",
     "clerk",
     "kba_manager", // <--- Added

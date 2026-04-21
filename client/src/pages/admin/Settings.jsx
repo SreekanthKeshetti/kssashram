@@ -631,7 +631,10 @@ const Settings = () => {
                       KSA Manager (Karunya Sindhu)
                     </option>
                     <option disabled>--- Staff Roles ---</option>
-                    <option value="warden">Warden</option>
+                    <option value="warden_food">Warden - Food</option>
+                    <option value="warden_nonfood">
+                      Warden - Non-Food
+                    </option>{" "}
                     <option value="accountant">Accountant</option>
                     <option value="clerk">Clerk</option>
                     <option disabled>--- Committee ---</option>

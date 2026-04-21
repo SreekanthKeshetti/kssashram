@@ -354,6 +354,21 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     .moveTo(150, y + payHeight + 2)
     .lineTo(560, y + payHeight + 2)
     .stroke();
+  // --- NEW: CHEQUE REALIZATION NOTE ---
+  let extraChequeGap = 0;
+  if (donation.paymentMode === "Cheque") {
+    extraChequeGap = 12;
+    doc
+      .font("Helvetica-Oblique")
+      .fontSize(8)
+      .fillColor("#B22222") // Red/Maroon text
+      .text(
+        "* Note: Cheques are subject to realization.",
+        150,
+        y + payHeight + 6,
+      );
+    doc.fillColor("black"); // Reset text color back to black
+  }
 
   // --- 7. DEPOSITED TO ACCOUNT (Always Visible) ---
   // Add gap based on previous text height
@@ -451,6 +466,17 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     .fontSize(8)
     .fillColor("black")
     .text("Authorized Signatory", 480, footerY + 60);
+  // --- NEW: ISSUED BY TRACEABILITY ---
+  // If no user collected it (e.g., Guest Online Donation), say "System / Online"
+  const issuerName = donation.collectedBy
+    ? donation.collectedBy.name
+    : "System / Online";
+
+  doc
+    .fontSize(9)
+    .font("Helvetica-Bold")
+    .fillColor("#555")
+    .text(`Issued By: ${issuerName}`, 30, footerY + 60);
 
   doc.end();
 };

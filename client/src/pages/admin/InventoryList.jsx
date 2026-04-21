@@ -102,6 +102,10 @@ const InventoryList = () => {
         ...prev,
         branch: user.branch || "KarunaSri Seva Samithi",
       }));
+      // NEW: Set default category based on role
+      if (user.role === "warden_nonfood") {
+        setFormData((prev) => ({ ...prev, category: "Non-Food" }));
+      }
     }
   }, []);
 
@@ -448,8 +452,8 @@ const InventoryList = () => {
 
             {/* Show ISSUE button only for Admin/KarunaSri Seva Samithi */}
             {(currentUser?.role === "admin" ||
-              currentUser?.role === "warden" ||
-              currentUser?.role === "employee") && (
+              currentUser?.role === "warden_food" ||
+              currentUser?.role === "warden_nonfood") && (
               <Button
                 variant="warning"
                 className="shadow-sm"
@@ -746,11 +750,33 @@ const InventoryList = () => {
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
+                  // Disable if they are a specific warden
+                  disabled={
+                    currentUser?.role === "warden_food" ||
+                    currentUser?.role === "warden_nonfood"
+                  }
                 >
-                  <option>Food</option>
-                  <option>Non-Food</option>
-                  <option>Medical</option>
-                  <option>General</option>
+                  {currentUser?.role === "warden_food" && (
+                    <option value="Food">Food</option>
+                  )}
+
+                  {currentUser?.role === "warden_nonfood" && (
+                    <>
+                      <option value="Non-Food">Non-Food</option>
+                      <option value="Medical">Medical</option>
+                      <option value="General">General</option>
+                    </>
+                  )}
+
+                  {/* Admin sees everything */}
+                  {currentUser?.role === "admin" && (
+                    <>
+                      <option value="Food">Food</option>
+                      <option value="Non-Food">Non-Food</option>
+                      <option value="Medical">Medical</option>
+                      <option value="General">General</option>
+                    </>
+                  )}
                 </Form.Select>
               </Col>
             </Row>
@@ -955,9 +981,17 @@ const InventoryList = () => {
                   list="itemSuggestions"
                 />
                 <datalist id="itemSuggestions">
-                  {items.map((i) => (
-                    <option key={i._id} value={i.itemName} />
-                  ))}
+                  {items
+                    .filter((i) => {
+                      if (currentUser?.role === "warden_food")
+                        return i.category === "Food";
+                      if (currentUser?.role === "warden_nonfood")
+                        return i.category !== "Food";
+                      return true; // Admin sees all
+                    })
+                    .map((i) => (
+                      <option key={i._id} value={i.itemName} />
+                    ))}
                 </datalist>
               </Col>
               <Col md={3}>

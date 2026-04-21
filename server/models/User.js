@@ -28,7 +28,8 @@ const userSchema = mongoose.Schema(
         "president", // Core Committee
         "secretary", // Core Committee
         "treasurer", // Core Committee
-        "warden", // Staff (Data Entry)
+        "warden_food", // Staff (Data Entry)
+        "warden_nonfood",
         "accountant", // Staff (Finance Entry)
         "clerk", // Staff (General Entry)
         "user", // Guest / Donor

@@ -28,6 +28,9 @@ const studentSchema = mongoose.Schema(
     // --- NEW FIELDS: AADHAAR & CASTE ---
     aadhaarNumber: { type: String },
     caste: { type: String },
+    // --- NEW FIELDS: HEALTH ---
+    bloodGroup: { type: String, default: "Unknown" },
+    healthDocuments: [{ type: String }], // Array of Cloudinary URLs
 
     // --- 3. EXISTING FUNCTIONALITY FIELDS ---
     formsStatus: {

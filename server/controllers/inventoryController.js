@@ -2,6 +2,14 @@ const Inventory = require("../models/Inventory");
 const InventoryTransfer = require("../models/InventoryTransfer");
 const { logAudit } = require("../utils/auditLogger");
 
+// Helper to check if a user is allowed to manage a specific category
+const hasCategoryPermission = (userRole, itemCategory) => {
+  if (userRole === "admin" || userRole === "president") return true;
+  if (userRole === "warden_food" && itemCategory === "Food") return true;
+  if (userRole === "warden_nonfood" && itemCategory !== "Food") return true; // Non-Food, Medical, General
+  return false;
+};
+
 // @desc    Get all inventory items (Filtered by Branch)
 const getInventory = async (req, res) => {
   try {
@@ -41,6 +49,12 @@ const addInventoryItem = async (req, res) => {
       donorPhone,
       donorAddress,
     } = req.body;
+    // --- NEW: SECURITY CHECK ---
+    if (!hasCategoryPermission(req.user.role, category)) {
+      return res.status(403).json({
+        message: `Access Denied: You are not authorized to manage ${category} items.`,
+      });
+    }
 
     let finalBranch = "KarunaSri Seva Samithi";
     if (req.user.role === "kba_manager") finalBranch = "Karunya Bharathi";
@@ -119,6 +133,12 @@ const issueStock = async (req, res) => {
           .status(400)
           .json({ message: `Insufficient stock for ${i.itemName}` });
       }
+      // --- NEW: SECURITY CHECK ---
+      if (!hasCategoryPermission(req.user.role, stockItem.category)) {
+        return res.status(403).json({
+          message: `Access Denied: You cannot issue ${stockItem.category} items.`,
+        });
+      }
 
       stockItem.quantity -= Number(i.quantity);
       stockItem.stockHistory.push({
@@ -176,6 +196,23 @@ const receiveStock = async (req, res) => {
         itemName: i.itemName,
         branch: receiverBranch,
       });
+      // --- NEW: SECURITY CHECK ---
+      // Note: If item doesn't exist yet, we check the category from the slip (assuming it's passed or we fetch it).
+      // To be safe, let's look up the Hub's item category if it's a new item.
+      let itemCategory = item ? item.category : "General";
+      if (!item) {
+        const hubItem = await Inventory.findOne({
+          itemName: i.itemName,
+          branch: transfer.fromBranch,
+        });
+        if (hubItem) itemCategory = hubItem.category;
+      }
+
+      if (!hasCategoryPermission(req.user.role, itemCategory)) {
+        return res.status(403).json({
+          message: `Access Denied: You cannot receive ${itemCategory} items.`,
+        });
+      }
 
       const historyEntry = {
         changeType: "Transfer-In",
@@ -267,6 +304,14 @@ const consumeStock = async (req, res) => {
     // 1. Find Item
     const item = await Inventory.findById(itemId);
     if (!item) return res.status(404).json({ message: "Item not found" });
+    // --- NEW: SECURITY CHECK ---
+    if (!hasCategoryPermission(req.user.role, item.category)) {
+      return res
+        .status(403)
+        .json({
+          message: `Access Denied: You cannot consume ${item.category} items.`,
+        });
+    }
 
     if (item.quantity < quantity) {
       return res.status(400).json({ message: "Insufficient stock to consume" });

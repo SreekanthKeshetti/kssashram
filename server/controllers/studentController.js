@@ -29,6 +29,7 @@ const createStudent = async (req, res) => {
       currentClass,
       aadhaarNumber,
       caste,
+      bloodGroup,
     } = req.body;
 
     let finalBranch = branch || "Headquarters";
@@ -54,6 +55,7 @@ const createStudent = async (req, res) => {
       currentClass,
       aadhaarNumber,
       caste,
+      bloodGroup,
     });
 
     await logAudit(
@@ -237,6 +239,7 @@ const updateStudent = async (req, res) => {
     student.currentClass = req.body.currentClass || student.currentClass;
     student.aadhaarNumber = req.body.aadhaarNumber || student.aadhaarNumber;
     student.caste = req.body.caste || student.caste;
+    student.bloodGroup = req.body.bloodGroup || student.bloodGroup;
 
     if (req.body.newExpense) student.expenses.push(req.body.newExpense);
     if (req.body.admissionStatus)
@@ -611,6 +614,8 @@ const importStudents = async (req, res) => {
           "Alternate",
         ]);
         const cls = getValue(["class", "std", "grade"]);
+        const bGroup =
+          getValue(["Blood", "Blood Group", "BloodGroup"]) || "Unknown";
 
         if (rawName) {
           results.push({
@@ -628,6 +633,8 @@ const importStudents = async (req, res) => {
             address: "Imported Data",
             gender: "Male",
             admissionStatus: "Active",
+            caste: "Imported Data", // existing code...
+            bloodGroup: bGroup, // <--- Add this line
             approvals: {
               president: {
                 status: "Approved",
@@ -686,6 +693,47 @@ const downloadBlankForm = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// --- NEW: HEALTH DOCUMENTS UPLOAD (Cloudinary) ---
+const uploadHealthDocs = async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: "Student not found" });
+    if (!req.files || req.files.length === 0)
+      return res.status(400).json({ message: "No files uploaded" });
+
+    const filePaths = req.files.map((file) => file.path);
+
+    student.healthDocuments.push(...filePaths);
+    await student.save();
+
+    res.json({
+      message: "Health Documents uploaded",
+      healthDocuments: student.healthDocuments,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const deleteHealthDoc = async (req, res) => {
+  try {
+    const { filePath } = req.body;
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ message: "Student not found" });
+
+    student.healthDocuments = student.healthDocuments.filter(
+      (doc) => doc !== filePath,
+    );
+    await student.save();
+
+    res.json({
+      message: "Health File link removed",
+      healthDocuments: student.healthDocuments,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 module.exports = {
   createStudent,
@@ -704,4 +752,6 @@ module.exports = {
   updateStatutoryInfo,
   importStudents,
   downloadBlankForm,
+  uploadHealthDocs,
+  deleteHealthDoc,
 };

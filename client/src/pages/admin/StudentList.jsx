@@ -848,6 +848,8 @@ const StudentList = () => {
   const [currentUser, setCurrentUser] = useState(null);
 
   const [filterStatus, setFilterStatus] = useState("Active");
+  // --- NEW: State for Branch Filter ---
+  const [filterBranch, setFilterBranch] = useState("All Branches");
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -865,6 +867,7 @@ const StudentList = () => {
     currentClass: "",
     aadhaarNumber: "",
     caste: "",
+    bloodGroup: "", // <--- Added Blood Group
   });
 
   useEffect(() => {
@@ -884,15 +887,34 @@ const StudentList = () => {
   };
 
   const filteredStudents = students.filter((s) => {
-    if (filterStatus === "All") return true;
-    if (filterStatus === "Alumni") return s.admissionStatus === "Alumni";
-    if (filterStatus === "Active")
-      return (
+    // 1. Check Status
+    let statusMatch = true;
+    if (filterStatus === "Alumni") {
+      statusMatch = s.admissionStatus === "Alumni";
+    } else if (filterStatus === "Active") {
+      statusMatch =
         s.admissionStatus === "Active" ||
         s.admissionStatus === "In Review" ||
-        s.admissionStatus === "Draft"
-      );
-    return true;
+        s.admissionStatus === "Draft";
+    }
+
+    // 2. Check Branch
+    let branchMatch = true;
+    if (filterBranch !== "All Branches") {
+      // Handle legacy typos/alternate names in your database
+      if (filterBranch === "Karunya Sindhu") {
+        branchMatch =
+          s.branch === "Karunya Sindhu" || s.branch === "Karunya Sindu";
+      } else if (filterBranch === "KarunaSri Seva Samithi") {
+        branchMatch =
+          s.branch === "KarunaSri Seva Samithi" || s.branch === "Headquarters";
+      } else {
+        branchMatch = s.branch === filterBranch;
+      }
+    }
+
+    // A student must match BOTH the status filter AND the branch filter to be shown
+    return statusMatch && branchMatch;
   });
 
   const handleExport = () => {
@@ -912,6 +934,7 @@ const StudentList = () => {
       "Alt Mobile (KSS)",
       "Aadhaar Number",
       "Caste",
+      "Blood Group",
       "Student Type",
       "Branch",
       "Parent / Guardian",
@@ -934,6 +957,7 @@ const StudentList = () => {
       `"${s.alternateContact || "-"}"`,
       `"${s.aadhaarNumber || "-"}"`,
       `"${s.caste || "-"}"`,
+      `"${s.bloodGroup || "-"}"`,
       s.studentType || "General",
       s.branch,
       `"${s.guardianName || "-"}"`,
@@ -1168,6 +1192,7 @@ const StudentList = () => {
       </Row>
 
       <div className="mb-3">
+        {/* Left Side: Existing Status Filters */}
         <ButtonGroup className="d-flex flex-wrap shadow-sm">
           <Button
             variant={filterStatus === "Active" ? "dark" : "outline-dark"}
@@ -1193,6 +1218,26 @@ const StudentList = () => {
             All <span className="d-none d-sm-inline">Records</span>
           </Button>
         </ButtonGroup>
+        {/* Right Side: NEW Branch Filter (Only visible to Global Roles) */}
+        {(currentUser?.role === "admin" ||
+          currentUser?.role === "president" ||
+          currentUser?.role === "secretary" ||
+          currentUser?.role === "treasurer") && (
+          <div style={{ minWidth: "250px" }}>
+            <Form.Select
+              value={filterBranch}
+              onChange={(e) => setFilterBranch(e.target.value)}
+              className="shadow-sm fw-bold text-maroon"
+            >
+              <option value="All Branches">
+                All Branches(KarunaSri Seva Samithi)
+              </option>
+              <option value="Karunya Sindhu">Karunya Sindhu</option>
+              <option value="Karunya Bharathi">Karunya Bharathi</option>
+              <option value="Karunya Jyothi">Karunya Jyothi</option>
+            </Form.Select>
+          </div>
+        )}
       </div>
 
       <Card className="shadow-sm border-0">
@@ -1548,7 +1593,7 @@ const StudentList = () => {
                 />
               </Col>
 
-              <Col md={6} className="mb-3">
+              <Col md={4} className="mb-3">
                 <Form.Label>Aadhaar Number</Form.Label>
                 <Form.Control
                   name="aadhaarNumber"
@@ -1556,13 +1601,29 @@ const StudentList = () => {
                   onChange={handleChange}
                 />
               </Col>
-              <Col md={6} className="mb-3">
+              <Col md={4} className="mb-3">
                 <Form.Label>Caste</Form.Label>
                 <Form.Control
                   name="caste"
                   placeholder="e.g. SC, ST, BC, General"
                   onChange={handleChange}
                 />
+              </Col>
+              {/* --- NEW BLOOD GROUP INPUT --- */}
+              <Col md={4} className="mb-3">
+                <Form.Label>Blood Group</Form.Label>
+                <Form.Select name="bloodGroup" onChange={handleChange}>
+                  <option value="">Select</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="Unknown">Unknown</option>
+                </Form.Select>
               </Col>
             </Row>
 

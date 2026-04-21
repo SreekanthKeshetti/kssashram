@@ -123,6 +123,8 @@ const {
   approveAlumniExit,
   approveTransfer,
   downloadBlankForm,
+  uploadHealthDocs,
+  deleteHealthDoc,
 } = require("../controllers/studentController");
 const { protect, admin, staff } = require("../middleware/authMiddleware");
 
@@ -169,5 +171,21 @@ router.post(
 
 router.route("/:id/approve-exit").put(protect, approveAlumniExit);
 router.route("/:id/approve-transfer").put(protect, approveTransfer);
+// --- NEW DOCUMENT ROUTES (Using Cloudinary) ---
+router.post(
+  "/:id/upload",
+  protect,
+  uploadCloud.array("files", 5),
+  uploadDocuments,
+);
+router.delete("/:id/documents", protect, deleteDocument);
 
+// --- NEW: HEALTH DOC ROUTES ---
+router.post(
+  "/:id/health-docs",
+  protect,
+  uploadCloud.array("files", 5),
+  uploadHealthDocs,
+);
+router.delete("/:id/health-docs", protect, deleteHealthDoc);
 module.exports = router;

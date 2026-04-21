@@ -40,7 +40,8 @@ const staff = (req, res, next) => {
     "secretary",
     "treasurer",
     // NEW ROLES ADDED HERE:
-    "warden",
+    "warden_food",
+    "warden_nonfood",
     "accountant",
     "clerk",
     // --- ADD NEW ROLES HERE ---

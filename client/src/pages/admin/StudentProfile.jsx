@@ -1766,6 +1766,8 @@ const StudentProfile = () => {
     participationLevel: "",
     achievement: "",
   });
+  const [healthFiles, setHealthFiles] = useState([]);
+  const [healthUploading, setHealthUploading] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("userInfo"));
@@ -1942,6 +1944,51 @@ const StudentProfile = () => {
         data: { filePath },
       };
       await axios.delete(`${BASE_URL}/api/students/${id}/documents`, config);
+      fetchStudent();
+    } catch (err) {
+      alert("Delete failed");
+    }
+  };
+  const handleHealthFileChange = (e) => setHealthFiles(e.target.files);
+
+  const handleHealthUpload = async (e) => {
+    e.preventDefault();
+    if (healthFiles.length === 0) return alert("Select files");
+    const fd = new FormData();
+    for (let i = 0; i < healthFiles.length; i++)
+      fd.append("files", healthFiles[i]);
+    setHealthUploading(true);
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+      await axios.post(
+        `${BASE_URL}/api/students/${id}/health-docs`,
+        fd,
+        config,
+      );
+      alert("Health Documents Uploaded!");
+      setHealthFiles([]);
+      fetchStudent();
+    } catch (err) {
+      alert("Upload failed");
+    }
+    setHealthUploading(false);
+  };
+
+  const handleDeleteHealthDoc = async (filePath) => {
+    if (!window.confirm("Delete health document?")) return;
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+        data: { filePath },
+      };
+      await axios.delete(`${BASE_URL}/api/students/${id}/health-docs`, config);
       fetchStudent();
     } catch (err) {
       alert("Delete failed");
@@ -2585,6 +2632,26 @@ const StudentProfile = () => {
                     className="mb-2"
                     placeholder="Caste"
                   />
+                  {/* NEW: Blood Group Edit */}
+                  <Form.Select
+                    size="sm"
+                    value={editData.bloodGroup || ""}
+                    onChange={(e) =>
+                      setEditData({ ...editData, bloodGroup: e.target.value })
+                    }
+                    className="mb-2"
+                  >
+                    <option value="">Blood Group</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="Unknown">Unknown</option>
+                  </Form.Select>
                 </Form>
               ) : (
                 <div className="text-start small">
@@ -2609,6 +2676,9 @@ const StudentProfile = () => {
                   </p>
                   <p>
                     <strong>Caste:</strong> {student.caste || "-"}
+                  </p>
+                  <p>
+                    <strong>Blood Group:</strong> {student.bloodGroup || "-"}
                   </p>
                 </div>
               )}
@@ -2846,6 +2916,57 @@ const StudentProfile = () => {
                       }
                     />
                     <Button onClick={addHealth}>Add</Button>
+                  </div>
+                  {/* --- NEW: HEALTH DOCUMENTS SECTION --- */}
+                  <div className="p-3 bg-light rounded mt-4 border">
+                    <h6 className="text-maroon fw-bold border-bottom pb-2">
+                      Health Documents (Prescriptions, Reports)
+                    </h6>
+
+                    <Form
+                      onSubmit={handleHealthUpload}
+                      className="d-flex gap-2 mb-3 mt-3"
+                    >
+                      <Form.Control
+                        type="file"
+                        multiple
+                        onChange={handleHealthFileChange}
+                      />
+                      <Button type="submit" disabled={healthUploading}>
+                        {healthUploading ? "..." : "Upload"}
+                      </Button>
+                    </Form>
+
+                    <Row>
+                      {student.healthDocuments?.map((path, idx) => (
+                        <Col xs={4} key={idx} className="mb-2">
+                          <div className="border p-2 text-center position-relative bg-white">
+                            <small className="d-block text-truncate">
+                              Health File {idx + 1}
+                            </small>
+                            <a href={path} target="_blank" rel="noreferrer">
+                              View
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              className="position-absolute top-0 end-0 p-0 px-1"
+                              onClick={() => handleDeleteHealthDoc(path)}
+                            >
+                              x
+                            </Button>
+                          </div>
+                        </Col>
+                      ))}
+                      {(!student.healthDocuments ||
+                        student.healthDocuments.length === 0) && (
+                        <Col>
+                          <small className="text-muted">
+                            No health documents uploaded yet.
+                          </small>
+                        </Col>
+                      )}
+                    </Row>
                   </div>
                 </Tab>
 
