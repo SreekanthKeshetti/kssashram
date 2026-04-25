@@ -436,27 +436,70 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
   doc.rect(110, footerY + 13, 10, 10).stroke();
   if (!isCorpus) doc.text("X", 112, footerY + 13);
 
-  doc
-    .font("Helvetica")
-    .fontSize(7)
-    .text(
-      "Income Tax exemption under Section 80G of IT ACT 1961 received Vide Director of Income Tax (Exemption)\nLtr.LF.No.DI(E)HYD/806/90/(05)07-08 dated 29-10-2007 & CBDT Circular No. 7 dated 27-10-2010.\nand as amended by the Finance ACT 2020.",
-      140,
-      footerY,
-      { align: "center", width: 420 },
-    );
+  // doc
+  //   .font("Helvetica")
+  //   .fontSize(7)
+  //   .text(
+  //     "Income Tax exemption under Section 80G of IT ACT 1961 received Vide Director of Income Tax (Exemption)\nLtr.LF.No.DI(E)HYD/806/90/(05)07-08 dated 29-10-2007 & CBDT Circular No. 7 dated 27-10-2010.\nand as amended by the Finance ACT 2020.",
+  //     140,
+  //     footerY,
+  //     { align: "center", width: 420 },
+  //   );
 
-  doc.moveDown(0.5);
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(8)
-    .fillColor("#B22222")
-    .text(
-      "IT Dept. Unique Regd.No.Under 80G AAATK6724FF20021, Date: 18/10/2021",
-      140,
-      doc.y,
-      { align: "center", width: 420 },
-    );
+  // doc.moveDown(0.5);
+  // doc
+  //   .font("Helvetica-Bold")
+  //   .fontSize(8)
+  //   .fillColor("#B22222")
+  //   .text(
+  //     "IT Dept. Unique Regd.No.Under 80G AAATK6724FF20021, Date: 18/10/2021",
+  //     140,
+  //     doc.y,
+  //     { align: "center", width: 420 },
+  //   );
+  // --- NEW: 80G TAX COMPLIANCE LOGIC ---
+  const isTaxEligible = !(
+    donation.paymentMode === "Cash" && donation.amount > 2000
+  );
+
+  if (isTaxEligible) {
+    // Print normal 80G Text
+    doc
+      .font("Helvetica")
+      .fontSize(7)
+      .fillColor("black")
+      .text(
+        "Income Tax exemption under Section 80G of IT ACT 1961 received Vide Director of Income Tax (Exemption)\nLtr.LF.No.DI(E)HYD/806/90/(05)07-08 dated 29-10-2007 & CBDT Circular No. 7 dated 27-10-2010.\nand as amended by the Finance ACT 2020.",
+        140,
+        footerY,
+        { align: "center", width: 420 },
+      );
+
+    doc.moveDown(0.5);
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8)
+      .fillColor("#B22222") // Red
+      .text(
+        "IT Dept. Unique Regd.No.Under 80G AAATK6724FF20021, Date: 18/10/2021",
+        140,
+        doc.y,
+        { align: "center", width: 420 },
+      );
+  } else {
+    // Print Warning Text for Cash > 2000
+    doc
+      .font("Helvetica-Oblique")
+      .fontSize(8)
+      .fillColor("#B22222") // Red
+      .text(
+        "* Note: As per Section 80G of the Income Tax Act, cash donations exceeding Rs. 2,000/- are not eligible for tax exemption benefits.",
+        140,
+        footerY + 10,
+        { align: "center", width: 420 },
+      );
+  }
+  // -------------------------------------
 
   doc
     .fillColor("blue")

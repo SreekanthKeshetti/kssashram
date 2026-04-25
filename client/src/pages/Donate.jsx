@@ -185,6 +185,18 @@ const Donate = () => {
                     style={{ fontSize: "1.2rem", fontWeight: "bold" }}
                   />
                 </InputGroup>
+                {/* Tax Benefit Badge */}
+                <div className="tax-badge">
+                  <FaCheckCircle />
+                  <div>
+                    <strong>Tax Benefit Available</strong>
+                    <br />
+                    <small>
+                      Online/Bank donations are eligible for 80G tax exemption.
+                      (Note: Cash donations above ₹2,000 are not eligible).
+                    </small>
+                  </div>
+                </div>
 
                 <h5 className="mt-4 mb-3 fw-bold text-secondary">
                   Payment Method

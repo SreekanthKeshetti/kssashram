@@ -659,6 +659,22 @@ const DonationList = () => {
         </div>
       );
     }
+    // --- NEW: 80G CASH WARNING LOGIC ---
+    if (mode === "Cash" && Number(formData.amount) > 2000) {
+      return (
+        <Alert
+          variant="warning"
+          className="small py-2 mb-3 shadow-sm border-warning"
+        >
+          <strong>⚠️ 80G Tax Exemption Warning:</strong>
+          <br />
+          As per IT Act, cash donations exceeding ₹2,000 are{" "}
+          <strong>not eligible</strong> for 80G tax deductions. The 80G text
+          will be automatically removed from this receipt.
+        </Alert>
+      );
+    }
+    // -----------------------------------
     return null;
   };
 
