@@ -10,8 +10,6 @@ import DonationList from "./pages/admin/DonationList"; // <--- Import this
 // --- Public Pages ---
 import Home from "./pages/Home";
 import About from "./pages/About";
-import Activities from "./pages/Activities";
-import Events from "./pages/Events";
 import Contact from "./pages/Contact";
 import Donate from "./pages/Donate";
 import Login from "./pages/Login";
@@ -57,8 +55,6 @@ function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/about-us" element={<About />} />
-        <Route path="/activities" element={<Activities />} />
-        <Route path="/events" element={<Events />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/donate" element={<Donate />} />
         <Route path="/login" element={<Login />} />

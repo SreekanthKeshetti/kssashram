@@ -108,22 +108,20 @@ const Header = () => {
 
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="ms-auto align-items-center gap-2">
-              {["Home", "About Us", "Activities", "Events", "Contact"].map(
-                (item) => (
-                  <Nav.Link
-                    key={item}
-                    as={NavLink}
-                    to={
-                      item === "Home"
-                        ? "/"
-                        : `/${item.toLowerCase().replace(" ", "-")}`
-                    }
-                    className="nav-link-custom"
-                  >
-                    {item}
-                  </Nav.Link>
-                ),
-              )}
+              {["Home", "About Us", "Contact"].map((item) => (
+                <Nav.Link
+                  key={item}
+                  as={NavLink}
+                  to={
+                    item === "Home"
+                      ? "/"
+                      : `/${item.toLowerCase().replace(" ", "-")}`
+                  }
+                  className="nav-link-custom"
+                >
+                  {item}
+                </Nav.Link>
+              ))}
 
               {/* AUTH CHECK */}
               {userInfo ? (

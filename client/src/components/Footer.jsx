@@ -56,12 +56,7 @@ const Footer = () => {
                   About Us
                 </Link>
               </li>
-              <li>
-                <Link to="/activities">
-                  <FaChevronRight size={12} className="me-2 text-warning" /> Our
-                  Activities
-                </Link>
-              </li>
+
               <li>
                 <Link to="/donate">
                   <FaChevronRight size={12} className="me-2 text-warning" />{" "}
