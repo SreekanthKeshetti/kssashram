@@ -15,6 +15,7 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 import "./Footer.css";
+import qrImage from "../assets/download.svg";
 
 const Footer = () => {
   return (
@@ -32,7 +33,7 @@ const Footer = () => {
 
             <div className="footer-qr-box">
               <img
-                src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
+                src={qrImage}
                 alt="Scan to Donate"
                 className="footer-qr-img"
               />
