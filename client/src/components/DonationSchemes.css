@@ -1,117 +1,116 @@
 .donation-section {
-  background-color: var(--bg-cream);
+  background-color: #fffbf5;
   padding: 80px 0;
-  position: relative;
 }
 
-/* Header: Title Left, Link Right */
-.scheme-header {
-  border-bottom: 2px solid #e0e0e0; /* lighter border */
-  padding-bottom: 15px;
-  margin-bottom: 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end; /* Align bottom so text sits on line */
-}
-
-.scheme-title {
-  font-family: var(--font-heading);
-  color: var(--secondary-color);
-  font-size: 2.2rem;
-  margin: 0;
+.impact-title {
+  font-family: "Playfair Display", serif;
+  font-size: 1.5rem;
+  color: #555;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  border-left: 5px solid var(--primary-color);
-  padding-left: 15px;
-  line-height: 1;
+  letter-spacing: 2px;
+  margin-bottom: 60px;
 }
 
-/* The Toggle Link (View All / View Less) */
-.view-toggle-link {
-  color: var(--primary-color);
-  font-weight: bold;
-  font-size: 1rem;
-  cursor: pointer;
-  text-decoration: none;
-  transition: color 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+.impact-title::after {
+  content: "";
+  display: block;
+  width: 80px;
+  height: 4px;
+  background-color: #d35400;
+  margin: 15px auto;
 }
 
-.view-toggle-link:hover {
-  color: var(--secondary-color);
-  text-decoration: underline;
+/* Flip Card logic */
+.flip-card {
+  background-color: transparent;
+  width: 100%;
+  height: 350px; /* Slightly taller for elegance */
+  perspective: 1000px;
 }
 
-/* Divine Card Styling - Clean & Traditional */
-.scheme-card {
-  border: none;
-  border-radius: 0; /* Square corners look more traditional sometimes */
-  overflow: hidden;
-  background: white;
-  transition: transform 0.3s, box-shadow 0.3s;
-  height: 100%;
-  border-bottom: 3px solid transparent;
-}
-
-.scheme-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  border-bottom: 3px solid var(--primary-color);
-}
-
-.scheme-img-wrapper {
-  height: 220px;
-  overflow: hidden;
+.flip-card-inner {
   position: relative;
-}
-
-.scheme-img-wrapper img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s;
-}
-
-.scheme-card:hover .scheme-img-wrapper img {
-  transform: scale(1.05);
-}
-
-.scheme-body {
-  padding: 20px;
   text-align: center;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
 }
 
-.scheme-name {
-  color: var(--secondary-color);
-  font-size: 1.3rem;
-  margin-bottom: 10px;
-  font-weight: 700;
-  font-family: var(--font-heading);
+.flip-card:hover .flip-card-inner {
+  transform: rotateY(180deg);
 }
 
-.scheme-desc {
-  font-size: 0.95rem;
-  color: #666;
-  margin-bottom: 20px;
-  line-height: 1.5;
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-donate-card {
-  background-color: transparent;
-  color: var(--primary-color);
-  border: 1px solid var(--primary-color);
-  padding: 6px 20px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: bold;
-  transition: all 0.3s;
-  text-decoration: none;
-  display: inline-block;
+/* Front Side: Image styling */
+.flip-card-front {
+  background-color: white;
+  background-size: 85%; /* Make mandala slightly smaller than the card */
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 1px solid #f1f1f1;
 }
 
-.btn-donate-card:hover {
-  background-color: var(--primary-color);
+/* Transparent overlay for the front to keep text sharp */
+.front-content-wrapper {
+  background-color: rgba(255, 255, 255, 0.6); /* Soft white veil */
+  padding: 15px;
+  border-radius: 10px;
+  width: 100%;
+}
+
+.scheme-name-impact {
+  font-family: "Playfair Display", serif;
+  font-weight: 900;
+  font-size: 1.4rem;
+  color: #581818;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Back Side: Solid Maroon */
+.flip-card-back {
+  background-color: #7d5353;
   color: white;
+  transform: rotateY(180deg);
+  border: 1px solid #581818;
+}
+
+.scheme-desc-impact {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.btn-donate-impact {
+  background-color: #daa520;
+  color: white !important;
+  padding: 10px 25px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  transition: 0.3s;
+}
+
+.btn-donate-impact:hover {
+  background-color: white;
+  color: #581818 !important;
 }

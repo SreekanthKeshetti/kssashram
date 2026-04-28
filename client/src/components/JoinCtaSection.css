@@ -21,7 +21,7 @@
 .flower-decor {
   width: 140px;
   height: 140px;
-  opacity: 0.2; /* Make it subtle like a watermark */
+  opacity: 0.5; /* Make it subtle like a watermark */
   filter: sepia(1) saturate(1.5) hue-rotate(-10deg); /* Gives it a golden/brown tint */
 }
 

@@ -1,6 +1,5 @@
 .quote-section {
-  /* High Quality Spiritual Texture */
-  background-image: url("https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=1920&auto=format&fit=crop");
+  /* We removed the hardcoded background-image here because we pass it via React inline styles now */
 
   /* THIS creates the Parallax Effect */
   background-attachment: fixed;
@@ -9,15 +8,15 @@
   background-size: cover;
 
   position: relative;
-  padding: 120px 0; /* More padding to see the effect better */
+  padding: 120px 0;
   text-align: center;
   color: white;
   width: 100%;
 }
 
 .quote-overlay {
-  /* Dark Maroon tint so text pops */
-  background-color: rgba(88, 24, 24, 0.7);
+  /* CHANGED: Reduced opacity from 0.7 to 0.4 so it's much less red */
+  background-color: rgba(88, 24, 24, 0.4);
   position: absolute;
   top: 0;
   left: 0;
@@ -26,7 +25,6 @@
   z-index: 1;
 }
 
-/* Ensure content sits ON TOP of the overlay */
 .quote-content-wrapper {
   position: relative;
   z-index: 2;
@@ -34,10 +32,10 @@
 
 .quote-text {
   font-family: "Playfair Display", serif;
-  font-size: 2.5rem; /* Larger for impact */
+  font-size: 1.8rem; /* CHANGED: Reduced from 2.5rem */
   font-style: italic;
   line-height: 1.6;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8); /* Darkened shadow to compensate for lighter overlay */
   margin-bottom: 20px;
 }
 
@@ -48,4 +46,5 @@
   text-transform: uppercase;
   letter-spacing: 3px;
   font-weight: 700;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
 }
