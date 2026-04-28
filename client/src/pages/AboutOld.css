@@ -1,26 +1,23 @@
-/* --- Page Hero (Updated to match Contact Page Style) --- */
+/* --- Page Hero (Breadcrumb style) --- */
 .page-hero {
-  background:
-    linear-gradient(rgba(164, 107, 107, 0.92), rgba(44, 11, 11, 0.92)),
-    url("../assets/mandala.jpg");
-  background-size: cover, 450px;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
-  height: 280px;
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+    url("https://images.unsplash.com/photo-1469044552483-057d60517869?q=80&w=1920&auto=format&fit=crop");
+  background-size: cover;
+  background-position: center;
+  height: 300px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   color: white;
-  border-bottom: 4px solid #daa520; /* Gold accent line */
 }
 
 .page-title {
   font-family: "Playfair Display", serif;
-  font-size: 3.5rem;
+  font-size: 3rem;
   font-weight: 700;
   letter-spacing: 2px;
-  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+  text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 /* --- Section Styling --- */
@@ -30,9 +27,10 @@
 }
 
 .about-bg-cream {
-  background-color: #fffbf5;
+  background-color: #fffbf5; /* Light cream for alternating sections */
 }
 
+/* Headings */
 .section-heading {
   font-family: "Playfair Display", serif;
   color: #581818;
@@ -47,7 +45,7 @@
   display: block;
   width: 60%;
   height: 3px;
-  background-color: #d35400;
+  background-color: #d35400; /* Saffron underline */
   margin-top: 10px;
 }
 
@@ -76,7 +74,7 @@
 
 .mission-icon {
   font-size: 3rem;
-  color: #daa520;
+  color: #daa520; /* Gold */
   margin-bottom: 20px;
 }
 
@@ -87,16 +85,40 @@
   margin-bottom: 15px;
 }
 
-/* --- Founder / Image sections --- */
-.img-frame {
+/* --- Founder Section --- */
+.founder-img-box {
+  position: relative;
   padding: 10px;
-  border: 2px solid #daa520;
+  border: 2px solid #daa520; /* Gold Border */
   border-radius: 8px;
-  background: white;
+  display: inline-block;
 }
 
-.about-img {
+.founder-img {
   width: 100%;
+  max-width: 400px;
   border-radius: 4px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Stats Strip --- */
+.stats-strip {
+  background-color: #581818;
+  padding: 50px 0;
+  color: white;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffd700;
+  font-family: "Playfair Display", serif;
+}
+
+.stat-label {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+  opacity: 0.8;
 }

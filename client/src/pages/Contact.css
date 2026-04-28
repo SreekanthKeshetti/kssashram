@@ -1,28 +1,47 @@
 .contact-hero {
-  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
-    url("https://images.unsplash.com/photo-1534536281715-e28d76689b4d?q=80&w=1920&auto=format&fit=crop");
-  background-size: cover;
-  background-position: center;
-  height: 300px;
+  /* 1. LAYERED BACKGROUND: 
+     First: A maroon gradient with 90% opacity
+     Second: The mandala image centered 
+  */
+  background:
+    linear-gradient(rgba(164, 107, 107, 0.92), rgba(44, 11, 11, 0.92)),
+    url("../assets/mandala.jpg");
+
+  /* 2. IMAGE BEHAVIOR: 
+     Gradient covers everything, 
+     Mandala is 450px wide and centered 
+  */
+  background-size: cover, 450px;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+
+  position: relative;
+  height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   color: white;
+
+  /* 3. A subtle gold border at the bottom to match our theme */
+  border-bottom: 4px solid #daa520;
 }
 
-.contact-box-icon {
-  width: 60px;
-  height: 60px;
-  background-color: #fffbf5;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #d35400; /* Saffron */
-  font-size: 24px;
-  margin-bottom: 15px;
-  border: 1px solid #d35400;
+/* Remove the old ::after block entirely if it's still in your file! */
+
+.contact-hero h1 {
+  font-family: "Playfair Display", serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.contact-hero p {
+  font-size: 1.1rem;
+  font-family: "Lato", sans-serif;
+  letter-spacing: 1px;
+  opacity: 0.9;
 }
 
 .form-control-ashram {

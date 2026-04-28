@@ -60,15 +60,11 @@ const Contact = () => {
 
   return (
     <>
+      {/* 1. Divine Hero Section */}
       <div className="contact-hero">
         <div>
-          <h1
-            className="display-3 fw-bold"
-            style={{ fontFamily: "Playfair Display" }}
-          >
-            Contact Us
-          </h1>
-          <p className="lead">We are here to help and serve</p>
+          <h1>Contact Us</h1>
+          <p>We are here to help and serve the community</p>
         </div>
       </div>
 
