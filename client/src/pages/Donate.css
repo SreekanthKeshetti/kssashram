@@ -1,4 +1,4 @@
-.donate-hero {
+/* .donate-hero {
   background: linear-gradient(rgba(88, 24, 24, 0.8), rgba(88, 24, 24, 0.8)),
     url("https://images.unsplash.com/photo-1593113598332-cd288d649433?q=80&w=1920&auto=format&fit=crop");
   background-size: cover;
@@ -7,6 +7,32 @@
   text-align: center;
   color: white;
   margin-bottom: 40px;
+} */
+.donate-hero {
+  /* 1. LAYERED BACKGROUND: Maroon Gradient + Mandala Watermark */
+  background:
+    linear-gradient(rgba(164, 107, 107, 0.92), rgba(44, 11, 11, 0.92)),
+    url("../assets/mandala.jpg");
+
+  /* 2. Positioning: Full cover for gradient, 450px centered for Mandala */
+  background-size: cover, 450px;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+
+  padding: 60px 0;
+  text-align: center;
+  color: white;
+
+  /* 3. Gold accent bottom border to match theme */
+  border-bottom: 4px solid #daa520;
+  margin-bottom: 40px;
+}
+
+/* Ensure the title stands out */
+.donate-hero h1 {
+  font-family: "Playfair Display", serif;
+  font-weight: 700;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 /* --- Section Titles --- */

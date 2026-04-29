@@ -28,7 +28,7 @@ const Footer = () => {
             <div className="footer-address">
               <p className="mb-2"> 17-1-474, Krishna Nagar Colony,</p>
               <p className="mb-2">Saidabad,</p>
-              <p className="mb-0">Hyderabad, Telangana - 500 060</p>
+              <p className="mb-0">Hyderabad, Telangana - 500 059</p>
             </div>
 
             <div className="footer-qr-box">
@@ -97,7 +97,7 @@ const Footer = () => {
               <div>
                 <strong>Phone:</strong>
                 <br />
-                +91 123456789
+                +91 9000889785
               </div>
             </div>
 
@@ -106,7 +106,7 @@ const Footer = () => {
               <div>
                 <strong>Email:</strong>
                 <br />
-                info@karunasri.org
+                karunasri1999@gmail.com
               </div>
             </div>
           </Col>

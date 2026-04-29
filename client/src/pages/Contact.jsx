@@ -91,7 +91,7 @@ const Contact = () => {
                 <h5 className="fw-bold">Our Location</h5>
                 <p className="text-muted">
                   Karunasri Seva Samithi / Karunya Sindhu 17-1-474, Krishna
-                  Nagar Colony, Saidabad, Hyderabad-500 060 Telangana State
+                  Nagar Colony, Saidabad, Hyderabad-500 059 Telangana State
                 </p>
               </div>
             </div>
@@ -102,8 +102,8 @@ const Contact = () => {
               </div>
               <div className="ms-3">
                 <h5 className="fw-bold">Phone Number</h5>
-                <p className="text-muted mb-0">+91 1234567890</p>
-                <p className="text-muted">+91 12 3456 7890</p>
+                <p className="text-muted mb-0">+91 9000889785</p>
+                {/* <p className="text-muted">+91 12 3456 7890</p> */}
               </div>
             </div>
 
@@ -113,7 +113,7 @@ const Contact = () => {
               </div>
               <div className="ms-3">
                 <h5 className="fw-bold">Email Address</h5>
-                <p className="text-muted">info@karunasri.org</p>
+                <p className="text-muted">karunasri1999@gmail.com</p>
               </div>
             </div>
           </Col>
@@ -204,7 +204,8 @@ const Contact = () => {
             >
               <iframe
                 title="Google Map"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3807.953931677399!2d78.50604131435277!3d17.36581198809159!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bcb9850c9b0e3e9%3A0x6b80862100690000!2sKarunasri%20Seva%20Samithi!5e0!3m2!1sen!2sin"
+                // src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3807.953931677399!2d78.50604131435277!3d17.36581198809159!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bcb9850c9b0e3e9%3A0x6b80862100690000!2sKarunasri%20Seva%20Samithi!5e0!3m2!1sen!2sin"
+                src="https://maps.google.com/maps?q=H.NO.17-1-474,Krishna+Nagar+Colony,Saidabad,Hyderabad-500059&t=&z=15&ie=UTF8&iwloc=&output=embed"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
