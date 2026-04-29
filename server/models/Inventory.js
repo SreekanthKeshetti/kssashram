@@ -51,6 +51,7 @@ const mongoose = require("mongoose");
 
 const inventorySchema = mongoose.Schema(
   {
+    itemCode: { type: String, required: true },
     itemName: { type: String, required: true },
 
     category: {
