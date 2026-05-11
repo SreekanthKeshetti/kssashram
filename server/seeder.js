@@ -126,6 +126,11 @@ const importData = async () => {
       { code: "23", name: "MESS EXPENSES - KIRANA ITEMS", type: "Debit" },
       { code: "30", name: "ADMIN EXPENSES - ELECTRICITY BILLS", type: "Debit" },
       {
+        code: "2136",
+        name: "KBA MANAVARASATWA SAMPADA EXPENSES",
+        type: "Debit",
+      },
+      {
         code: "31",
         name: "ADMIN EXPENSES - REPAIRS & MAINTENANCE",
         type: "Debit",
