@@ -28,9 +28,8 @@ const FinanceList = () => {
   const location = useLocation();
   const [vouchers, setVouchers] = useState([]);
   const [accountHeads, setAccountHeads] = useState([]);
-  const [bankAccounts, setBankAccounts] = useState([]); // Dropdown data
+  const [bankAccounts, setBankAccounts] = useState([]);
 
-  // Modals
   const [showModal, setShowModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -41,7 +40,6 @@ const FinanceList = () => {
   const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
   const [currentBalance, setCurrentBalance] = useState(0);
 
-  // Voucher Form Data
   const [formData, setFormData] = useState({
     voucherType: "Debit",
     accountHead: "",
@@ -58,7 +56,6 @@ const FinanceList = () => {
     },
   });
 
-  // Transfer Form Data
   const [transferData, setTransferData] = useState({
     toBranch: "Karunya Sindhu",
     amount: "",
@@ -113,7 +110,6 @@ const FinanceList = () => {
       const { data } = await axios.get(`${BASE_URL}/api/accounts`, config);
       setAccountHeads(data);
 
-      // Filter for Banks (Code 101, 102, 103 etc or Name includes Bank/Cash)
       const banks = data.filter(
         (acc) =>
           acc.name.toLowerCase().includes("bank") ||
@@ -125,12 +121,23 @@ const FinanceList = () => {
     }
   };
 
-  // --- FORM HANDLERS ---
-
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Special logic for Bank Deduction: Auto-set recipient
+    // Auto reset payment mode to Cash if changing from Credit (with UPI) to Debit
+    if (
+      name === "voucherType" &&
+      value === "Debit" &&
+      formData.paymentMode === "UPI"
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        voucherType: value,
+        paymentMode: "Cash",
+      }));
+      return;
+    }
+
     if (name === "paymentMode" && value === "Bank Deduction") {
       setFormData((prev) => ({
         ...prev,
@@ -151,13 +158,12 @@ const FinanceList = () => {
 
   const renderPaymentFields = () => {
     const mode = formData.paymentMode;
-    if (mode === "Cash") return null; // No extra fields for Cash
+    if (mode === "Cash") return null;
 
     return (
       <div className="bg-light p-2 rounded mb-3 border">
         <h6 className="text-muted small mb-2 fw-bold">Payment Details</h6>
         <Row className="g-2">
-          {/* SCENARIO A: BANK DEDUCTION (Select OUR Bank) */}
           {mode === "Bank Deduction" ? (
             <Col md={12}>
               <Form.Label className="small">Select Bank Account *</Form.Label>
@@ -176,9 +182,7 @@ const FinanceList = () => {
               </Form.Select>
             </Col>
           ) : (
-            /* SCENARIO B: Cheque/DD/Transfer/UPI (Date, Bank, Ref) */
             <>
-              {/* 1. Date */}
               <Col md={4}>
                 <Form.Control
                   size="sm"
@@ -189,8 +193,6 @@ const FinanceList = () => {
                   title="Date"
                 />
               </Col>
-
-              {/* 2. Bank Name (Text Input for External Bank) */}
               <Col md={4}>
                 <Form.Control
                   size="sm"
@@ -200,8 +202,6 @@ const FinanceList = () => {
                   onChange={handleChange}
                 />
               </Col>
-
-              {/* 3. Reference Number (Cheque No / Transaction ID) */}
               <Col md={4}>
                 <Form.Control
                   size="sm"
@@ -232,8 +232,6 @@ const FinanceList = () => {
     );
   };
 
-  // --- SUBMIT ACTIONS ---
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -243,7 +241,7 @@ const FinanceList = () => {
       fetchVouchers(userInfo);
       fetchBalance();
       alert("Voucher Created Successfully!");
-      // Reset
+
       setFormData({
         voucherType: "Debit",
         accountHead: "",
@@ -626,7 +624,7 @@ const FinanceList = () => {
           <Form onSubmit={handleSubmit}>
             <Row className="g-2 mb-2">
               <Col md={6}>
-                <Form.Label className="small fw-bold">Voucher Type</Form.Label>
+                <Form.Label className="small">Voucher Type</Form.Label>
                 <Form.Select
                   name="voucherType"
                   value={formData.voucherType}
@@ -637,7 +635,7 @@ const FinanceList = () => {
                 </Form.Select>
               </Col>
               <Col md={6}>
-                <Form.Label className="small fw-bold">Mode</Form.Label>
+                <Form.Label className="small">Mode</Form.Label>
                 <Form.Select
                   name="paymentMode"
                   value={formData.paymentMode}
@@ -646,7 +644,9 @@ const FinanceList = () => {
                   <option>Cash</option>
                   <option>Bank Transfer</option>
                   <option>Cheque</option>
-                  <option>UPI</option>
+                  {/* --- NEW: HIDE UPI IF DEBIT --- */}
+                  {formData.voucherType === "Credit" && <option>UPI</option>}
+
                   <option
                     className="fw-bold text-danger"
                     value="Bank Deduction"
@@ -678,7 +678,6 @@ const FinanceList = () => {
               </Col>
             </Row>
 
-            {/* Recipient Input (Hidden for Bank Deduction) */}
             {formData.paymentMode !== "Bank Deduction" && (
               <Form.Group className="mb-2">
                 <Form.Label className="small fw-bold">
@@ -724,7 +723,6 @@ const FinanceList = () => {
               </Col>
             </Row>
 
-            {/* --- DYNAMIC PAYMENT FIELDS --- */}
             {renderPaymentFields()}
 
             <Form.Group className="mb-3">

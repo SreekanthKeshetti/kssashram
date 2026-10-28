@@ -1,813 +1,3 @@
-// /* eslint-disable react-hooks/immutability */
-// /* eslint-disable no-unused-vars */
-// import React, { useEffect, useState } from "react";
-// import axios from "axios";
-// import BASE_URL from "../../apiConfig";
-// import {
-//   Table,
-//   Button,
-//   Badge,
-//   Card,
-//   Row,
-//   Col,
-//   Modal,
-//   Form,
-//   ButtonGroup,
-// } from "react-bootstrap";
-// import {
-//   FaPlus,
-//   FaEye,
-//   FaCheckCircle,
-//   FaTimesCircle,
-//   FaClock,
-//   FaUserGraduate,
-//   FaFileDownload,
-//   FaTrash,
-//   FaFileUpload,
-//   FaUserFriends,
-//   FaHistory,
-//   FaFilePdf,
-// } from "react-icons/fa";
-// import { Link } from "react-router-dom";
-
-// const StudentList = () => {
-//   const [students, setStudents] = useState([]);
-//   const [showAddModal, setShowAddModal] = useState(false);
-//   const [showViewModal, setShowViewModal] = useState(false);
-//   const [selectedStudent, setSelectedStudent] = useState(null);
-//   const [currentUser, setCurrentUser] = useState(null);
-
-//   const [filterStatus, setFilterStatus] = useState("Active");
-
-//   const [formData, setFormData] = useState({
-//     firstName: "",
-//     lastName: "",
-//     dob: "",
-//     gender: "Male",
-//     guardianName: "",
-//     contactNumber: "",
-//     address: "",
-//     branch: "KarunaSri Seva Samithi",
-//     admissionNumber: "",
-//     caseNumber: "",
-//     studentType: "General",
-//     alternateContact: "",
-//     currentClass: "",
-//     aadhaarNumber: "", // <--- Added
-//     caste: "", // <--- Added
-//   });
-
-//   useEffect(() => {
-//     const user = JSON.parse(localStorage.getItem("userInfo"));
-//     setCurrentUser(user);
-//     if (user) fetchStudents(user);
-//   }, []);
-
-//   const fetchStudents = async (user) => {
-//     try {
-//       const config = { headers: { Authorization: `Bearer ${user.token}` } };
-//       const { data } = await axios.get(`${BASE_URL}/api/students`, config);
-//       setStudents(data);
-//     } catch (error) {
-//       console.error(error);
-//     }
-//   };
-
-//   const filteredStudents = students.filter((s) => {
-//     if (filterStatus === "All") return true;
-//     if (filterStatus === "Alumni") return s.admissionStatus === "Alumni";
-//     if (filterStatus === "Active")
-//       return (
-//         s.admissionStatus === "Active" ||
-//         s.admissionStatus === "In Review" ||
-//         s.admissionStatus === "Draft"
-//       );
-//     return true;
-//   });
-
-//   const handleExport = () => {
-//     if (filteredStudents.length === 0)
-//       return alert("No data to export in current view");
-
-//     const headers = [
-//       "CCI Admin No",
-//       "Case Profile No",
-//       "First Name",
-//       "Last Name",
-//       "Class",
-//       "DOB",
-//       "Gender",
-//       "Mobile",
-//       "Alt Mobile (KSS)",
-//       "Aadhaar Number", // <--- Updated Headers
-//       "Caste", // <--- Updated Headers
-//       "Student Type",
-//       "Branch",
-//       "Parent / Guardian",
-//       "Address",
-//       "Admission Status",
-//       "President Approval",
-//       "Secretary Approval",
-//       "Treasurer Approval",
-//     ];
-
-//     const rows = filteredStudents.map((s) => [
-//       s.admissionNumber || "-",
-//       s.caseNumber || "-",
-//       `"${s.firstName}"`,
-//       `"${s.lastName}"`,
-//       s.currentClass || "-",
-//       s.dob ? new Date(s.dob).toLocaleDateString() : "-",
-//       s.gender,
-//       `"${s.contactNumber || "-"}"`,
-//       `"${s.alternateContact || "-"}"`,
-//       `"${s.aadhaarNumber || "-"}"`, // <--- Added Row Data
-//       `"${s.caste || "-"}"`, // <--- Added Row Data
-//       s.studentType || "General",
-//       s.branch,
-//       `"${s.guardianName || "-"}"`,
-//       `"${s.address ? s.address.replace(/\n/g, " ") : "-"}"`,
-//       s.admissionStatus,
-//       s.approvals?.president?.status || "Pending",
-//       s.approvals?.secretary?.status || "Pending",
-//       s.approvals?.treasurer?.status || "Pending",
-//     ]);
-
-//     const csvContent =
-//       "data:text/csv;charset=utf-8," +
-//       headers.join(",") +
-//       "\n" +
-//       rows.map((e) => e.join(",")).join("\n");
-
-//     const encodedUri = encodeURI(csvContent);
-//     const link = document.createElement("a");
-//     link.setAttribute("href", encodedUri);
-//     const dateStr = new Date().toISOString().split("T")[0];
-//     link.setAttribute(
-//       "download",
-//       `KSS_${filterStatus}_Students_${dateStr}.csv`,
-//     );
-//     document.body.appendChild(link);
-//     link.click();
-//     document.body.removeChild(link);
-//   };
-
-//   const handleDelete = async (id) => {
-//     if (!window.confirm("Are you sure you want to delete this student record?"))
-//       return;
-//     try {
-//       const config = {
-//         headers: { Authorization: `Bearer ${currentUser.token}` },
-//       };
-//       await axios.delete(`${BASE_URL}/api/students/${id}`, config);
-//       fetchStudents(currentUser);
-//       alert("Student Deleted");
-//     } catch (error) {
-//       alert("Error deleting student");
-//     }
-//   };
-
-//   const handleApprove = async (status) => {
-//     try {
-//       const config = {
-//         headers: { Authorization: `Bearer ${currentUser.token}` },
-//       };
-//       await axios.put(
-//         `${BASE_URL}/api/students/${selectedStudent._id}/approve`,
-//         {
-//           status: status,
-//           remark: "Approved via Dashboard",
-//           approvalType: currentUser.role,
-//         },
-//         config,
-//       );
-//       alert(`Successfully ${status}`);
-//       setShowViewModal(false);
-//       fetchStudents(currentUser);
-//     } catch (error) {
-//       alert(error.response?.data?.message || "Error updating status");
-//     }
-//   };
-
-//   const handleChange = (e) => {
-//     setFormData({ ...formData, [e.target.name]: e.target.value });
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     try {
-//       const config = {
-//         headers: { Authorization: `Bearer ${currentUser.token}` },
-//       };
-//       await axios.post(`${BASE_URL}/api/students`, formData, config);
-//       setShowAddModal(false);
-//       fetchStudents(currentUser);
-//       alert("Application Submitted!");
-//       setFormData({
-//         firstName: "",
-//         lastName: "",
-//         dob: "",
-//         gender: "Male",
-//         guardianName: "",
-//         contactNumber: "",
-//         address: "",
-//         branch: "KarunaSri Seva Samithi",
-//         admissionNumber: "",
-//         caseNumber: "",
-//         studentType: "General",
-//         alternateContact: "",
-//         currentClass: "",
-//         aadhaarNumber: "",
-//         caste: "",
-//       });
-//     } catch (error) {
-//       alert("Error submitting application");
-//     }
-//   };
-
-//   const openViewModal = (student) => {
-//     setSelectedStudent(student);
-//     setShowViewModal(true);
-//   };
-
-//   const StatusBadge = ({ status }) => {
-//     if (status === "Approved")
-//       return (
-//         <Badge bg="success">
-//           <FaCheckCircle /> Approved
-//         </Badge>
-//       );
-//     if (status === "Rejected")
-//       return (
-//         <Badge bg="danger">
-//           <FaTimesCircle /> Rejected
-//         </Badge>
-//       );
-//     return (
-//       <Badge bg="warning" text="dark">
-//         <FaClock /> Pending
-//       </Badge>
-//     );
-//   };
-
-//   const handleImport = async (e) => {
-//     const file = e.target.files[0];
-//     if (!file) return;
-
-//     const formData = new FormData();
-//     formData.append("file", file);
-
-//     try {
-//       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-//       const config = {
-//         headers: {
-//           "Content-Type": "multipart/form-data",
-//           Authorization: `Bearer ${userInfo.token}`,
-//         },
-//       };
-
-//       const { data } = await axios.post(
-//         `${BASE_URL}/api/students/import`,
-//         formData,
-//         config,
-//       );
-
-//       alert(data.message);
-//       fetchStudents(userInfo);
-//     } catch (err) {
-//       alert(err.response?.data?.message || "Import Failed");
-//     }
-//   };
-
-//   const handleDownloadBlankForm = async () => {
-//     try {
-//       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-//       const response = await axios.get(`${BASE_URL}/api/students/blank-form`, {
-//         headers: { Authorization: `Bearer ${userInfo.token}` },
-//         responseType: "blob",
-//       });
-//       const url = window.URL.createObjectURL(new Blob([response.data]));
-//       const link = document.createElement("a");
-//       link.href = url;
-//       link.setAttribute("download", "Admission_Form_Blank.pdf");
-//       document.body.appendChild(link);
-//       link.click();
-//       document.body.removeChild(link);
-//     } catch (err) {
-//       alert("Error downloading form");
-//     }
-//   };
-
-//   return (
-//     <div>
-//       <Row className="mb-4 align-items-center">
-//         <Col lg={5} xs={12} className="mb-3 mb-lg-0">
-//           <h2
-//             className="text-maroon m-0"
-//             style={{ fontFamily: "Playfair Display" }}
-//           >
-//             Student Admissions
-//           </h2>
-//           <p className="text-muted m-0 small">Manage enrollments & alumni</p>
-//         </Col>
-
-//         <Col lg={7} xs={12}>
-//           <div className="d-flex flex-wrap gap-2 justify-content-lg-end justify-content-start">
-//             <Button
-//               variant="danger"
-//               className="shadow-sm flex-grow-1 flex-lg-grow-0"
-//               onClick={handleDownloadBlankForm}
-//             >
-//               <FaFilePdf className="me-1" /> Blank Form
-//             </Button>
-//             <input
-//               type="file"
-//               id="csvInput"
-//               accept=".csv"
-//               style={{ display: "none" }}
-//               onChange={handleImport}
-//             />
-
-//             <Button
-//               variant="warning"
-//               className="text-dark shadow-sm flex-grow-1 flex-lg-grow-0"
-//               onClick={() => document.getElementById("csvInput").click()}
-//             >
-//               <FaFileUpload className="me-1" /> Import CSV
-//             </Button>
-
-//             <Button
-//               variant="success"
-//               className="shadow-sm flex-grow-1 flex-lg-grow-0"
-//               onClick={handleExport}
-//             >
-//               <FaFileDownload className="me-1" /> Export List
-//             </Button>
-
-//             <Button
-//               variant="primary"
-//               className="shadow-sm flex-grow-1 flex-lg-grow-0"
-//               style={{ backgroundColor: "#581818", border: "none" }}
-//               onClick={() => setShowAddModal(true)}
-//             >
-//               <FaPlus className="me-1" /> New Admission
-//             </Button>
-//           </div>
-//         </Col>
-//       </Row>
-
-//       <div className="mb-3">
-//         <ButtonGroup className="d-flex flex-wrap shadow-sm">
-//           <Button
-//             variant={filterStatus === "Active" ? "dark" : "outline-dark"}
-//             className="flex-grow-1"
-//             onClick={() => setFilterStatus("Active")}
-//           >
-//             <FaUserFriends className="me-2" /> Current{" "}
-//             <span className="d-none d-sm-inline">Students</span>
-//           </Button>
-//           <Button
-//             variant={filterStatus === "Alumni" ? "info" : "outline-info"}
-//             className="flex-grow-1"
-//             onClick={() => setFilterStatus("Alumni")}
-//           >
-//             <FaHistory className="me-2" /> Alumni{" "}
-//             <span className="d-none d-sm-inline">List</span>
-//           </Button>
-//           <Button
-//             variant={filterStatus === "All" ? "secondary" : "outline-secondary"}
-//             className="flex-grow-1"
-//             onClick={() => setFilterStatus("All")}
-//           >
-//             All <span className="d-none d-sm-inline">Records</span>
-//           </Button>
-//         </ButtonGroup>
-//       </div>
-
-//       <Card className="shadow-sm border-0">
-//         <Card.Body className="p-0">
-//           <Table
-//             hover
-//             responsive
-//             className="align-middle mb-0 table-striped"
-//             style={{ fontSize: "0.85rem" }}
-//           >
-//             <thead className="bg-light text-uppercase">
-//               <tr>
-//                 <th className="ps-3">Admin No</th>
-//                 <th>Name / Case No</th>
-//                 <th>Class</th>
-//                 <th>DOB</th>
-//                 <th>Mobile</th>
-//                 <th>Alt Mobile</th>
-//                 <th>Branch</th>
-//                 <th>Type</th>
-//                 <th className="text-center">Approvals</th>
-//                 <th>Action</th>
-//               </tr>
-//             </thead>
-//             <tbody>
-//               {filteredStudents.map((s) => (
-//                 <tr key={s._id}>
-//                   <td className="ps-3 fw-bold text-primary">
-//                     {s.admissionNumber || "-"}
-//                   </td>
-
-//                   <td>
-//                     <div className="fw-bold text-dark">
-//                       {s.firstName} {s.lastName}
-//                     </div>
-//                     {s.caseNumber && (
-//                       <div className="text-muted small">
-//                         Case: {s.caseNumber}
-//                       </div>
-//                     )}
-//                   </td>
-
-//                   <td>{s.currentClass || "-"}</td>
-//                   <td>{s.dob ? new Date(s.dob).toLocaleDateString() : "-"}</td>
-//                   <td>{s.contactNumber || "-"}</td>
-//                   <td>{s.alternateContact || "-"}</td>
-
-//                   <td>
-//                     <Badge bg="light" text="dark" className="border">
-//                       {s.branch}
-//                     </Badge>
-//                   </td>
-
-//                   <td>
-//                     <Badge
-//                       bg={
-//                         s.studentType === "Orphan"
-//                           ? "danger"
-//                           : s.studentType === "Semi_Orphan"
-//                             ? "warning"
-//                             : "secondary"
-//                       }
-//                     >
-//                       {s.studentType}
-//                     </Badge>
-//                   </td>
-
-//                   <td className="text-center">
-//                     <div
-//                       className="d-flex justify-content-center gap-1"
-//                       style={{ fontSize: "0.7rem" }}
-//                     >
-//                       <span
-//                         title="President"
-//                         className={
-//                           s.approvals.president.status === "Approved"
-//                             ? "text-success"
-//                             : "text-muted"
-//                         }
-//                       >
-//                         P:
-//                         {s.approvals.president.status === "Approved"
-//                           ? "✅"
-//                           : "⏳"}
-//                       </span>
-//                       <span className="text-muted">|</span>
-//                       <span
-//                         title="Secretary"
-//                         className={
-//                           s.approvals.secretary.status === "Approved"
-//                             ? "text-success"
-//                             : "text-muted"
-//                         }
-//                       >
-//                         S:
-//                         {s.approvals.secretary.status === "Approved"
-//                           ? "✅"
-//                           : "⏳"}
-//                       </span>
-//                       <span className="text-muted">|</span>
-//                       <span
-//                         title="Treasurer"
-//                         className={
-//                           s.approvals.treasurer.status === "Approved"
-//                             ? "text-success"
-//                             : "text-muted"
-//                         }
-//                       >
-//                         T:
-//                         {s.approvals.treasurer.status === "Approved"
-//                           ? "✅"
-//                           : "⏳"}
-//                       </span>
-//                     </div>
-//                   </td>
-
-//                   <td>
-//                     <div className="d-flex gap-2">
-//                       <Button
-//                         size="sm"
-//                         variant="outline-primary"
-//                         onClick={() => openViewModal(s)}
-//                         title="View Status / Approve"
-//                       >
-//                         <FaEye />
-//                       </Button>
-
-//                       <Link
-//                         to={`/dashboard/students/${s._id}`}
-//                         className="btn btn-sm btn-dark"
-//                         title="Full Profile"
-//                       >
-//                         <FaUserGraduate />
-//                       </Link>
-
-//                       {currentUser?.role === "admin" && (
-//                         <Button
-//                           size="sm"
-//                           variant="outline-danger"
-//                           onClick={() => handleDelete(s._id)}
-//                         >
-//                           <FaTrash />
-//                         </Button>
-//                       )}
-//                     </div>
-//                   </td>
-//                 </tr>
-//               ))}
-//               {filteredStudents.length === 0 && (
-//                 <tr>
-//                   <td colSpan="10" className="text-center py-5 text-muted">
-//                     No records found in "{filterStatus}" view.
-//                   </td>
-//                 </tr>
-//               )}
-//             </tbody>
-//           </Table>
-//         </Card.Body>
-//       </Card>
-
-//       {/* VIEW MODAL */}
-//       <Modal
-//         show={showViewModal}
-//         onHide={() => setShowViewModal(false)}
-//         size="lg"
-//       >
-//         <Modal.Header closeButton>
-//           <Modal.Title>Application Details</Modal.Title>
-//         </Modal.Header>
-//         <Modal.Body>
-//           {selectedStudent && (
-//             <>
-//               <h4 className="text-maroon">
-//                 {selectedStudent.firstName} {selectedStudent.lastName}
-//               </h4>
-//               <p className="text-muted">
-//                 Parent/Guardian: {selectedStudent.guardianName}
-//               </p>
-//               <hr />
-//               <h5 className="mb-3">Approval Workflow</h5>
-
-//               {/* President */}
-//               <div className="d-flex justify-content-between align-items-center mb-3 p-2 border rounded">
-//                 <div>
-//                   <strong>1. President Review</strong>
-//                 </div>
-//                 <div>
-//                   <StatusBadge
-//                     status={selectedStudent.approvals.president.status}
-//                   />
-//                 </div>
-//                 {currentUser?.role === "president" &&
-//                   selectedStudent.approvals.president.status === "Pending" && (
-//                     <div>
-//                       <Button
-//                         size="sm"
-//                         variant="success"
-//                         className="me-2"
-//                         onClick={() => handleApprove("Approved")}
-//                       >
-//                         Approve
-//                       </Button>
-//                       <Button
-//                         size="sm"
-//                         variant="danger"
-//                         onClick={() => handleApprove("Rejected")}
-//                       >
-//                         Reject
-//                       </Button>
-//                     </div>
-//                   )}
-//               </div>
-
-//               {/* Secretary */}
-//               <div className="d-flex justify-content-between align-items-center mb-3 p-2 border rounded">
-//                 <div>
-//                   <strong>2. Secretary Review</strong>
-//                 </div>
-//                 <div>
-//                   <StatusBadge
-//                     status={selectedStudent.approvals.secretary.status}
-//                   />
-//                 </div>
-//                 {currentUser?.role === "secretary" &&
-//                   selectedStudent.approvals.secretary.status === "Pending" && (
-//                     <div>
-//                       <Button
-//                         size="sm"
-//                         variant="success"
-//                         className="me-2"
-//                         onClick={() => handleApprove("Approved")}
-//                       >
-//                         Approve
-//                       </Button>
-//                       <Button
-//                         size="sm"
-//                         variant="danger"
-//                         onClick={() => handleApprove("Rejected")}
-//                       >
-//                         Reject
-//                       </Button>
-//                     </div>
-//                   )}
-//               </div>
-
-//               {/* Treasurer */}
-//               <div className="d-flex justify-content-between align-items-center mb-3 p-2 border rounded">
-//                 <div>
-//                   <strong>3. Treasurer Review</strong>
-//                 </div>
-//                 <div>
-//                   <StatusBadge
-//                     status={selectedStudent.approvals.treasurer.status}
-//                   />
-//                 </div>
-//                 {currentUser?.role === "treasurer" &&
-//                   selectedStudent.approvals.treasurer.status === "Pending" && (
-//                     <div>
-//                       <Button
-//                         size="sm"
-//                         variant="success"
-//                         className="me-2"
-//                         onClick={() => handleApprove("Approved")}
-//                       >
-//                         Approve
-//                       </Button>
-//                       <Button
-//                         size="sm"
-//                         variant="danger"
-//                         onClick={() => handleApprove("Rejected")}
-//                       >
-//                         Reject
-//                       </Button>
-//                     </div>
-//                   )}
-//               </div>
-//             </>
-//           )}
-//         </Modal.Body>
-//       </Modal>
-
-//       {/* ADD MODAL */}
-//       <Modal
-//         show={showAddModal}
-//         onHide={() => setShowAddModal(false)}
-//         size="lg"
-//       >
-//         <Modal.Header closeButton>
-//           <Modal.Title>New Student Admission</Modal.Title>
-//         </Modal.Header>
-//         <Modal.Body>
-//           <Form onSubmit={handleSubmit}>
-//             <h6 className="text-maroon">Official Details</h6>
-//             <Row>
-//               <Col md={4} className="mb-3">
-//                 <Form.Label>Admission Admin No</Form.Label>
-//                 <Form.Control name="admissionNumber" onChange={handleChange} />
-//               </Col>
-//               <Col md={4} className="mb-3">
-//                 <Form.Label>Case Profile No</Form.Label>
-//                 <Form.Control name="caseNumber" onChange={handleChange} />
-//               </Col>
-//               <Col md={4} className="mb-3">
-//                 <Form.Label>Student Type</Form.Label>
-//                 <Form.Select name="studentType" onChange={handleChange}>
-//                   <option value="General">General</option>
-//                   <option value="BPL">BPL</option>
-//                   <option value="Orphan">Orphan</option>
-//                   <option value="Semi_Orphan">Semi-Orphan</option>
-//                 </Form.Select>
-//               </Col>
-//             </Row>
-
-//             <h6 className="text-maroon mt-2">Personal Details</h6>
-//             <Row>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>First Name</Form.Label>
-//                 <Form.Control
-//                   name="firstName"
-//                   onChange={handleChange}
-//                   required
-//                 />
-//               </Col>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Last Name</Form.Label>
-//                 <Form.Control
-//                   name="lastName"
-//                   onChange={handleChange}
-//                   required
-//                 />
-//               </Col>
-//               <Col md={4} className="mb-3">
-//                 <Form.Label>DOB</Form.Label>
-//                 <Form.Control
-//                   type="date"
-//                   name="dob"
-//                   onChange={handleChange}
-//                   required
-//                 />
-//               </Col>
-//               <Col md={4} className="mb-3">
-//                 <Form.Label>Gender</Form.Label>
-//                 <Form.Select name="gender" onChange={handleChange}>
-//                   <option>Male</option>
-//                   <option>Female</option>
-//                 </Form.Select>
-//               </Col>
-//               <Col md={4} className="mb-3">
-//                 <Form.Label>Class</Form.Label>
-//                 <Form.Control
-//                   name="currentClass"
-//                   placeholder="e.g. 5th Class"
-//                   onChange={handleChange}
-//                 />
-//               </Col>
-
-//               {/* --- NEW AADHAAR AND CASTE INPUTS --- */}
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Aadhaar Number</Form.Label>
-//                 <Form.Control
-//                   name="aadhaarNumber"
-//                   placeholder="12-digit Aadhaar"
-//                   onChange={handleChange}
-//                 />
-//               </Col>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Caste</Form.Label>
-//                 <Form.Control
-//                   name="caste"
-//                   placeholder="e.g. SC, ST, BC, General"
-//                   onChange={handleChange}
-//                 />
-//               </Col>
-//             </Row>
-
-//             <h6 className="text-maroon mt-2">Guardian & Contact</h6>
-//             <Row>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Parent / Guardian</Form.Label>
-//                 <Form.Control
-//                   name="guardianName"
-//                   onChange={handleChange}
-//                   placeholder="If applicable"
-//                 />
-//               </Col>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Branch</Form.Label>
-//                 <Form.Select name="branch" onChange={handleChange}>
-//                   <option value="KarunaSri Seva Samithi">
-//                     KarunaSri Seva Samithi
-//                   </option>
-//                   <option value="Karunya Sindhu">Karunya Sindhu</option>
-//                   <option value="Karunya Bharathi">Karunya Bharathi</option>
-//                   <option value="Karunya Jyothi">Karunya Jyothi</option>
-//                 </Form.Select>
-//               </Col>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Primary Contact</Form.Label>
-//                 <Form.Control name="contactNumber" onChange={handleChange} />
-//               </Col>
-//               <Col md={6} className="mb-3">
-//                 <Form.Label>Alternate Contact</Form.Label>
-//                 <Form.Control name="alternateContact" onChange={handleChange} />
-//               </Col>
-//               <Col md={12} className="mb-3">
-//                 <Form.Label>Address</Form.Label>
-//                 <Form.Control
-//                   as="textarea"
-//                   name="address"
-//                   onChange={handleChange}
-//                 />
-//               </Col>
-//             </Row>
-
-//             <Button type="submit" className="w-100 btn-ashram">
-//               Submit Application
-//             </Button>
-//           </Form>
-//         </Modal.Body>
-//       </Modal>
-//     </div>
-//   );
-// };
-
-// export default StudentList;
-// Above is with adhar and pan below is cwc included:
 /* eslint-disable react-hooks/immutability */
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
@@ -848,9 +38,9 @@ const StudentList = () => {
   const [currentUser, setCurrentUser] = useState(null);
 
   const [filterStatus, setFilterStatus] = useState("Active");
-  // --- NEW: State for Branch Filter ---
   const [filterBranch, setFilterBranch] = useState("All Branches");
 
+  // --- NEW: Split Address & Checkbox State ---
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -858,16 +48,18 @@ const StudentList = () => {
     gender: "Male",
     guardianName: "",
     contactNumber: "",
-    address: "",
+    presentAddress: "",
+    permanentAddress: "",
+    sameAsPresent: false, // UI helper
     branch: "KarunaSri Seva Samithi",
     admissionNumber: "",
-    caseNumber: "", // DB Field is caseNumber, but UI is CWC
+    caseNumber: "",
     studentType: "General",
     alternateContact: "",
     currentClass: "",
     aadhaarNumber: "",
     caste: "",
-    bloodGroup: "", // <--- Added Blood Group
+    bloodGroup: "",
   });
 
   useEffect(() => {
@@ -887,7 +79,6 @@ const StudentList = () => {
   };
 
   const filteredStudents = students.filter((s) => {
-    // 1. Check Status
     let statusMatch = true;
     if (filterStatus === "Alumni") {
       statusMatch = s.admissionStatus === "Alumni";
@@ -898,10 +89,8 @@ const StudentList = () => {
         s.admissionStatus === "Draft";
     }
 
-    // 2. Check Branch
     let branchMatch = true;
     if (filterBranch !== "All Branches") {
-      // Handle legacy typos/alternate names in your database
       if (filterBranch === "Karunya Sindhu") {
         branchMatch =
           s.branch === "Karunya Sindhu" || s.branch === "Karunya Sindu";
@@ -912,8 +101,6 @@ const StudentList = () => {
         branchMatch = s.branch === filterBranch;
       }
     }
-
-    // A student must match BOTH the status filter AND the branch filter to be shown
     return statusMatch && branchMatch;
   });
 
@@ -921,7 +108,6 @@ const StudentList = () => {
     if (filteredStudents.length === 0)
       return alert("No data to export in current view");
 
-    // --- RENAMED: Case Profile No -> CWC Allotted No ---
     const headers = [
       "CCI Admin No",
       "CWC Allotted No",
@@ -938,7 +124,8 @@ const StudentList = () => {
       "Student Type",
       "Branch",
       "Parent / Guardian",
-      "Address",
+      "Present Address", // <--- Updated
+      "Permanent Address", // <--- Updated
       "Admission Status",
       "President Approval",
       "Secretary Approval",
@@ -947,7 +134,7 @@ const StudentList = () => {
 
     const rows = filteredStudents.map((s) => [
       s.admissionNumber || "-",
-      s.caseNumber || "-", // Outputs the CWC value
+      s.caseNumber || "-",
       `"${s.firstName}"`,
       `"${s.lastName}"`,
       s.currentClass || "-",
@@ -961,7 +148,8 @@ const StudentList = () => {
       s.studentType || "General",
       s.branch,
       `"${s.guardianName || "-"}"`,
-      `"${s.address ? s.address.replace(/\n/g, " ") : "-"}"`,
+      `"${s.presentAddress ? s.presentAddress.replace(/\n/g, " ") : "-"}"`, // <--- Updated
+      `"${s.permanentAddress ? s.permanentAddress.replace(/\n/g, " ") : "-"}"`, // <--- Updated
       s.admissionStatus,
       s.approvals?.president?.status || "Pending",
       s.approvals?.secretary?.status || "Pending",
@@ -1028,13 +216,25 @@ const StudentList = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // --- Checkbox Logic ---
+  const handleCheckboxChange = (e) => {
+    const isChecked = e.target.checked;
+    setFormData((prev) => ({
+      ...prev,
+      sameAsPresent: isChecked,
+      permanentAddress: isChecked ? prev.presentAddress : prev.permanentAddress,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const config = {
         headers: { Authorization: `Bearer ${currentUser.token}` },
       };
-      await axios.post(`${BASE_URL}/api/students`, formData, config);
+      // Send payload without the UI helper boolean
+      const { sameAsPresent, ...payload } = formData;
+      await axios.post(`${BASE_URL}/api/students`, payload, config);
       setShowAddModal(false);
       fetchStudents(currentUser);
       alert("Application Submitted!");
@@ -1045,7 +245,9 @@ const StudentList = () => {
         gender: "Male",
         guardianName: "",
         contactNumber: "",
-        address: "",
+        presentAddress: "",
+        permanentAddress: "",
+        sameAsPresent: false,
         branch: "KarunaSri Seva Samithi",
         admissionNumber: "",
         caseNumber: "",
@@ -1054,6 +256,7 @@ const StudentList = () => {
         currentClass: "",
         aadhaarNumber: "",
         caste: "",
+        bloodGroup: "",
       });
     } catch (error) {
       alert("Error submitting application");
@@ -1088,10 +291,8 @@ const StudentList = () => {
   const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append("file", file);
-
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = {
@@ -1100,13 +301,11 @@ const StudentList = () => {
           Authorization: `Bearer ${userInfo.token}`,
         },
       };
-
       const { data } = await axios.post(
         `${BASE_URL}/api/students/import`,
         formData,
         config,
       );
-
       alert(data.message);
       fetchStudents(userInfo);
     } catch (err) {
@@ -1162,7 +361,6 @@ const StudentList = () => {
               style={{ display: "none" }}
               onChange={handleImport}
             />
-
             <Button
               variant="warning"
               className="text-dark shadow-sm flex-grow-1 flex-lg-grow-0"
@@ -1170,7 +368,6 @@ const StudentList = () => {
             >
               <FaFileUpload className="me-1" /> Import CSV
             </Button>
-
             <Button
               variant="success"
               className="shadow-sm flex-grow-1 flex-lg-grow-0"
@@ -1178,7 +375,6 @@ const StudentList = () => {
             >
               <FaFileDownload className="me-1" /> Export List
             </Button>
-
             <Button
               variant="primary"
               className="shadow-sm flex-grow-1 flex-lg-grow-0"
@@ -1192,7 +388,6 @@ const StudentList = () => {
       </Row>
 
       <div className="mb-3">
-        {/* Left Side: Existing Status Filters */}
         <ButtonGroup className="d-flex flex-wrap shadow-sm">
           <Button
             variant={filterStatus === "Active" ? "dark" : "outline-dark"}
@@ -1218,12 +413,11 @@ const StudentList = () => {
             All <span className="d-none d-sm-inline">Records</span>
           </Button>
         </ButtonGroup>
-        {/* Right Side: NEW Branch Filter (Only visible to Global Roles) */}
         {(currentUser?.role === "admin" ||
           currentUser?.role === "president" ||
           currentUser?.role === "secretary" ||
           currentUser?.role === "treasurer") && (
-          <div style={{ minWidth: "250px" }}>
+          <div style={{ minWidth: "250px", marginTop: "10px" }}>
             <Form.Select
               value={filterBranch}
               onChange={(e) => setFilterBranch(e.target.value)}
@@ -1251,7 +445,6 @@ const StudentList = () => {
             <thead className="bg-light text-uppercase">
               <tr>
                 <th className="ps-3">Admin No</th>
-                {/* RENAMED Case No to CWC No */}
                 <th>Name / CWC No</th>
                 <th>Class</th>
                 <th>DOB</th>
@@ -1269,7 +462,6 @@ const StudentList = () => {
                   <td className="ps-3 fw-bold text-primary">
                     {s.admissionNumber || "-"}
                   </td>
-
                   <td>
                     <div className="fw-bold text-dark">
                       {s.firstName} {s.lastName}
@@ -1280,18 +472,15 @@ const StudentList = () => {
                       </div>
                     )}
                   </td>
-
                   <td>{s.currentClass || "-"}</td>
                   <td>{s.dob ? new Date(s.dob).toLocaleDateString() : "-"}</td>
                   <td>{s.contactNumber || "-"}</td>
                   <td>{s.alternateContact || "-"}</td>
-
                   <td>
                     <Badge bg="light" text="dark" className="border">
                       {s.branch}
                     </Badge>
                   </td>
-
                   <td>
                     <Badge
                       bg={
@@ -1305,7 +494,6 @@ const StudentList = () => {
                       {s.studentType}
                     </Badge>
                   </td>
-
                   <td className="text-center">
                     <div
                       className="d-flex justify-content-center gap-1"
@@ -1354,7 +542,6 @@ const StudentList = () => {
                       </span>
                     </div>
                   </td>
-
                   <td>
                     <div className="d-flex gap-2">
                       <Button
@@ -1365,7 +552,6 @@ const StudentList = () => {
                       >
                         <FaEye />
                       </Button>
-
                       <Link
                         to={`/dashboard/students/${s._id}`}
                         className="btn btn-sm btn-dark"
@@ -1373,7 +559,6 @@ const StudentList = () => {
                       >
                         <FaUserGraduate />
                       </Link>
-
                       {currentUser?.role === "admin" && (
                         <Button
                           size="sm"
@@ -1399,7 +584,6 @@ const StudentList = () => {
         </Card.Body>
       </Card>
 
-      {/* VIEW MODAL (Unchanged) */}
       <Modal
         show={showViewModal}
         onHide={() => setShowViewModal(false)}
@@ -1517,7 +701,7 @@ const StudentList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* ADD MODAL */}
+      {/* --- ADD STUDENT MODAL (UPDATED ADDRESSES) --- */}
       <Modal
         show={showAddModal}
         onHide={() => setShowAddModal(false)}
@@ -1536,7 +720,6 @@ const StudentList = () => {
               </Col>
               <Col md={4} className="mb-3">
                 <Form.Label>CWC Allotted No</Form.Label>
-                {/* RENAMED Case Profile to CWC */}
                 <Form.Control name="caseNumber" onChange={handleChange} />
               </Col>
               <Col md={4} className="mb-3">
@@ -1592,7 +775,6 @@ const StudentList = () => {
                   onChange={handleChange}
                 />
               </Col>
-
               <Col md={4} className="mb-3">
                 <Form.Label>Aadhaar Number</Form.Label>
                 <Form.Control
@@ -1609,7 +791,6 @@ const StudentList = () => {
                   onChange={handleChange}
                 />
               </Col>
-              {/* --- NEW BLOOD GROUP INPUT --- */}
               <Col md={4} className="mb-3">
                 <Form.Label>Blood Group</Form.Label>
                 <Form.Select name="bloodGroup" onChange={handleChange}>
@@ -1656,12 +837,38 @@ const StudentList = () => {
                 <Form.Label>Alternate Contact</Form.Label>
                 <Form.Control name="alternateContact" onChange={handleChange} />
               </Col>
+
+              {/* --- SPLIT ADDRESS SECTIONS --- */}
               <Col md={12} className="mb-3">
-                <Form.Label>Address</Form.Label>
+                <Form.Label>Present Address</Form.Label>
                 <Form.Control
                   as="textarea"
-                  name="address"
+                  name="presentAddress"
+                  value={formData.presentAddress}
                   onChange={handleChange}
+                  placeholder="Where the child currently lives"
+                />
+              </Col>
+
+              <Col md={12} className="mb-2">
+                <Form.Check
+                  type="checkbox"
+                  label="Permanent Address is same as Present Address"
+                  onChange={handleCheckboxChange}
+                  checked={formData.sameAsPresent}
+                  className="fw-bold text-primary"
+                />
+              </Col>
+
+              <Col md={12} className="mb-3">
+                <Form.Label>Permanent Address</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  name="permanentAddress"
+                  value={formData.permanentAddress}
+                  onChange={handleChange}
+                  disabled={formData.sameAsPresent} // Lock if checked
+                  placeholder="Native address"
                 />
               </Col>
             </Row>

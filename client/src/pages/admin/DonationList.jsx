@@ -113,7 +113,7 @@ const DonationList = () => {
     donorPan: "",
     donorAadhaar: "",
     amount: "",
-    scheme: "Nitya Annadhana",
+    scheme: "Nitya Annadhana Nidhi",
     paymentMode: "Cash",
     branch: "KarunaSri Seva Samithi",
     category: "Household",
@@ -153,7 +153,13 @@ const DonationList = () => {
         const schemeRes = await axios.get(`${BASE_URL}/api/schemes`, config);
         setSchemes(schemeRes.data);
         if (schemeRes.data.length > 0) {
-          setFormData((prev) => ({ ...prev, scheme: schemeRes.data[0].name }));
+          // Initialize with first scheme and its rate
+          const firstScheme = schemeRes.data[0];
+          setFormData((prev) => ({
+            ...prev,
+            scheme: firstScheme.name,
+            amount: firstScheme.defaultRate > 0 ? firstScheme.defaultRate : "",
+          }));
         }
 
         const occRes = await axios.get(`${BASE_URL}/api/occasions`, config);
@@ -205,8 +211,11 @@ const DonationList = () => {
       donorEmail: "",
       donorPan: "",
       donorAadhaar: "",
-      amount: "",
-      scheme: "Nitya Annadhana",
+      amount:
+        schemes.length > 0 && schemes[0].defaultRate > 0
+          ? schemes[0].defaultRate
+          : "",
+      scheme: schemes.length > 0 ? schemes[0].name : "Nitya Annadhana Nidhi",
       paymentMode: "Cash",
       branch: "KarunaSri Seva Samithi",
       category: "Household",
@@ -309,6 +318,20 @@ const DonationList = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    // --- NEW: Auto-populate amount based on scheme selected ---
+    if (name === "scheme") {
+      const selectedScheme = schemes.find((s) => s.name === value);
+      if (selectedScheme && selectedScheme.defaultRate > 0 && !isEditing) {
+        setFormData((prev) => ({
+          ...prev,
+          scheme: value,
+          amount: selectedScheme.defaultRate,
+        }));
+        return;
+      }
+    }
+
     if (
       ["chequeNo", "chequeDate", "bankName", "transactionId"].includes(name)
     ) {
@@ -432,10 +455,9 @@ const DonationList = () => {
       "Manual Ref",
       "Comments",
     ];
-    // Helper to prevent commas and quotes in data from breaking Excel columns
+
     const safeString = (str) => {
       if (!str) return `"-"`;
-      // Replace line breaks with spaces, and escape double quotes
       return `"${String(str).replace(/"/g, '""').replace(/\n/g, " ")}"`;
     };
 
@@ -476,7 +498,6 @@ const DonationList = () => {
       headers.join(",") +
       "\n" +
       rows.map((e) => e.join(",")).join("\n");
-    // --- THE FIX: USE A BLOB FOR UNLIMITED DATA CAPACITY ---
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
 
@@ -659,7 +680,6 @@ const DonationList = () => {
         </div>
       );
     }
-    // --- NEW: 80G CASH WARNING LOGIC ---
     if (mode === "Cash" && Number(formData.amount) > 2000) {
       return (
         <Alert
@@ -674,7 +694,6 @@ const DonationList = () => {
         </Alert>
       );
     }
-    // -----------------------------------
     return null;
   };
 
@@ -854,7 +873,6 @@ const DonationList = () => {
                       <small className="text-muted">
                         {d.receiptNo || d._id.slice(-6).toUpperCase()}
                       </small>
-
                       {d.manualReceiptNo && (
                         <div className="text-danger small mt-1">
                           Ref: {d.manualReceiptNo}
@@ -1094,7 +1112,6 @@ const DonationList = () => {
                   </ButtonGroup>
                 </div>
 
-                {/* --- ROW 1: Date, Mobile & Landline --- */}
                 <Row className="g-2 mb-2">
                   <Col md={4}>
                     <Form.Label className="small fw-bold text-maroon">
@@ -1141,7 +1158,6 @@ const DonationList = () => {
                   </Col>
                 </Row>
 
-                {/* --- ROW 2: Name, Email, PAN & Aadhaar --- */}
                 <Row className="g-2 mb-2">
                   <Col md={3}>
                     <Form.Label className="small fw-bold">
@@ -1200,6 +1216,21 @@ const DonationList = () => {
                 <hr />
                 <Row className="g-2 mb-2">
                   <Col md={4}>
+                    <Form.Label className="small fw-bold">Scheme</Form.Label>
+                    <Form.Select
+                      size="sm"
+                      name="scheme"
+                      value={formData.scheme}
+                      onChange={handleChange}
+                    >
+                      {schemes.map((s) => (
+                        <option key={s._id} value={s.name}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Col>
+                  <Col md={4}>
                     <Form.Label className="small fw-bold">
                       Amount (₹) *
                     </Form.Label>
@@ -1210,7 +1241,7 @@ const DonationList = () => {
                       value={formData.amount}
                       onChange={handleChange}
                       required
-                      className="fw-bold"
+                      className="fw-bold text-success"
                     />
                   </Col>
                   <Col md={4}>
@@ -1230,21 +1261,6 @@ const DonationList = () => {
                       </option>
                       <option value="Karunya Sindhu">Karunya Sindhu</option>
                       <option value="Karunya Bharathi">Karunya Bharathi</option>
-                    </Form.Select>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Label className="small fw-bold">Scheme</Form.Label>
-                    <Form.Select
-                      size="sm"
-                      name="scheme"
-                      value={formData.scheme}
-                      onChange={handleChange}
-                    >
-                      {schemes.map((s) => (
-                        <option key={s._id} value={s.name}>
-                          {s.name}
-                        </option>
-                      ))}
                     </Form.Select>
                   </Col>
                 </Row>
@@ -1388,7 +1404,6 @@ const DonationList = () => {
                   </Col>
                 </Row>
 
-                {/* --- RESTORED: MANUAL RECEIPT NO WITH COMMENTS --- */}
                 <Row className="mt-3 g-2">
                   <Col md={4}>
                     <Form.Control
@@ -1534,7 +1549,6 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* CANCEL MODAL */}
       <Modal show={showCancelModal} onHide={() => setShowCancelModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Cancel Receipt</Modal.Title>
@@ -1566,7 +1580,6 @@ const DonationList = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* IMPORT MODAL */}
       <Modal show={showImportModal} onHide={() => setShowImportModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Import CSV</Modal.Title>
@@ -1596,7 +1609,6 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* TAX MODAL */}
       <Modal show={showTaxModal} onHide={() => setShowTaxModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Download Tax Certificate</Modal.Title>
@@ -1628,31 +1640,6 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* MEDIA MODAL old*/}
-      {/* <Modal show={showMediaModal} onHide={() => setShowMediaModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Attachments</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleUpload} className="mb-3 d-flex gap-2">
-            <Form.Control type="file" multiple onChange={handleFileChange} />
-            <Button type="submit">Upload</Button>
-          </Form>
-          <Row>
-            {selectedDonation?.media?.map((path, i) => (
-              <Col xs={6} key={i}>
-                <img
-                  src={`${BASE_URL}${path}`}
-                  style={{ width: "100%" }}
-                  alt="doc"
-                />
-              </Col>
-            ))}
-          </Row>
-        </Modal.Body>
-      </Modal> */}
-      {/* MEDIA MODAL */}
-      {/* MEDIA MODAL */}
       <Modal show={showMediaModal} onHide={() => setShowMediaModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Attachments</Modal.Title>
@@ -1667,7 +1654,6 @@ const DonationList = () => {
           <Row>
             {selectedDonation?.media?.map((path, i) => (
               <Col xs={6} key={i} className="mb-2 position-relative">
-                {/* --- FIX: Removed BASE_URL --- */}
                 <a href={path} target="_blank" rel="noreferrer">
                   <img
                     src={path}

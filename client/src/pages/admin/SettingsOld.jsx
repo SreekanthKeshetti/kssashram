@@ -13,6 +13,7 @@ import {
   Tabs,
   Tab,
   Modal,
+  Spinner,
 } from "react-bootstrap";
 import {
   FaTrash,
@@ -20,7 +21,10 @@ import {
   FaUserShield,
   FaKey,
   FaLayerGroup,
-  FaCalendarDay, // Icon for Occasion
+  FaCalendarDay,
+  FaDatabase, // <--- New Icon
+  FaDownload, // <--- New Icon
+  FaUpload, // <--- New Icon
 } from "react-icons/fa";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
@@ -35,7 +39,7 @@ const Settings = () => {
   const [accountHeads, setAccountHeads] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState("");
 
-  // --- OCCASION STATE (NEW) ---
+  // --- OCCASION STATE ---
   const [occasions, setOccasions] = useState([]);
   const [newOccasionName, setNewOccasionName] = useState("");
 
@@ -52,18 +56,22 @@ const Settings = () => {
     password: "",
   });
 
+  // --- BACKUP STATE ---
+  const [restoreFile, setRestoreFile] = useState(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("userInfo"));
     setUserInfo(user);
     if (user) {
       fetchSchemes(user);
       fetchAccountHeads(user);
-      fetchOccasions(user); // <--- Fetch Occasions
+      fetchOccasions(user);
       fetchUsers(user);
     }
   }, []);
 
-  // 1. SCHEME LOGIC
+  // ... (Keep existing fetch functions for Schemes, Accounts, Occasions, Users) ...
   const fetchSchemes = async (user) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
@@ -73,7 +81,6 @@ const Settings = () => {
       console.error(error);
     }
   };
-
   const fetchAccountHeads = async (user) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
@@ -83,7 +90,27 @@ const Settings = () => {
       console.error(error);
     }
   };
+  const fetchOccasions = async (user) => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      const { data } = await axios.get(`${BASE_URL}/api/occasions`, config);
+      setOccasions(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const fetchUsers = async (user) => {
+    if (user.role !== "admin") return;
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      const { data } = await axios.get(`${BASE_URL}/api/users`, config);
+      setUsers(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
+  // ... (Keep existing Add/Delete handlers for Schemes, Occasions, Users) ...
   const handleAddScheme = async (e) => {
     e.preventDefault();
     if (!newSchemeName || !selectedAccount) return alert("Enter details");
@@ -101,7 +128,6 @@ const Settings = () => {
       alert("Error adding scheme");
     }
   };
-
   const handleDeleteScheme = async (id) => {
     if (!window.confirm("Delete scheme?")) return;
     try {
@@ -112,18 +138,6 @@ const Settings = () => {
       alert("Error deleting");
     }
   };
-
-  // 2. OCCASION LOGIC (NEW)
-  const fetchOccasions = async (user) => {
-    try {
-      const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get(`${BASE_URL}/api/occasions`, config);
-      setOccasions(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   const handleAddOccasion = async (e) => {
     e.preventDefault();
     if (!newOccasionName) return alert("Enter name");
@@ -140,7 +154,6 @@ const Settings = () => {
       alert("Error adding occasion");
     }
   };
-
   const handleDeleteOccasion = async (id) => {
     if (!window.confirm("Delete occasion?")) return;
     try {
@@ -151,19 +164,6 @@ const Settings = () => {
       alert("Error deleting");
     }
   };
-
-  // 3. USER LOGIC
-  const fetchUsers = async (user) => {
-    if (user.role !== "admin") return;
-    try {
-      const config = { headers: { Authorization: `Bearer ${user.token}` } };
-      const { data } = await axios.get(`${BASE_URL}/api/users`, config);
-      setUsers(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   const handleUserSubmit = async (e) => {
     e.preventDefault();
     const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
@@ -185,7 +185,6 @@ const Settings = () => {
       alert(error.response?.data?.message || "Error");
     }
   };
-
   const handleDeleteUser = async (id) => {
     if (!window.confirm("Delete user?")) return;
     try {
@@ -196,7 +195,6 @@ const Settings = () => {
       alert("Error deleting");
     }
   };
-
   const openUserModal = (user = null) => {
     if (user) {
       setSelectedUser(user);
@@ -213,6 +211,68 @@ const Settings = () => {
       });
     }
     setShowUserModal(true);
+  };
+
+  // --- BACKUP HANDLERS ---
+  const handleDownloadBackup = async () => {
+    try {
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+        responseType: "blob",
+      };
+      const response = await axios.get(
+        `${BASE_URL}/api/backup/download`,
+        config,
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `KSS_Backup_${new Date().toISOString().split("T")[0]}.zip`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      alert("Backup Failed");
+    }
+  };
+
+  const handleRestoreBackup = async (e) => {
+    e.preventDefault();
+    if (!restoreFile) return alert("Select a Zip file first");
+
+    if (
+      !window.confirm(
+        "⚠️ DANGER: This will OVERWRITE current data with the backup file. Are you sure?",
+      )
+    )
+      return;
+
+    setRestoreLoading(true);
+    const fd = new FormData();
+    fd.append("backupFile", restoreFile);
+
+    try {
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+      const { data } = await axios.post(
+        `${BASE_URL}/api/backup/restore`,
+        fd,
+        config,
+      );
+      alert(data.message + " Please refresh the page.");
+      window.location.reload();
+    } catch (error) {
+      alert(error.response?.data?.message || "Restore Failed");
+    }
+    setRestoreLoading(false);
   };
 
   return (
@@ -375,7 +435,7 @@ const Settings = () => {
           </Row>
         </Tab>
 
-        {/* TAB 3: OCCASIONS (NEW) */}
+        {/* TAB 3: OCCASIONS */}
         <Tab
           eventKey="occasions"
           title={
@@ -392,7 +452,7 @@ const Settings = () => {
                   <Form.Group className="mb-3">
                     <Form.Label>Occasion Name</Form.Label>
                     <Form.Control
-                      placeholder="e.g. House Warming, Graduation"
+                      placeholder="e.g. House Warming"
                       value={newOccasionName}
                       onChange={(e) => setNewOccasionName(e.target.value)}
                     />
@@ -427,22 +487,92 @@ const Settings = () => {
                         </td>
                       </tr>
                     ))}
-                    {occasions.length === 0 && (
-                      <tr>
-                        <td colSpan="2" className="text-center">
-                          No occasions found. Add one!
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </Table>
               </Card>
             </Col>
           </Row>
         </Tab>
+
+        {/* TAB 4: DATA BACKUP (NEW) */}
+        {userInfo?.role === "admin" && (
+          <Tab
+            eventKey="backup"
+            title={
+              <span>
+                <FaDatabase /> Data Backup
+              </span>
+            }
+          >
+            <Row className="g-4">
+              {/* DOWNLOAD CARD */}
+              <Col md={6}>
+                <Card className="h-100 shadow-sm border-success">
+                  <Card.Body className="text-center p-5">
+                    <FaDownload size={50} className="text-success mb-3" />
+                    <h4>Download Full Backup</h4>
+                    <p className="text-muted">
+                      Export all database records (Donations, Students, Finance,
+                      etc.) into a ZIP file.
+                      <br />
+                      Keep this safe.
+                    </p>
+                    <Button
+                      variant="success"
+                      size="lg"
+                      onClick={handleDownloadBackup}
+                    >
+                      Download Data (.zip)
+                    </Button>
+                  </Card.Body>
+                </Card>
+              </Col>
+
+              {/* RESTORE CARD */}
+              <Col md={6}>
+                <Card className="h-100 shadow-sm border-danger">
+                  <Card.Body className="text-center p-5">
+                    <FaUpload size={50} className="text-danger mb-3" />
+                    <h4>Restore Data</h4>
+                    <p className="text-danger small fw-bold">
+                      WARNING: This will DELETE all current data and replace it
+                      with the backup file.
+                    </p>
+                    <Form onSubmit={handleRestoreBackup}>
+                      <Form.Control
+                        type="file"
+                        accept=".zip"
+                        onChange={(e) => setRestoreFile(e.target.files[0])}
+                        className="mb-3"
+                        required
+                      />
+                      <Button
+                        type="submit"
+                        variant="danger"
+                        size="lg"
+                        disabled={restoreLoading}
+                      >
+                        {restoreLoading ? (
+                          <Spinner animation="border" size="sm" />
+                        ) : (
+                          "Upload & Restore"
+                        )}
+                      </Button>
+                    </Form>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+
+            <Alert variant="info" className="mt-4 text-center">
+              ℹ️ <strong>Note:</strong> An automated backup is also emailed to
+              the Admin account every Sunday at 10:00 PM.
+            </Alert>
+          </Tab>
+        )}
       </Tabs>
 
-      {/* USER MODAL */}
+      {/* USER MODAL (Existing) */}
       <Modal show={showUserModal} onHide={() => setShowUserModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -486,23 +616,6 @@ const Settings = () => {
               <Col>
                 <Form.Group className="mb-3">
                   <Form.Label>Role</Form.Label>
-                  {/* <Form.Select
-                    value={userForm.role}
-                    onChange={(e) =>
-                      setUserForm({ ...userForm, role: e.target.value })
-                    }
-                  >
-                    <option value="employee">Employee</option>
-                    <option value="warden">Warden</option>
-                    <option value="accountant">Accountant</option>
-                    <option value="clerk">Clerk</option>
-                    <option disabled>--- Committee ---</option>
-                    <option value="president">President</option>
-                    <option value="secretary">Secretary</option>
-                    <option value="treasurer">Treasurer</option>
-                    <option disabled>--- Admin ---</option>
-                    <option value="admin">System Admin</option>
-                  </Form.Select> */}
                   <Form.Select
                     value={userForm.role}
                     onChange={(e) =>
@@ -517,17 +630,17 @@ const Settings = () => {
                     <option value="ksa_manager">
                       KSA Manager (Karunya Sindhu)
                     </option>
-
                     <option disabled>--- Staff Roles ---</option>
-                    <option value="warden">Warden</option>
+                    <option value="warden_food">Warden - Food</option>
+                    <option value="warden_nonfood">
+                      Warden - Non-Food
+                    </option>{" "}
                     <option value="accountant">Accountant</option>
                     <option value="clerk">Clerk</option>
-
                     <option disabled>--- Committee ---</option>
                     <option value="president">President</option>
                     <option value="secretary">Secretary</option>
                     <option value="treasurer">Treasurer</option>
-
                     <option disabled>--- Admin ---</option>
                     <option value="admin">System Admin</option>
                   </Form.Select>
@@ -547,9 +660,7 @@ const Settings = () => {
                     </option>
                     <option value="Karunya Sindhu">Karunya Sindhu</option>
                     <option value="Karunya Bharathi">Karunya Bharathi</option>
-                    <option value="KarunaSri Seva Samithi">
-                      KarunaSri Seva Samithi
-                    </option>
+                    <option value="Karunya Jyothi">Karunya Jyothi</option>
                   </Form.Select>
                 </Form.Group>
               </Col>

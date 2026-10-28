@@ -29,7 +29,6 @@ const Donate = () => {
   const [donorDetails, setDonorDetails] = useState({
     donorName: "",
     donorPhone: "",
-    donorLandline: "", // <--- NEW FIELD
     donorEmail: "",
     donorPan: "",
     address: "",
@@ -38,12 +37,16 @@ const Donate = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [schemesList, setSchemesList] = useState([]);
+
   useEffect(() => {
     const fetchSchemes = async () => {
       try {
         const { data } = await axios.get(`${BASE_URL}/api/schemes`);
         setSchemesList(data);
-        if (data.length > 0) setScheme(data[0].name);
+        if (data.length > 0) {
+          setScheme(data[0].name);
+          if (data[0].defaultRate > 0) setAmount(data[0].defaultRate);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -65,7 +68,7 @@ const Donate = () => {
     if (!amount || !donorDetails.donorName || !donorDetails.donorPhone) {
       setMessage({
         type: "danger",
-        text: "Please fill in all required fields (Name, Mobile, Amount).",
+        text: "Please fill in all required fields (Name, Phone, Amount).",
       });
       setLoading(false);
       return;
@@ -94,7 +97,6 @@ const Donate = () => {
       setDonorDetails({
         donorName: "",
         donorPhone: "",
-        donorLandline: "", // <--- RESET
         donorEmail: "",
         donorPan: "",
         address: "",
@@ -146,7 +148,14 @@ const Donate = () => {
                 <select
                   className="scheme-select-box form-select"
                   value={scheme}
-                  onChange={(e) => setScheme(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setScheme(val);
+                    const selected = schemesList.find((s) => s.name === val);
+                    if (selected && selected.defaultRate > 0) {
+                      setAmount(selected.defaultRate);
+                    }
+                  }}
                 >
                   {schemesList.map((s) => (
                     <option key={s._id} value={s.name}>
@@ -173,7 +182,7 @@ const Donate = () => {
                   ))}
                 </div>
 
-                <InputGroup className="mb-3 mt-3">
+                <InputGroup className="mb-3">
                   <InputGroup.Text>
                     <FaRupeeSign />
                   </InputGroup.Text>
@@ -185,18 +194,6 @@ const Donate = () => {
                     style={{ fontSize: "1.2rem", fontWeight: "bold" }}
                   />
                 </InputGroup>
-                {/* Tax Benefit Badge */}
-                <div className="tax-badge">
-                  <FaCheckCircle />
-                  <div>
-                    <strong>Tax Benefit Available</strong>
-                    <br />
-                    <small>
-                      Online/Bank donations are eligible for 80G tax exemption.
-                      (Note: Cash donations above ₹2,000 are not eligible).
-                    </small>
-                  </div>
-                </div>
 
                 <h5 className="mt-4 mb-3 fw-bold text-secondary">
                   Payment Method
@@ -273,9 +270,7 @@ const Donate = () => {
                       required
                     />
                   </Col>
-
-                  {/* --- ROW FOR MOBILE AND LANDLINE --- */}
-                  <Col md={6} className="mb-3">
+                  <Col md={12} className="mb-3">
                     <Form.Label>
                       Mobile Number <span className="text-danger">*</span>
                     </Form.Label>
@@ -288,17 +283,6 @@ const Donate = () => {
                       required
                     />
                   </Col>
-                  <Col md={6} className="mb-3">
-                    <Form.Label>Landline Number</Form.Label>
-                    <Form.Control
-                      type="tel"
-                      name="donorLandline"
-                      value={donorDetails.donorLandline}
-                      onChange={handleChange}
-                      placeholder="Optional"
-                    />
-                  </Col>
-
                   <Col md={12} className="mb-3">
                     <Form.Label>Email Address</Form.Label>
                     <Form.Control
@@ -358,10 +342,46 @@ const Donate = () => {
                     </>
                   )}
                 </Button>
+
+                <div className="text-center mt-3">
+                  <small className="text-muted">
+                    <FaLock size={12} /> Secure 256-bit SSL encrypted payment
+                  </small>
+                </div>
               </Card>
             </Col>
           </Row>
         </Form>
+
+        {paymentMode === "Bank Transfer" && (
+          <Row className="mt-5 justify-content-center">
+            <Col md={8}>
+              <Card className="p-4 border-warning bg-light text-center">
+                <h4 className="text-maroon mb-3">Bank Account Details</h4>
+                <p className="mb-1">
+                  <strong>Account Name:</strong> Karunasri Seva Samithi
+                </p>
+                <p className="mb-1">
+                  <strong>Account Number:</strong> 992200300000312
+                </p>
+                <p className="mb-1">
+                  <strong>Bank:</strong> Telangana State Co-operative Apex Bank
+                </p>
+                <p className="mb-1">
+                  <strong>IFSC Code:</strong> TSAB0000122
+                </p>
+                <p className="mb-0">
+                  <strong>Branch:</strong> Champapet
+                </p>
+                <hr />
+                <small className="text-danger">
+                  After transfer, please click "Proceed to Pay" to record your
+                  donation.
+                </small>
+              </Card>
+            </Col>
+          </Row>
+        )}
       </Container>
     </>
   );

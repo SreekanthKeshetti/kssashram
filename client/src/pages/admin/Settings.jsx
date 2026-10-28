@@ -22,9 +22,9 @@ import {
   FaKey,
   FaLayerGroup,
   FaCalendarDay,
-  FaDatabase, // <--- New Icon
-  FaDownload, // <--- New Icon
-  FaUpload, // <--- New Icon
+  FaDatabase,
+  FaDownload,
+  FaUpload,
 } from "react-icons/fa";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
@@ -36,6 +36,7 @@ const Settings = () => {
   // --- SCHEME STATE ---
   const [schemes, setSchemes] = useState([]);
   const [newSchemeName, setNewSchemeName] = useState("");
+  const [newSchemeRate, setNewSchemeRate] = useState(""); // <--- NEW STATE FOR DEFAULT RATE
   const [accountHeads, setAccountHeads] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState("");
 
@@ -71,7 +72,6 @@ const Settings = () => {
     }
   }, []);
 
-  // ... (Keep existing fetch functions for Schemes, Accounts, Occasions, Users) ...
   const fetchSchemes = async (user) => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
@@ -110,7 +110,6 @@ const Settings = () => {
     }
   };
 
-  // ... (Keep existing Add/Delete handlers for Schemes, Occasions, Users) ...
   const handleAddScheme = async (e) => {
     e.preventDefault();
     if (!newSchemeName || !selectedAccount) return alert("Enter details");
@@ -118,10 +117,15 @@ const Settings = () => {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       await axios.post(
         `${BASE_URL}/api/schemes`,
-        { name: newSchemeName, accountHead: selectedAccount },
+        {
+          name: newSchemeName,
+          accountHead: selectedAccount,
+          defaultRate: newSchemeRate, // <--- ADDED DEFAULT RATE PAYLOAD
+        },
         config,
       );
       setNewSchemeName("");
+      setNewSchemeRate(""); // Reset
       setSelectedAccount("");
       fetchSchemes(userInfo);
     } catch (error) {
@@ -213,7 +217,6 @@ const Settings = () => {
     setShowUserModal(true);
   };
 
-  // --- BACKUP HANDLERS ---
   const handleDownloadBackup = async () => {
     try {
       const config = {
@@ -285,7 +288,6 @@ const Settings = () => {
       </h2>
 
       <Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-4">
-        {/* TAB 1: USERS */}
         <Tab
           eventKey="users"
           title={
@@ -355,7 +357,6 @@ const Settings = () => {
           )}
         </Tab>
 
-        {/* TAB 2: SCHEMES */}
         <Tab
           eventKey="schemes"
           title={
@@ -376,7 +377,7 @@ const Settings = () => {
                       onChange={(e) => setNewSchemeName(e.target.value)}
                     />
                   </Form.Group>
-                  <Form.Group className="mb-3">
+                  <Form.Group className="mb-2">
                     <Form.Label>Account Code</Form.Label>
                     <Form.Select
                       value={selectedAccount}
@@ -389,6 +390,16 @@ const Settings = () => {
                         </option>
                       ))}
                     </Form.Select>
+                  </Form.Group>
+                  {/* --- NEW FIELD: DEFAULT RATE --- */}
+                  <Form.Group className="mb-3">
+                    <Form.Label>Default Rate / Amount (₹)</Form.Label>
+                    <Form.Control
+                      type="number"
+                      placeholder="e.g. 1500 (Optional)"
+                      value={newSchemeRate}
+                      onChange={(e) => setNewSchemeRate(e.target.value)}
+                    />
                   </Form.Group>
                   <Button type="submit" variant="success" className="w-100">
                     <FaPlus /> Add Scheme
@@ -403,6 +414,7 @@ const Settings = () => {
                     <tr>
                       <th>Scheme Name</th>
                       <th>Code</th>
+                      <th>Default Rate</th>
                       <th className="text-end">Action</th>
                     </tr>
                   </thead>
@@ -416,6 +428,9 @@ const Settings = () => {
                           ) : (
                             <Badge bg="danger">Unmapped</Badge>
                           )}
+                        </td>
+                        <td className="text-success fw-bold">
+                          {s.defaultRate > 0 ? `₹${s.defaultRate}` : "-"}
                         </td>
                         <td className="text-end">
                           <Button
@@ -435,7 +450,6 @@ const Settings = () => {
           </Row>
         </Tab>
 
-        {/* TAB 3: OCCASIONS */}
         <Tab
           eventKey="occasions"
           title={
@@ -452,7 +466,7 @@ const Settings = () => {
                   <Form.Group className="mb-3">
                     <Form.Label>Occasion Name</Form.Label>
                     <Form.Control
-                      placeholder="e.g. House Warming"
+                      placeholder="e.g. House Warming, Graduation"
                       value={newOccasionName}
                       onChange={(e) => setNewOccasionName(e.target.value)}
                     />
@@ -487,6 +501,13 @@ const Settings = () => {
                         </td>
                       </tr>
                     ))}
+                    {occasions.length === 0 && (
+                      <tr>
+                        <td colSpan="2" className="text-center">
+                          No occasions found. Add one!
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </Table>
               </Card>
@@ -494,7 +515,6 @@ const Settings = () => {
           </Row>
         </Tab>
 
-        {/* TAB 4: DATA BACKUP (NEW) */}
         {userInfo?.role === "admin" && (
           <Tab
             eventKey="backup"
@@ -505,7 +525,6 @@ const Settings = () => {
             }
           >
             <Row className="g-4">
-              {/* DOWNLOAD CARD */}
               <Col md={6}>
                 <Card className="h-100 shadow-sm border-success">
                   <Card.Body className="text-center p-5">
@@ -528,7 +547,6 @@ const Settings = () => {
                 </Card>
               </Col>
 
-              {/* RESTORE CARD */}
               <Col md={6}>
                 <Card className="h-100 shadow-sm border-danger">
                   <Card.Body className="text-center p-5">
@@ -563,7 +581,6 @@ const Settings = () => {
                 </Card>
               </Col>
             </Row>
-
             <Alert variant="info" className="mt-4 text-center">
               ℹ️ <strong>Note:</strong> An automated backup is also emailed to
               the Admin account every Sunday at 10:00 PM.
@@ -572,7 +589,6 @@ const Settings = () => {
         )}
       </Tabs>
 
-      {/* USER MODAL (Existing) */}
       <Modal show={showUserModal} onHide={() => setShowUserModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -630,17 +646,17 @@ const Settings = () => {
                     <option value="ksa_manager">
                       KSA Manager (Karunya Sindhu)
                     </option>
+
                     <option disabled>--- Staff Roles ---</option>
-                    <option value="warden_food">Warden - Food</option>
-                    <option value="warden_nonfood">
-                      Warden - Non-Food
-                    </option>{" "}
+                    <option value="warden">Warden</option>
                     <option value="accountant">Accountant</option>
                     <option value="clerk">Clerk</option>
+
                     <option disabled>--- Committee ---</option>
                     <option value="president">President</option>
                     <option value="secretary">Secretary</option>
                     <option value="treasurer">Treasurer</option>
+
                     <option disabled>--- Admin ---</option>
                     <option value="admin">System Admin</option>
                   </Form.Select>

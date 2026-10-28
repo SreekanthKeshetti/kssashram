@@ -69,8 +69,10 @@ const numToWords = (num) => {
   return str + "Rupees Only";
 };
 
+// --- NEW: DYNAMIC HEADER LOGIC ---
 const drawHeader = (doc, branchName) => {
   const logoPath = path.join(__dirname, "..", "logo.jpg");
+  const logo2Path = path.join(__dirname, "..", "logo_vhp.jpg"); // Support for secondary logo
 
   // --- 1. Top Slogans (Y = 20) ---
   doc.fontSize(9).font("Helvetica-Bold").fillColor("black");
@@ -78,19 +80,30 @@ const drawHeader = (doc, branchName) => {
   doc.text("SHIKSHANA", 0, 20, { align: "center" });
   doc.text("SAMSKAR", 500, 20, { align: "right" });
 
-  // --- 2. Logo (Moved down to Y=35) ---
+  // --- 2. Logos ---
   if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, 30, 35, { width: 50 });
+    doc.image(logoPath, 30, 35, { width: 50 }); // Left Logo
+  }
+  if (fs.existsSync(logo2Path)) {
+    doc.image(logo2Path, 500, 35, { width: 50 }); // Right Logo (New Requirement)
   }
 
-  // --- 3. Main Title (Moved down to Y=35) ---
+  // --- 3. Main Title ---
   doc
     .font("Helvetica-Bold")
     .fontSize(18)
     .fillColor("#000000")
     .text("KARUNASRI SEVA SAMITHI", 0, 35, { align: "center" });
 
-  // --- 4. Address Block ---
+  // --- 4. Branch Specific Phone Numbers ---
+  let phoneText = "Ph: 040-24073204, 9000889785"; // Default HQ
+  if (branchName === "Karunya Sindhu") {
+    phoneText = "Ph: 040-79621625, 9000889785";
+  } else if (branchName === "Karunya Bharathi") {
+    phoneText = "Ph: 040-79621625, 9000889785"; // Using the same standard for other branches if none provided
+  }
+
+  // --- 5. Address Block ---
   doc
     .font("Helvetica")
     .fontSize(8)
@@ -98,10 +111,9 @@ const drawHeader = (doc, branchName) => {
     .text("H.No.17-1-474, Krishna Nagar, Saidabad, Hyderabad - 500 059", {
       align: "center",
     })
-    .text(
-      "Society Regd. No. 7451/1999 | PAN: AAATK6724F | Ph: 040-24073204, 9000889785",
-      { align: "center" },
-    )
+    .text(`Society Regd. No. 7451/1999 | PAN: AAATK6724F | ${phoneText}`, {
+      align: "center",
+    })
     .text("Email: karunasri1999@gmail.com | Website: https://karunasri.org", {
       align: "center",
     });
@@ -116,10 +128,6 @@ const drawHeader = (doc, branchName) => {
     .stroke();
   doc.moveTo(20, 98).lineTo(575, 98).stroke();
 };
-
-// --- FILE: server/utils/generatePDF.js ---
-
-// ... (Keep imports and helper functions at the top) ...
 
 const buildReceipt = (donation, dataCallback, endCallback) => {
   // A4 Size (Portrait)
@@ -152,7 +160,7 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
 
   // --- MAIN CONTENT ---
   y += 35;
-  const lineGap = 25; // Slightly increased gap for clarity
+  const lineGap = 25;
   doc.fontSize(10).fillColor("black");
 
   // 1. Received From
@@ -165,32 +173,28 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     .strokeColor("#999")
     .stroke();
 
-  // 2. Mobile & IDs (UPDATED: Added underlines for values)
+  // 2. Mobile & IDs
   y += lineGap;
-
-  // Mobile
   doc.font("Helvetica").text("Mobile:", 30, y);
   doc.font("Helvetica-Bold").text(donation.donorPhone, 75, y);
   doc
     .moveTo(75, y + 12)
     .lineTo(190, y + 12)
-    .stroke(); // Underline Mobile Value
+    .stroke();
 
-  // PAN
   doc.font("Helvetica").text("PAN:", 200, y);
   doc.font("Helvetica-Bold").text(donation.donorPan || "", 230, y);
   doc
     .moveTo(230, y + 12)
     .lineTo(340, y + 12)
-    .stroke(); // Underline PAN Value
+    .stroke();
 
-  // Aadhaar
   doc.font("Helvetica").text("Aadhaar:", 350, y);
   doc.font("Helvetica-Bold").text(donation.donorAadhaar || "", 400, y);
   doc
     .moveTo(400, y + 12)
     .lineTo(560, y + 12)
-    .stroke(); // Underline Aadhaar Value
+    .stroke();
 
   // 3. Address
   y += lineGap;
@@ -207,40 +211,34 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     width: addressWidth,
   });
 
-  // Underline address (adjusted to height)
   doc
     .moveTo(addressX, y + addressHeight + 2)
     .lineTo(560, y + addressHeight + 2)
     .stroke();
 
-  y += addressHeight + 15; // Gap after address
+  y += addressHeight + 15;
 
-  // --- 3A. MANUAL RECEIPT ROW (UPDATED: Specific underlines) ---
+  // --- 3A. MANUAL RECEIPT ROW ---
   const manualNo = donation.manualReceiptNo || "";
   const manualDateStr = donation.manualReceiptDate
     ? new Date(donation.manualReceiptDate).toLocaleDateString()
     : "";
 
-  // Left: Manual Receipt No
   doc.font("Helvetica").text("Ref Manual Receipt No:", 30, y);
   doc.font("Helvetica-Bold").text(manualNo, 150, y);
-  // Underline ONLY the Manual No value
   doc
     .moveTo(150, y + 12)
     .lineTo(330, y + 12)
     .stroke();
 
-  // Right: Manual Date
   doc.font("Helvetica").text("Manual Date:", 350, y);
   doc.font("Helvetica-Bold").text(manualDateStr, 420, y);
-  // Underline ONLY the Date value
   doc
     .moveTo(420, y + 12)
     .lineTo(560, y + 12)
     .stroke();
 
-  y += 25; // Gap before Email row
-  // ----------------------------------------------
+  y += 25;
 
   // 4. Email
   doc.font("Helvetica").text("Email Id:", 30, y);
@@ -266,67 +264,6 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
   doc.font("Helvetica").text(" /- )", 280 + wordsWidth, y);
 
   // 6. Payment Narrative
-  // y += lineGap + 10;
-  // let payString = "";
-
-  // // A. Build the Payment Mode String
-  // if (donation.paymentMode === "Cash") {
-  //   payString = "Cash";
-  // } else {
-  //   const { chequeNo, chequeDate, bankName, transactionId, ddNo } =
-  //     donation.paymentDetails || {};
-
-  //   if (donation.paymentMode === "Cheque") {
-  //     payString = `Cheque No. ${chequeNo || "-"} Dt ${chequeDate ? new Date(chequeDate).toLocaleDateString() : "-"}`;
-  //   } else if (donation.paymentMode === "DD") {
-  //     payString = `DD No. ${ddNo || "-"} Dt ${chequeDate ? new Date(chequeDate).toLocaleDateString() : "-"}`;
-  //   } else {
-  //     payString = `${donation.paymentMode} Ref. ${transactionId || "-"}`;
-  //   }
-
-  //   // If there is a Donor's Bank (for Cheque/DD), add it
-  //   if (bankName) payString += ` (Donor Bank: ${bankName})`;
-  // }
-
-  // // B. ADD THE ORGANIZATION'S DEPOSIT BANK (The Requirement)
-  // if (donation.depositBank && donation.depositBank.name) {
-  //   // We append it nicely to the string
-  //   payString += ` | Deposited to: ${donation.depositBank.name}`;
-  // }
-
-  // doc.font("Helvetica").text("By Cash/Cheque/Online:", 30, y);
-  // doc.font("Helvetica-Bold").text(payString, 150, y, { width: 400 });
-
-  // // Calculate height in case text wraps to two lines
-  // const payHeight = doc.heightOfString(payString, { width: 400 });
-
-  // doc
-  //   .moveTo(150, y + payHeight + 2) // Dynamic underline based on text height
-  //   .lineTo(560, y + payHeight + 2)
-  //   .stroke();
-
-  // y += payHeight + 15; // Adjust Y for next section
-
-  // // 7. Towards
-  // y += lineGap;
-  // let towards = donation.scheme;
-  // if (donation.occasion) towards += ` (${donation.occasion})`;
-  // if (donation.inNameOf) towards += ` in name of ${donation.inNameOf}`;
-
-  // doc.font("Helvetica").text("Towards:", 30, y);
-
-  // const towardsWidth = 470;
-  // doc.font("Helvetica-Bold").text(towards, 80, y, { width: towardsWidth });
-
-  // const towardsHeight = doc.heightOfString(towards, { width: towardsWidth });
-
-  // doc
-  //   .moveTo(80, y + towardsHeight + 2)
-  //   .lineTo(560, y + towardsHeight + 2)
-  //   .stroke();
-
-  // y += towardsHeight + 25;
-  // 6. Payment Narrative
   y += lineGap + 10;
   let payString = "";
   if (donation.paymentMode === "Cash") {
@@ -341,11 +278,9 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     } else {
       payString = `${donation.paymentMode} Ref. ${transactionId || "-"}`;
     }
-    // Add Donor Bank if exists
     if (bankName) payString += ` (Donor Bank: ${bankName})`;
   }
 
-  // Draw Payment Mode Line
   doc.font("Helvetica").text("By Cash/Cheque/Online:", 30, y);
   doc.font("Helvetica-Bold").text(payString, 150, y, { width: 400 });
 
@@ -354,38 +289,32 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     .moveTo(150, y + payHeight + 2)
     .lineTo(560, y + payHeight + 2)
     .stroke();
-  // --- NEW: CHEQUE REALIZATION NOTE ---
+
   let extraChequeGap = 0;
   if (donation.paymentMode === "Cheque") {
     extraChequeGap = 12;
     doc
       .font("Helvetica-Oblique")
       .fontSize(8)
-      .fillColor("#B22222") // Red/Maroon text
+      .fillColor("#B22222")
       .text(
         "* Note: Cheques are subject to realization.",
         150,
         y + payHeight + 6,
       );
-    doc.fillColor("black"); // Reset text color back to black
+    doc.fillColor("black");
   }
 
-  // --- 7. DEPOSITED TO ACCOUNT (Always Visible) ---
-  // Add gap based on previous text height
+  // --- 7. DEPOSITED TO ACCOUNT ---
   y += lineGap + (payHeight > 15 ? 10 : 0);
 
   doc.font("Helvetica").text("Deposited to Account:", 30, y);
-
-  // Get Bank Name or default to empty string/dash
   const bankName =
     donation.depositBank && donation.depositBank.name
       ? donation.depositBank.name
       : "";
 
   doc.font("Helvetica-Bold").text(bankName, 150, y, { width: 400 });
-
-  // Calculate height to position the underline correctly
-  // If bankName is empty, default height is ~12-14px
   const bankHeight = bankName
     ? doc.heightOfString(bankName, { width: 400 })
     : 12;
@@ -394,32 +323,25 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     .moveTo(150, y + bankHeight + 2)
     .lineTo(560, y + bankHeight + 2)
     .stroke();
-
-  // Adjust Y for the next section
   y += bankHeight + 10;
 
   // --- 8. TOWARDS ---
   y += lineGap;
-
   let towards = donation.scheme;
   if (donation.occasion) towards += ` (${donation.occasion})`;
   if (donation.inNameOf) towards += ` in name of ${donation.inNameOf}`;
 
   doc.font("Helvetica").text("Towards:", 30, y);
-
   const towardsWidth = 470;
   doc.font("Helvetica-Bold").text(towards, 80, y, { width: towardsWidth });
-
   const towardsHeight = doc.heightOfString(towards, { width: towardsWidth });
-
   doc
     .moveTo(80, y + towardsHeight + 2)
     .lineTo(560, y + towardsHeight + 2)
     .stroke();
-
   y += towardsHeight + 25;
 
-  // --- FOOTER (Same as before) ---
+  // --- FOOTER ---
   let footerY = y < 350 ? 350 : y;
 
   const isCorpus =
@@ -427,7 +349,6 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     donation.scheme.toLowerCase().includes("shasvitha");
 
   doc.font("Helvetica-Bold").fontSize(9);
-
   doc.text("1). Corpus Funds", 30, footerY);
   doc.rect(110, footerY - 2, 10, 10).stroke();
   if (isCorpus) doc.text("X", 112, footerY - 2);
@@ -436,34 +357,12 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
   doc.rect(110, footerY + 13, 10, 10).stroke();
   if (!isCorpus) doc.text("X", 112, footerY + 13);
 
-  // doc
-  //   .font("Helvetica")
-  //   .fontSize(7)
-  //   .text(
-  //     "Income Tax exemption under Section 80G of IT ACT 1961 received Vide Director of Income Tax (Exemption)\nLtr.LF.No.DI(E)HYD/806/90/(05)07-08 dated 29-10-2007 & CBDT Circular No. 7 dated 27-10-2010.\nand as amended by the Finance ACT 2020.",
-  //     140,
-  //     footerY,
-  //     { align: "center", width: 420 },
-  //   );
-
-  // doc.moveDown(0.5);
-  // doc
-  //   .font("Helvetica-Bold")
-  //   .fontSize(8)
-  //   .fillColor("#B22222")
-  //   .text(
-  //     "IT Dept. Unique Regd.No.Under 80G AAATK6724FF20021, Date: 18/10/2021",
-  //     140,
-  //     doc.y,
-  //     { align: "center", width: 420 },
-  //   );
-  // --- NEW: 80G TAX COMPLIANCE LOGIC ---
+  // 80G TAX COMPLIANCE LOGIC
   const isTaxEligible = !(
     donation.paymentMode === "Cash" && donation.amount > 2000
   );
 
   if (isTaxEligible) {
-    // Print normal 80G Text
     doc
       .font("Helvetica")
       .fontSize(7)
@@ -479,7 +378,7 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     doc
       .font("Helvetica-Bold")
       .fontSize(8)
-      .fillColor("#B22222") // Red
+      .fillColor("#B22222")
       .text(
         "IT Dept. Unique Regd.No.Under 80G AAATK6724FF20021, Date: 18/10/2021",
         140,
@@ -487,11 +386,10 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
         { align: "center", width: 420 },
       );
   } else {
-    // Print Warning Text for Cash > 2000
     doc
       .font("Helvetica-Oblique")
       .fontSize(8)
-      .fillColor("#B22222") // Red
+      .fillColor("#B22222")
       .text(
         "* Note: As per Section 80G of the Income Tax Act, cash donations exceeding Rs. 2,000/- are not eligible for tax exemption benefits.",
         140,
@@ -499,7 +397,6 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
         { align: "center", width: 420 },
       );
   }
-  // -------------------------------------
 
   doc
     .fillColor("blue")
@@ -509,12 +406,10 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     .fontSize(8)
     .fillColor("black")
     .text("Authorized Signatory", 480, footerY + 60);
-  // --- NEW: ISSUED BY TRACEABILITY ---
-  // If no user collected it (e.g., Guest Online Donation), say "System / Online"
+
   const issuerName = donation.collectedBy
     ? donation.collectedBy.name
     : "System / Online";
-
   doc
     .fontSize(9)
     .font("Helvetica-Bold")
