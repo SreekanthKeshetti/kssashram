@@ -69,6 +69,7 @@ const numToWords = (num) => {
   return str + "Rupees Only";
 };
 
+// updated the logo
 // --- NEW: DYNAMIC HEADER LOGIC ---
 const drawHeader = (doc, branchName) => {
   const logoPath = path.join(__dirname, "..", "logo.jpg");
