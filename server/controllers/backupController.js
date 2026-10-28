@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const archiver = require("archiver");
 const AdmZip = require("adm-zip");
-const nodemailer = require("nodemailer");
+const { sendEmail } = require("../utils/emailService");
 
 // Import ALL Models
 const Donation = require("../models/Donation");
@@ -23,7 +23,7 @@ const getAllData = async () => {
     inventory: await Inventory.find({}),
     vouchers: await Voucher.find({}),
     events: await Event.find({}),
-    users: await User.find({}), // Careful with passwords, but needed for full restore
+    users: await User.find({}),
     accounts: await AccountHead.find({}),
   };
 };
@@ -38,7 +38,6 @@ const downloadBackup = async (req, res) => {
     res.attachment(`KSS_Backup_${new Date().toISOString().split("T")[0]}.zip`);
     archive.pipe(res);
 
-    // Append files
     for (const [key, value] of Object.entries(data)) {
       archive.append(JSON.stringify(value, null, 2), { name: `${key}.json` });
     }
@@ -67,27 +66,32 @@ const emailBackupInternal = async () => {
 
     await archive.finalize();
 
-    // Wait for zip to finish writing
     output.on("close", async () => {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
+      // Read archive file as a buffer for Resend
+      const fileBuffer = fs.readFileSync(zipPath);
 
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: process.env.EMAIL_USER, // Send to self/admin
+      const emailResult = await sendEmail({
+        to: process.env.EMAIL_TO_ADMIN || "karunasri1999@gmail.com",
         subject: `Weekly Data Backup - ${new Date().toLocaleDateString()}`,
         html: `<p>Attached is the automated weekly backup of the Karunasri ERP Database.</p>`,
-        attachments: [{ filename: "Weekly_Backup.zip", path: zipPath }],
+        attachments: [
+          {
+            filename: "Weekly_Backup.zip",
+            content: fileBuffer,
+          },
+        ],
       });
 
-      console.log("✅ Backup Emailed Successfully");
-      // Cleanup
-      fs.unlinkSync(zipPath);
+      if (emailResult.success) {
+        console.log("✅ Backup Emailed Successfully via Resend");
+      } else {
+        console.error("❌ Auto-Backup Email Failed:", emailResult.error);
+      }
+
+      // Cleanup local temp file
+      if (fs.existsSync(zipPath)) {
+        fs.unlinkSync(zipPath);
+      }
     });
   } catch (error) {
     console.error("❌ Auto-Backup Failed:", error);
@@ -101,9 +105,8 @@ const restoreBackup = async (req, res) => {
 
   try {
     const zip = new AdmZip(req.file.path);
-    const zipEntries = zip.getEntries(); // an array of ZipEntry records
+    const zipEntries = zip.getEntries();
 
-    // Helper: Parse JSON from entry
     const getData = (filename) => {
       const entry = zipEntries.find((e) => e.entryName === filename);
       return entry ? JSON.parse(entry.getData().toString("utf8")) : null;
@@ -117,13 +120,6 @@ const restoreBackup = async (req, res) => {
     const events = getData("events.json");
     const users = getData("users.json");
     const accounts = getData("accounts.json");
-
-    // DANGEROUS OPERATION: Wipe and Replace
-    // We use insertMany with the data from JSON.
-    // Note: We deliberately DO NOT delete Users to prevent locking admin out,
-    // unless the user specifically requested a full wipe.
-    // For safety here, we will upsert or just insert.
-    // BUT for a true restore (Clean slate), deleteMany is standard.
 
     if (donations) {
       await Donation.deleteMany({});
@@ -154,16 +150,12 @@ const restoreBackup = async (req, res) => {
       await AccountHead.insertMany(accounts);
     }
 
-    // Users: Only restore if the list is empty (New DB), otherwise skip to avoid overwriting current Admin
-    // Or, you can implement logic to merge.
     const userCount = await User.countDocuments();
     if (users && userCount === 0) {
       await User.insertMany(users);
     }
 
-    // Cleanup uploaded file
     fs.unlinkSync(req.file.path);
-
     res.json({ message: "Database Restored Successfully!" });
   } catch (error) {
     console.error(error);

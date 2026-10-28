@@ -1,5 +1,5 @@
 const Contact = require("../models/Contact");
-const nodemailer = require("nodemailer");
+const { sendEmail } = require("../utils/emailService");
 
 // @desc    Submit a new contact message & Send Email
 // @route   POST /api/contact
@@ -23,21 +23,10 @@ const submitContact = async (req, res) => {
       message,
     });
 
-    // 3. Send Email Notification
+    // 3. Send Email Notification via Resend HTTPS API
     if (newContact) {
-      // Create Transporter
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS, // Your App Password
-        },
-      });
-
-      // Email Content
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: process.env.EMAIL_USER, // Send to the Ashram's own email
+      const emailResult = await sendEmail({
+        to: process.env.EMAIL_TO_ADMIN || "karunasri1999@gmail.com",
         subject: `New Website Inquiry: ${subject}`,
         html: `
           <h3>New Contact Message</h3>
@@ -49,10 +38,14 @@ const submitContact = async (req, res) => {
           <p><strong>Message:</strong></p>
           <p>${message}</p>
         `,
-      };
+      });
 
-      // Send Mail
-      await transporter.sendMail(mailOptions);
+      if (!emailResult.success) {
+        console.error(
+          "⚠️ Contact inquiry saved to DB, but email failed:",
+          emailResult.error,
+        );
+      }
 
       res.status(201).json({
         success: true,
