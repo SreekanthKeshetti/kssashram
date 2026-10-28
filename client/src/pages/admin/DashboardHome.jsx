@@ -14,6 +14,7 @@ import {
   FaUserTie,
   FaFileInvoiceDollar,
   FaChevronRight,
+  FaTruck, // <--- New Icon
 } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -43,9 +44,8 @@ const DashboardHome = () => {
     }
   };
 
-  // Helper Component for Action Cards
   const ActionCard = ({ title, count, link, icon, color }) => (
-    <Col md={4} className="mb-3">
+    <Col md={3} className="mb-3">
       <Card
         className="shadow-sm border-0 h-100 action-card-hover"
         onClick={() => navigate(link)}
@@ -74,7 +74,6 @@ const DashboardHome = () => {
     </Col>
   );
 
-  // 1. Loading State
   if (loading)
     return (
       <div className="text-center py-5">
@@ -82,21 +81,23 @@ const DashboardHome = () => {
       </div>
     );
 
-  // 2. Error State
   if (error) return <Alert variant="danger">{error}</Alert>;
 
-  // 3. DEFINE VARIABLES (Critical Step - Must be before return)
-  // Check if myActions exists in stats to avoid crashes if backend didn't send it
-  const actions = stats.myActions || { students: 0, members: 0, vouchers: 0 };
+  const actions = stats.myActions || {
+    students: 0,
+    members: 0,
+    vouchers: 0,
+    transfers: 0,
+  };
 
-  // Calculate if we should show the section
   const hasActions =
-    actions.students > 0 || actions.members > 0 || actions.vouchers > 0;
+    actions.students > 0 ||
+    actions.members > 0 ||
+    actions.vouchers > 0 ||
+    actions.transfers > 0;
 
-  // 4. Render
   return (
     <div>
-      {/* --- Welcome Section --- */}
       <div className="mb-4 d-flex justify-content-between align-items-end">
         <div>
           <h2
@@ -121,7 +122,6 @@ const DashboardHome = () => {
         </div>
       </div>
 
-      {/* --- ACTION CENTER (Dynamic Row) --- */}
       {hasActions && (
         <div className="mb-4 fade-in">
           <h5 className="text-maroon mb-3">
@@ -155,16 +155,24 @@ const DashboardHome = () => {
                 color="#c0392b"
               />
             )}
+            {/* --- NEW CARD: TRANSFER APPROVALS --- */}
+            {actions.transfers > 0 && (
+              <ActionCard
+                title="Stock Transfers"
+                count={actions.transfers}
+                link="/dashboard/inventory"
+                icon={<FaTruck size={24} />}
+                color="#8e44ad"
+              />
+            )}
           </Row>
         </div>
       )}
 
-      {/* --- ROW 1: INCOME METRICS --- */}
       <h5 className="text-muted small fw-bold text-uppercase mb-3">
         Financial Overview
       </h5>
       <Row className="mb-3">
-        {/* 1. TOTAL INCOME */}
         <Col lg={4} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 text-white shadow border-0 h-100"
@@ -184,7 +192,6 @@ const DashboardHome = () => {
           </Card>
         </Col>
 
-        {/* 2. KARUNYA SINDHU */}
         <Col lg={4} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 text-white shadow border-0 h-100"
@@ -204,7 +211,6 @@ const DashboardHome = () => {
           </Card>
         </Col>
 
-        {/* 3. KARUNYA BHARATHI */}
         <Col lg={4} md={12} xs={12} className="mb-3">
           <Card
             className="p-3 text-white shadow border-0 h-100"
@@ -225,9 +231,7 @@ const DashboardHome = () => {
         </Col>
       </Row>
 
-      {/* --- ROW 2: OPERATIONAL & EXPENSE METRICS --- */}
       <Row className="mb-4">
-        {/* 1. APPROVED EXPENSES */}
         <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 text-white shadow border-0 h-100"
@@ -247,7 +251,6 @@ const DashboardHome = () => {
           </Card>
         </Col>
 
-        {/* 2. PENDING EXPENSES - CLICKABLE */}
         <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 text-white shadow border-0 h-100 action-card-hover"
@@ -274,7 +277,6 @@ const DashboardHome = () => {
           </Card>
         </Col>
 
-        {/* 3. ACTIVE STUDENTS */}
         <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 text-white shadow border-0 h-100 action-card-hover"
@@ -296,7 +298,6 @@ const DashboardHome = () => {
           </Card>
         </Col>
 
-        {/* 4. LOW STOCK ALERTS */}
         <Col lg={3} md={6} xs={12} className="mb-3">
           <Card
             className="p-3 text-white shadow border-0 h-100 action-card-hover"
@@ -319,7 +320,6 @@ const DashboardHome = () => {
         </Col>
       </Row>
 
-      {/* --- Recent Activity Section --- */}
       <Row>
         <Col xs={12} sm={12} md={12} lg={8} className="mb-3">
           <Card className="shadow-sm border-0 h-100">
@@ -371,7 +371,6 @@ const DashboardHome = () => {
         </Col>
 
         <Col lg={4} md={12} xs={12} className="mb-3">
-          {/* Quick Actions Card */}
           <Card className="shadow-sm border-0 mb-4">
             <Card.Header className="bg-white py-3">
               <h5 className="mb-0 text-maroon">Quick Links</h5>

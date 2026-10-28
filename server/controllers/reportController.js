@@ -2,17 +2,14 @@ const Donation = require("../models/Donation");
 const Voucher = require("../models/Voucher");
 const Student = require("../models/Student");
 const Inventory = require("../models/Inventory");
+const InventoryTransfer = require("../models/InventoryTransfer"); // <--- Import Needed
 const AccountHead = require("../models/AccountHead");
-const Scheme = require("../models/Scheme");
 const Member = require("../models/Member");
 const PDFDocument = require("pdfkit");
 
-// @desc    Get Real-Time Dashboard Stats
-// @route   GET /api/reports/stats
 const getDashboardStats = async (req, res) => {
   try {
     const { role, branch } = req.user;
-
     let query = {};
     let isGlobalView = false;
 
@@ -23,11 +20,9 @@ const getDashboardStats = async (req, res) => {
     } else if (role === "ksa_manager") {
       query.branch = "Karunya Sindhu";
     } else {
-      // FIX 3: If staff belongs to HQ, let them see both naming conventions
       query.branch = { $in: ["KarunaSri Seva Samithi", "Headquarters"] };
     }
 
-    // FIX 2: Strictly pull only ACTIVE donations
     const donations = await Donation.find({ ...query, status: "Active" });
     const allVouchers = await Voucher.find({ ...query, status: "Approved" });
 
@@ -75,7 +70,6 @@ const getDashboardStats = async (req, res) => {
     const feeJyothi = getFeeIncome("Karunya Jyothi");
     const totalJyothi = donationJyothi + feeJyothi;
 
-    // FIX 3: Combine BOTH names for the HQ Card!
     const donationKarunaSree = donations
       .filter(
         (d) =>
@@ -123,17 +117,27 @@ const getDashboardStats = async (req, res) => {
       0,
     );
 
-    let myActions = { students: 0, members: 0, vouchers: 0 };
+    let myActions = { students: 0, members: 0, vouchers: 0, transfers: 0 }; // <--- Added transfers
 
     if (isGlobalView) {
       const roleKey = role === "admin" ? "president" : role;
+
       myActions.students = await Student.countDocuments({
         [`approvals.${roleKey}.status`]: "Pending",
         admissionStatus: { $ne: "Draft" },
       });
+
       myActions.members = await Member.countDocuments({
         [`approvals.${roleKey}.status`]: "Pending",
       });
+
+      // --- NEW: COUNT PENDING TRANSFER SLIPS ---
+      myActions.transfers = await InventoryTransfer.countDocuments({
+        [`approvals.${roleKey}.status`]: "Pending",
+        status: "Pending Approval",
+      });
+      // ------------------------------------------
+
       if (role === "secretary" || role === "president" || role === "admin") {
         myActions.vouchers = await Voucher.countDocuments({
           "approvals.level1.status": "Pending",
@@ -175,7 +179,6 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-// @desc    Advanced Custom Finance Report (General Summary)
 const getCustomFinanceReport = async (req, res) => {
   try {
     const { startDate, endDate, reportType, branch } = req.query;
@@ -194,7 +197,6 @@ const getCustomFinanceReport = async (req, res) => {
     } else if (req.user.role === "ksa_manager") {
       branchFilter = { branch: "Karunya Sindhu" };
     } else if (branch && branch === "KarunaSri Seva Samithi") {
-      // FIX 3: Include Headquarters when HQ is selected in the dropdown
       branchFilter = {
         branch: { $in: ["KarunaSri Seva Samithi", "Headquarters"] },
       };
@@ -208,7 +210,7 @@ const getCustomFinanceReport = async (req, res) => {
     if (reportType === "Income" || reportType === "All") {
       const donations = await Donation.find({
         createdAt: { $gte: start, $lte: end },
-        status: "Active", // FIX 2: Only Active
+        status: "Active",
         ...branchFilter,
       }).populate("accountHead", "name code");
 
@@ -408,7 +410,6 @@ const downloadReportPDF = async (req, res) => {
   }
 };
 
-// @desc    Get Detailed Ledger Report (API JSON)
 const getLedgerReport = async (req, res) => {
   try {
     const { startDate, endDate, accountId, branch } = req.query;
@@ -421,7 +422,6 @@ const getLedgerReport = async (req, res) => {
     const account = await AccountHead.findById(accountId);
     if (!account) return res.status(404).json({ message: "Account not found" });
 
-    // FIX 3: Include Headquarters when HQ is selected in the dropdown
     let branchFilter = {};
     if (req.user.role === "kba_manager") {
       branchFilter = { branch: "Karunya Bharathi" };
@@ -437,7 +437,7 @@ const getLedgerReport = async (req, res) => {
 
     const prevDonations = await Donation.find({
       accountHead: accountId,
-      status: "Active", // FIX 2
+      status: "Active",
       createdAt: { $lt: start },
       ...branchFilter,
     });
@@ -457,7 +457,7 @@ const getLedgerReport = async (req, res) => {
 
     const rangeDonations = await Donation.find({
       accountHead: accountId,
-      status: "Active", // FIX 2
+      status: "Active",
       createdAt: { $gte: start, $lte: end },
       ...branchFilter,
     });

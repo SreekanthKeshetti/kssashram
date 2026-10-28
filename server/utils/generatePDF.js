@@ -69,11 +69,16 @@ const numToWords = (num) => {
   return str + "Rupees Only";
 };
 
-// updated the logo
-// --- NEW: DYNAMIC HEADER LOGIC ---
+// --- DYNAMIC HEADER LOGIC ---
 const drawHeader = (doc, branchName) => {
-  const logoPath = path.join(__dirname, "..", "logo.jpg");
-  const logo2Path = path.join(__dirname, "..", "logo_vhp.jpg"); // Support for secondary logo
+  // Check both lowercase and uppercase extensions just in case
+  let logoPath = path.join(__dirname, "..", "logo.jpg");
+  if (!fs.existsSync(logoPath))
+    logoPath = path.join(__dirname, "..", "logo.JPG");
+
+  let logo2Path = path.join(__dirname, "..", "logo_vhp.jpg");
+  if (!fs.existsSync(logo2Path))
+    logo2Path = path.join(__dirname, "..", "logo_vhp.JPG");
 
   // --- 1. Top Slogans (Y = 20) ---
   doc.fontSize(9).font("Helvetica-Bold").fillColor("black");
@@ -86,7 +91,7 @@ const drawHeader = (doc, branchName) => {
     doc.image(logoPath, 30, 35, { width: 50 }); // Left Logo
   }
   if (fs.existsSync(logo2Path)) {
-    doc.image(logo2Path, 500, 35, { width: 50 }); // Right Logo (New Requirement)
+    doc.image(logo2Path, 500, 35, { width: 50 }); // Right Logo
   }
 
   // --- 3. Main Title ---
@@ -98,10 +103,8 @@ const drawHeader = (doc, branchName) => {
 
   // --- 4. Branch Specific Phone Numbers ---
   let phoneText = "Ph: 040-24073204, 9000889785"; // Default HQ
-  if (branchName === "Karunya Sindhu") {
+  if (branchName === "Karunya Sindhu" || branchName === "Karunya Bharathi") {
     phoneText = "Ph: 040-79621625, 9000889785";
-  } else if (branchName === "Karunya Bharathi") {
-    phoneText = "Ph: 040-79621625, 9000889785"; // Using the same standard for other branches if none provided
   }
 
   // --- 5. Address Block ---
@@ -131,17 +134,13 @@ const drawHeader = (doc, branchName) => {
 };
 
 const buildReceipt = (donation, dataCallback, endCallback) => {
-  // A4 Size (Portrait)
   const doc = new PDFDocument({ size: "A4", margin: 30 });
-
   doc.on("data", dataCallback);
   doc.on("end", endCallback);
 
   drawHeader(doc, donation.branch);
 
-  // --- TOP ROW: RECEIPT NO & DATE ---
   let y = 115;
-
   const systemReceiptNo =
     donation.receiptNo || `${donation._id.toString().slice(-6).toUpperCase()}`;
   const systemDate = new Date(donation.createdAt).toLocaleDateString();
@@ -151,15 +150,12 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     .fontSize(11)
     .fillColor("#B22222")
     .text(`Receipt No: ${systemReceiptNo}`, 30, y);
-
   doc
     .fillColor("black")
     .fontSize(14)
     .text("RECEIPT", 250, y - 2);
-
   doc.fontSize(11).text(`Date: ${systemDate}`, 450, y);
 
-  // --- MAIN CONTENT ---
   y += 35;
   const lineGap = 25;
   doc.fontSize(10).fillColor("black");
@@ -200,26 +196,22 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
   // 3. Address
   y += lineGap;
   doc.font("Helvetica").text("Address:", 30, y);
-
   const addressX = 80;
   const addressWidth = 480;
   doc.font("Helvetica-Bold").text(donation.address || "", addressX, y, {
     width: addressWidth,
     align: "left",
   });
-
   const addressHeight = doc.heightOfString(donation.address || "_", {
     width: addressWidth,
   });
-
   doc
     .moveTo(addressX, y + addressHeight + 2)
     .lineTo(560, y + addressHeight + 2)
     .stroke();
-
   y += addressHeight + 15;
 
-  // --- 3A. MANUAL RECEIPT ROW ---
+  // 3A. MANUAL RECEIPT ROW
   const manualNo = donation.manualReceiptNo || "";
   const manualDateStr = donation.manualReceiptDate
     ? new Date(donation.manualReceiptDate).toLocaleDateString()
@@ -291,9 +283,7 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     .lineTo(560, y + payHeight + 2)
     .stroke();
 
-  let extraChequeGap = 0;
   if (donation.paymentMode === "Cheque") {
-    extraChequeGap = 12;
     doc
       .font("Helvetica-Oblique")
       .fontSize(8)
@@ -306,9 +296,8 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
     doc.fillColor("black");
   }
 
-  // --- 7. DEPOSITED TO ACCOUNT ---
+  // 7. DEPOSITED TO ACCOUNT
   y += lineGap + (payHeight > 15 ? 10 : 0);
-
   doc.font("Helvetica").text("Deposited to Account:", 30, y);
   const bankName =
     donation.depositBank && donation.depositBank.name
@@ -319,14 +308,13 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
   const bankHeight = bankName
     ? doc.heightOfString(bankName, { width: 400 })
     : 12;
-
   doc
     .moveTo(150, y + bankHeight + 2)
     .lineTo(560, y + bankHeight + 2)
     .stroke();
   y += bankHeight + 10;
 
-  // --- 8. TOWARDS ---
+  // 8. TOWARDS
   y += lineGap;
   let towards = donation.scheme;
   if (donation.occasion) towards += ` (${donation.occasion})`;
@@ -358,7 +346,6 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
   doc.rect(110, footerY + 13, 10, 10).stroke();
   if (!isCorpus) doc.text("X", 112, footerY + 13);
 
-  // 80G TAX COMPLIANCE LOGIC
   const isTaxEligible = !(
     donation.paymentMode === "Cash" && donation.amount > 2000
   );
@@ -374,7 +361,6 @@ const buildReceipt = (donation, dataCallback, endCallback) => {
         footerY,
         { align: "center", width: 420 },
       );
-
     doc.moveDown(0.5);
     doc
       .font("Helvetica-Bold")

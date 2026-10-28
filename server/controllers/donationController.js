@@ -1142,7 +1142,6 @@ const getAccountHeadForScheme = async (schemeName) => {
   return schemeObj ? schemeObj.accountHead : null;
 };
 
-// @desc    Create new donation
 const createDonation = async (req, res) => {
   try {
     const {
@@ -1173,14 +1172,12 @@ const createDonation = async (req, res) => {
       manualReceiptNo,
     } = req.body;
 
-    // --- NEW: CASH 2 LAKH LIMIT LOGIC ---
     if (paymentMode === "Cash") {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
 
-      // We match exactly today, for the same phone number
       const existingCashDonations = await Donation.aggregate([
         {
           $match: {
@@ -1204,7 +1201,6 @@ const createDonation = async (req, res) => {
         });
       }
     }
-    // ------------------------------------
 
     let finalBranch = "KarunaSri Seva Samithi";
     if (req.user.role === "kba_manager") finalBranch = "Karunya Bharathi";
@@ -1227,7 +1223,6 @@ const createDonation = async (req, res) => {
       const inputDate = new Date(donationDate);
       const todayStr = parsedDate.toISOString().split("T")[0];
       const inputStr = inputDate.toISOString().split("T")[0];
-
       if (inputStr !== todayStr) {
         parsedDate = inputDate;
       }
@@ -1274,59 +1269,70 @@ const createDonation = async (req, res) => {
 
     if (donation.donorEmail) {
       try {
+        console.log(`[EMAIL] Generating PDF for ${donation.donorName}...`);
         const fullDonation = await Donation.findById(donation._id)
           .populate("depositBank", "name")
           .populate("accountHead", "code name")
           .populate("collectedBy", "name");
 
         if (fullDonation) {
-          // --- UPDATED EMAIL PDF LOGIC (Force strict resolution before email) ---
           let buffers = [];
-          const pdfBuffer = await new Promise((resolve, reject) => {
-            buildReceipt(
-              fullDonation,
-              (chunk) => buffers.push(chunk),
-              () => resolve(Buffer.concat(buffers)),
-            );
+
+          // Hardened Promise to ensure PDF is fully built
+          const pdfPromise = new Promise((resolve, reject) => {
+            try {
+              buildReceipt(
+                fullDonation,
+                (chunk) => buffers.push(chunk),
+                () => resolve(Buffer.concat(buffers)),
+              );
+            } catch (err) {
+              reject(err);
+            }
           });
 
-          // Ensure buffer is actually filled before sending
-          if (pdfBuffer && pdfBuffer.length > 0) {
-            const transporter = nodemailer.createTransport({
-              service: "gmail",
-              auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
+          const pdfBuffer = await pdfPromise;
+
+          console.log(
+            `[EMAIL] PDF Generated. Size: ${pdfBuffer.length} bytes. Sending email...`,
+          );
+
+          const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS,
+            },
+          });
+
+          await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: fullDonation.donorEmail,
+            subject: `Donation Receipt - Karunasri Seva Samithi`,
+            html: `
+              <h3>Namaste ${fullDonation.donorName},</h3>
+              <p>Thank you for your generous donation of <strong>Rs. ${fullDonation.amount}</strong>.</p>
+              <p>Please find your official 80G tax-exempt receipt attached to this email.</p>
+              <br/><p>Regards,<br/>Karunasri Team</p>
+            `,
+            attachments: [
+              {
+                filename: `Receipt_${fullDonation.receiptNo || "New"}.pdf`,
+                content: pdfBuffer,
+                contentType: "application/pdf",
               },
-            });
+            ],
+          });
 
-            await transporter.sendMail({
-              from: process.env.EMAIL_USER,
-              to: fullDonation.donorEmail,
-              subject: `Donation Receipt - Karunasri Seva Samithi`,
-              html: `
-                <h3>Namaste ${fullDonation.donorName},</h3>
-                <p>Thank you for your generous donation of <strong>Rs. ${fullDonation.amount}</strong>.</p>
-                <p>Please find your official 80G tax-exempt receipt attached to this email.</p>
-                <br/><p>Regards,<br/>Karunasri Team</p>
-              `,
-              attachments: [
-                {
-                  filename: `Receipt_${fullDonation.receiptNo || "New"}.pdf`,
-                  content: pdfBuffer,
-                  contentType: "application/pdf",
-                },
-              ],
-            });
-
-            donation.receiptStatus = "Sent";
-            await donation.save();
-          } else {
-            console.error("PDF buffer generated empty length. Email skipped.");
-          }
+          donation.receiptStatus = "Sent";
+          await donation.save();
+          console.log(
+            `[EMAIL] Sent successfully to ${fullDonation.donorEmail}`,
+          );
         }
       } catch (emailError) {
         console.error("❌ Auto-Email Failed:", emailError.message);
+        // Does not block donation creation
       }
     }
 
@@ -1405,13 +1411,19 @@ const emailReceipt = async (req, res) => {
       return res.status(400).json({ message: "Donation/Email missing" });
 
     let buffers = [];
-    const pdfBuffer = await new Promise((resolve) => {
-      buildReceipt(
-        donation,
-        (chunk) => buffers.push(chunk),
-        () => resolve(Buffer.concat(buffers)),
-      );
+    const pdfPromise = new Promise((resolve, reject) => {
+      try {
+        buildReceipt(
+          donation,
+          (chunk) => buffers.push(chunk),
+          () => resolve(Buffer.concat(buffers)),
+        );
+      } catch (err) {
+        reject(err);
+      }
     });
+
+    const pdfBuffer = await pdfPromise;
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
