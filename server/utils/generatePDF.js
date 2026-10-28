@@ -76,9 +76,9 @@ const drawHeader = (doc, branchName) => {
   if (!fs.existsSync(logoPath))
     logoPath = path.join(__dirname, "..", "logo.JPG");
 
-  let logo2Path = path.join(__dirname, "..", "logo_vhp.jpg");
+  let logo2Path = path.join(__dirname, "..", "logo_kss.jpg");
   if (!fs.existsSync(logo2Path))
-    logo2Path = path.join(__dirname, "..", "logo_vhp.JPG");
+    logo2Path = path.join(__dirname, "..", "logo_kss.JPG");
 
   // --- 1. Top Slogans (Y = 20) ---
   doc.fontSize(9).font("Helvetica-Bold").fillColor("black");

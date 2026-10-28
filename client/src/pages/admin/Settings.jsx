@@ -25,6 +25,7 @@ import {
   FaDatabase,
   FaDownload,
   FaUpload,
+  FaEdit, // <--- New Icon
 } from "react-icons/fa";
 import axios from "axios";
 import BASE_URL from "../../apiConfig";
@@ -36,9 +37,18 @@ const Settings = () => {
   // --- SCHEME STATE ---
   const [schemes, setSchemes] = useState([]);
   const [newSchemeName, setNewSchemeName] = useState("");
-  const [newSchemeRate, setNewSchemeRate] = useState(""); // <--- NEW STATE FOR DEFAULT RATE
+  const [newSchemeRate, setNewSchemeRate] = useState("");
   const [accountHeads, setAccountHeads] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState("");
+
+  // --- NEW: EDIT SCHEME STATE ---
+  const [showEditSchemeModal, setShowEditSchemeModal] = useState(false);
+  const [editSchemeData, setEditSchemeData] = useState({
+    id: "",
+    name: "",
+    accountHead: "",
+    defaultRate: "",
+  });
 
   // --- OCCASION STATE ---
   const [occasions, setOccasions] = useState([]);
@@ -120,18 +130,41 @@ const Settings = () => {
         {
           name: newSchemeName,
           accountHead: selectedAccount,
-          defaultRate: newSchemeRate, // <--- ADDED DEFAULT RATE PAYLOAD
+          defaultRate: newSchemeRate,
         },
         config,
       );
       setNewSchemeName("");
-      setNewSchemeRate(""); // Reset
+      setNewSchemeRate("");
       setSelectedAccount("");
       fetchSchemes(userInfo);
     } catch (error) {
       alert("Error adding scheme");
     }
   };
+
+  // --- NEW: HANDLE EDIT SCHEME SUBMIT ---
+  const handleUpdateScheme = async (e) => {
+    e.preventDefault();
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.put(
+        `${BASE_URL}/api/schemes/${editSchemeData.id}`,
+        {
+          name: editSchemeData.name,
+          accountHead: editSchemeData.accountHead,
+          defaultRate: editSchemeData.defaultRate,
+        },
+        config,
+      );
+      alert("Scheme Updated Successfully!");
+      setShowEditSchemeModal(false);
+      fetchSchemes(userInfo);
+    } catch (error) {
+      alert("Error updating scheme");
+    }
+  };
+
   const handleDeleteScheme = async (id) => {
     if (!window.confirm("Delete scheme?")) return;
     try {
@@ -142,6 +175,7 @@ const Settings = () => {
       alert("Error deleting");
     }
   };
+
   const handleAddOccasion = async (e) => {
     e.preventDefault();
     if (!newOccasionName) return alert("Enter name");
@@ -288,6 +322,7 @@ const Settings = () => {
       </h2>
 
       <Tabs activeKey={key} onSelect={(k) => setKey(k)} className="mb-4">
+        {/* TAB 1: USERS */}
         <Tab
           eventKey="users"
           title={
@@ -357,6 +392,7 @@ const Settings = () => {
           )}
         </Tab>
 
+        {/* TAB 2: SCHEMES */}
         <Tab
           eventKey="schemes"
           title={
@@ -366,7 +402,7 @@ const Settings = () => {
           }
         >
           <Row>
-            <Col md={5}>
+            <Col md={4}>
               <Card className="shadow-sm border-0 p-3 mb-4">
                 <h5 className="mb-3">Add New Scheme</h5>
                 <Form onSubmit={handleAddScheme}>
@@ -391,7 +427,6 @@ const Settings = () => {
                       ))}
                     </Form.Select>
                   </Form.Group>
-                  {/* --- NEW FIELD: DEFAULT RATE --- */}
                   <Form.Group className="mb-3">
                     <Form.Label>Default Rate / Amount (₹)</Form.Label>
                     <Form.Control
@@ -407,9 +442,9 @@ const Settings = () => {
                 </Form>
               </Card>
             </Col>
-            <Col md={7}>
+            <Col md={8}>
               <Card className="shadow-sm border-0">
-                <Table hover className="mb-0 align-middle">
+                <Table hover responsive className="mb-0 align-middle">
                   <thead className="bg-light">
                     <tr>
                       <th>Scheme Name</th>
@@ -435,6 +470,24 @@ const Settings = () => {
                         <td className="text-end">
                           <Button
                             size="sm"
+                            variant="outline-primary"
+                            className="me-2"
+                            onClick={() => {
+                              setEditSchemeData({
+                                id: s._id,
+                                name: s.name,
+                                accountHead: s.accountHead
+                                  ? s.accountHead._id
+                                  : "",
+                                defaultRate: s.defaultRate || "",
+                              });
+                              setShowEditSchemeModal(true);
+                            }}
+                          >
+                            <FaEdit />
+                          </Button>
+                          <Button
+                            size="sm"
                             variant="outline-danger"
                             onClick={() => handleDeleteScheme(s._id)}
                           >
@@ -450,6 +503,7 @@ const Settings = () => {
           </Row>
         </Tab>
 
+        {/* TAB 3: OCCASIONS */}
         <Tab
           eventKey="occasions"
           title={
@@ -515,6 +569,7 @@ const Settings = () => {
           </Row>
         </Tab>
 
+        {/* TAB 4: DATA BACKUP */}
         {userInfo?.role === "admin" && (
           <Tab
             eventKey="backup"
@@ -581,6 +636,7 @@ const Settings = () => {
                 </Card>
               </Col>
             </Row>
+
             <Alert variant="info" className="mt-4 text-center">
               ℹ️ <strong>Note:</strong> An automated backup is also emailed to
               the Admin account every Sunday at 10:00 PM.
@@ -589,6 +645,71 @@ const Settings = () => {
         )}
       </Tabs>
 
+      {/* --- EDIT SCHEME MODAL --- */}
+      <Modal
+        show={showEditSchemeModal}
+        onHide={() => setShowEditSchemeModal(false)}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Scheme</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleUpdateScheme}>
+            <Form.Group className="mb-3">
+              <Form.Label>Scheme Name</Form.Label>
+              <Form.Control
+                value={editSchemeData.name}
+                onChange={(e) =>
+                  setEditSchemeData({ ...editSchemeData, name: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Account Code</Form.Label>
+              <Form.Select
+                value={editSchemeData.accountHead}
+                onChange={(e) =>
+                  setEditSchemeData({
+                    ...editSchemeData,
+                    accountHead: e.target.value,
+                  })
+                }
+                required
+              >
+                <option value="">-- Select --</option>
+                {accountHeads.map((acc) => (
+                  <option key={acc._id} value={acc._id}>
+                    {acc.code} - {acc.name}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+            <Form.Group className="mb-4">
+              <Form.Label>Default Rate / Amount (₹)</Form.Label>
+              <Form.Control
+                type="number"
+                value={editSchemeData.defaultRate}
+                onChange={(e) =>
+                  setEditSchemeData({
+                    ...editSchemeData,
+                    defaultRate: e.target.value,
+                  })
+                }
+              />
+            </Form.Group>
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-100 btn-ashram"
+            >
+              Update Scheme
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* USER MODAL */}
       <Modal show={showUserModal} onHide={() => setShowUserModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>
