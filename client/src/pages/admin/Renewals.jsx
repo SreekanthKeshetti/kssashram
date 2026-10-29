@@ -38,6 +38,14 @@ const Renewals = () => {
   const [selectedDonor, setSelectedDonor] = useState(null);
   const [newNote, setNewNote] = useState("");
 
+  // --- REUSED DONATION-STYLE WHATSAPP MODAL STATE ---
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsAppData, setWhatsAppData] = useState({
+    donorName: "",
+    phone: "",
+    message: "",
+  });
+
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("userInfo"));
     setCurrentUser(user);
@@ -56,28 +64,31 @@ const Renewals = () => {
     }
   };
 
-  const handleWhatsAppClick = (don) => {
+  // --- OPEN WHATSAPP MODAL (Just like DonationList.jsx) ---
+  const handleOpenWhatsAppModal = (don) => {
     const dateStr = new Date(don.nextReminderDate).toLocaleDateString("en-IN");
-    let cleanNumber = don.donorPhone.replace(/\D/g, "");
+    const defaultMsg = `Namaste ${don.donorName} garu,\n\nWe are from Karunasri Seva Samithi. Last year you generously supported *${don.scheme}*. Your 1-year anniversary is approaching on *${dateStr}*.\n\nWe humbly request you to renew your support and invite you to visit the Ashram.\n\nRegards,\nKarunasri Seva Samithi`;
+
+    setWhatsAppData({
+      donorName: don.donorName,
+      phone: don.donorPhone !== "0000000000" ? don.donorPhone : "",
+      message: defaultMsg,
+    });
+    setShowWhatsAppModal(true);
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!whatsAppData.phone)
+      return alert("Please enter a valid donor mobile number");
+
+    let cleanNumber = whatsAppData.phone.replace(/\D/g, "");
     if (cleanNumber.length === 10) cleanNumber = "91" + cleanNumber;
 
-    const message = `Namaste ${don.donorName} garu,\n\nWe are from Karunasri Seva Samithi. Last year you generously supported *${don.scheme}*. Your 1-year anniversary is approaching on *${dateStr}*.\n\nWe humbly request you to renew your support and invite you to visit the Ashram.\n\nRegards,\nAshram Management`;
+    const encodedMessage = encodeURIComponent(whatsAppData.message);
+    const waUrl = `https://wa.me/${cleanNumber}?text=${encodedMessage}`;
 
-    // 1. Automatically copy the message text to clipboard so staff can paste it instantly (Ctrl + V)
-    navigator.clipboard
-      .writeText(message)
-      .then(() => {
-        alert(
-          `💬 WhatsApp message copied to clipboard!\n\n1. WhatsApp will open the chat.\n2. Just press Ctrl + V (or Right Click -> Paste) to send the message!`,
-        );
-      })
-      .catch((err) => {
-        console.error("Clipboard copy failed", err);
-      });
-
-    // 2. Open WhatsApp chat with the phone number
-    const waUrl = `https://wa.me/${cleanNumber}`;
     window.open(waUrl, "_blank");
+    setShowWhatsAppModal(false);
   };
 
   const submitNote = async (e) => {
@@ -162,8 +173,8 @@ const Renewals = () => {
                     variant="outline-success"
                     size="sm"
                     className="me-2"
-                    title="WhatsApp Message (Auto-Copies Message)"
-                    onClick={() => handleWhatsAppClick(d)}
+                    title="WhatsApp Message"
+                    onClick={() => handleOpenWhatsAppModal(d)}
                   >
                     <FaWhatsapp />
                   </Button>
@@ -270,6 +281,65 @@ const Renewals = () => {
           {activeTab === "overdue" && renderTable(data.overdue)}
         </Card.Body>
       </Card>
+
+      {/* --- WHATSAPP PREVIEW MODAL (Matched with DonationList.jsx) --- */}
+      <Modal
+        show={showWhatsAppModal}
+        onHide={() => setShowWhatsAppModal(false)}
+        centered
+      >
+        <Modal.Header closeButton className="bg-success text-white">
+          <Modal.Title className="fs-5 d-flex align-items-center">
+            <FaWhatsapp className="me-2" size={24} /> Send Renewal on WhatsApp
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label className="small fw-bold">
+              Donor WhatsApp Mobile Number *
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={whatsAppData.phone}
+              onChange={(e) =>
+                setWhatsAppData({ ...whatsAppData, phone: e.target.value })
+              }
+              placeholder="e.g. 9848012345"
+              required
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="small fw-bold">
+              Message Preview (Editable)
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={7}
+              value={whatsAppData.message}
+              onChange={(e) =>
+                setWhatsAppData({ ...whatsAppData, message: e.target.value })
+              }
+              style={{ fontSize: "0.85rem", lineHeight: "1.4" }}
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowWhatsAppModal(false)}
+          >
+            Close
+          </Button>
+          <Button
+            variant="success"
+            onClick={handleSendWhatsApp}
+            className="fw-bold"
+          >
+            <FaWhatsapp className="me-2" /> Open in WhatsApp
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* MODAL: ADD NOTE */}
       <Modal show={showNoteModal} onHide={() => setShowNoteModal(false)}>
