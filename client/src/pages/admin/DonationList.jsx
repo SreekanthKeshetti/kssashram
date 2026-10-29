@@ -594,21 +594,36 @@ const DonationList = () => {
   };
 
   // --- UPDATED FOR OPTION 2: WEBPAGE RECEIPT LINK ---
+  // const handleOpenWhatsAppModal = (donation) => {
+  //   const recNo = donation.receiptNo || donation._id.slice(-6).toUpperCase();
+
+  //   // Generates link pointing to the donor's web page (Works on Localhost or live Vercel domain!)
+  //   const frontendBaseUrl = window.location.origin;
+  //   const downloadUrl = `${frontendBaseUrl}/receipt/${donation._id}`;
+
+  //   const defaultMsg = `Namaste ${donation.donorName} garu,\n\nThank you for your generous donation of Rs. ${donation.amount.toLocaleString()} towards *${donation.scheme}* to Karunasri Seva Samithi.\n\nReceipt No: *${recNo}*\nDate: ${new Date(donation.createdAt).toLocaleDateString()}\n\nYou can view your official receipt and download the 80G tax certificate here:\n${downloadUrl}\n\nWith Gratitude,\n*Karunasri Seva Samithi*`;
+
+  //   setWhatsAppData({
+  //     donorName: donation.donorName,
+  //     phone: donation.donorPhone !== "0000000000" ? donation.donorPhone : "",
+  //     amount: donation.amount,
+  //     receiptNo: recNo,
+  //     scheme: donation.scheme,
+  //     message: defaultMsg,
+  //   });
+  //   setShowWhatsAppModal(true);
+  // };
   const handleOpenWhatsAppModal = (donation) => {
     const recNo = donation.receiptNo || donation._id.slice(-6).toUpperCase();
-
-    // Generates link pointing to the donor's web page (Works on Localhost or live Vercel domain!)
     const frontendBaseUrl = window.location.origin;
     const downloadUrl = `${frontendBaseUrl}/receipt/${donation._id}`;
 
-    const defaultMsg = `Namaste ${donation.donorName} garu,\n\nThank you for your generous donation of Rs. ${donation.amount.toLocaleString()} towards *${donation.scheme}* to Karunasri Seva Samithi.\n\nReceipt No: *${recNo}*\nDate: ${new Date(donation.createdAt).toLocaleDateString()}\n\nYou can view your official receipt and download the 80G tax certificate here:\n${downloadUrl}\n\nWith Gratitude,\n*Karunasri Seva Samithi*`;
+    // Using a clear structure that Desktop and Web WhatsApp both understand
+    const defaultMsg = `Namaste ${donation.donorName} garu,\n\nThank you for your generous donation of Rs. ${donation.amount.toLocaleString("en-IN")} towards *${donation.scheme}* to Karunasri Seva Samithi.\n\nReceipt No: *${recNo}*\nDate: ${new Date(donation.createdAt).toLocaleDateString("en-IN")}\n\nYou can view your official receipt and download the 80G tax certificate here:\n${downloadUrl}\n\nWith Gratitude,\n*Karunasri Seva Samithi*`;
 
     setWhatsAppData({
       donorName: donation.donorName,
       phone: donation.donorPhone !== "0000000000" ? donation.donorPhone : "",
-      amount: donation.amount,
-      receiptNo: recNo,
-      scheme: donation.scheme,
       message: defaultMsg,
     });
     setShowWhatsAppModal(true);
@@ -621,12 +636,25 @@ const DonationList = () => {
     let cleanNumber = whatsAppData.phone.replace(/\D/g, "");
     if (cleanNumber.length === 10) cleanNumber = "91" + cleanNumber;
 
-    const encodedMessage = encodeURIComponent(whatsAppData.message);
-    const waUrl = `https://wa.me/${cleanNumber}?text=${encodedMessage}`;
-
+    // --- ROBUST FORMAT ---
+    const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(whatsAppData.message)}`;
     window.open(waUrl, "_blank");
     setShowWhatsAppModal(false);
   };
+
+  // const handleSendWhatsApp = () => {
+  //   if (!whatsAppData.phone)
+  //     return alert("Please enter a valid donor mobile number");
+
+  //   let cleanNumber = whatsAppData.phone.replace(/\D/g, "");
+  //   if (cleanNumber.length === 10) cleanNumber = "91" + cleanNumber;
+
+  //   const encodedMessage = encodeURIComponent(whatsAppData.message);
+  //   const waUrl = `https://wa.me/${cleanNumber}?text=${encodedMessage}`;
+
+  //   window.open(waUrl, "_blank");
+  //   setShowWhatsAppModal(false);
+  // };
 
   const openMediaModal = (d) => {
     setSelectedDonation(d);
@@ -935,7 +963,7 @@ const DonationList = () => {
                             : "fw-bold"
                         }
                       >
-                        {new Date(d.createdAt).toLocaleDateString()}
+                        {new Date(d.createdAt).toLocaleDateString("en-IN")}
                       </div>
                       <small className="text-muted">
                         {d.receiptNo || d._id.slice(-6).toUpperCase()}
