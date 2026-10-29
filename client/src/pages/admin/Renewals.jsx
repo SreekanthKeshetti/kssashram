@@ -63,9 +63,20 @@ const Renewals = () => {
 
     const message = `Namaste ${don.donorName} garu,\n\nWe are from Karunasri Seva Samithi. Last year you generously supported *${don.scheme}*. Your 1-year anniversary is approaching on *${dateStr}*.\n\nWe humbly request you to renew your support and invite you to visit the Ashram.\n\nRegards,\nAshram Management`;
 
-    // --- ROBUST FIX FOR DESKTOP APP & WEB ---
-    // Using wa.me with the phone number directly in the path ensures the Desktop App catches both phone and text parameters
-    const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+    // 1. Automatically copy the message text to clipboard so staff can paste it instantly (Ctrl + V)
+    navigator.clipboard
+      .writeText(message)
+      .then(() => {
+        alert(
+          `💬 WhatsApp message copied to clipboard!\n\n1. WhatsApp will open the chat.\n2. Just press Ctrl + V (or Right Click -> Paste) to send the message!`,
+        );
+      })
+      .catch((err) => {
+        console.error("Clipboard copy failed", err);
+      });
+
+    // 2. Open WhatsApp chat with the phone number
+    const waUrl = `https://wa.me/${cleanNumber}`;
     window.open(waUrl, "_blank");
   };
 
@@ -151,7 +162,7 @@ const Renewals = () => {
                     variant="outline-success"
                     size="sm"
                     className="me-2"
-                    title="WhatsApp Message"
+                    title="WhatsApp Message (Auto-Copies Message)"
                     onClick={() => handleWhatsAppClick(d)}
                   >
                     <FaWhatsapp />
