@@ -57,15 +57,15 @@ const Renewals = () => {
   };
 
   const handleWhatsAppClick = (don) => {
-    // --- FIX: Format date to Indian standard DD/MM/YYYY ---
     const dateStr = new Date(don.nextReminderDate).toLocaleDateString("en-IN");
     let cleanNumber = don.donorPhone.replace(/\D/g, "");
     if (cleanNumber.length === 10) cleanNumber = "91" + cleanNumber;
 
     const message = `Namaste ${don.donorName} garu,\n\nWe are from Karunasri Seva Samithi. Last year you generously supported *${don.scheme}*. Your 1-year anniversary is approaching on *${dateStr}*.\n\nWe humbly request you to renew your support and invite you to visit the Ashram.\n\nRegards,\nAshram Management`;
 
-    // --- FIX: Using api.whatsapp.com which works perfectly with the Desktop App ---
-    const waUrl = `https://api.whatsapp.com/send?phone=${cleanNumber}&text=${encodeURIComponent(message)}`;
+    // --- ROBUST FIX FOR DESKTOP APP & WEB ---
+    // Using wa.me with the phone number directly in the path ensures the Desktop App catches both phone and text parameters
+    const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, "_blank");
   };
 
@@ -131,7 +131,6 @@ const Renewals = () => {
                 </div>
               </td>
               <td>
-                {/* --- FIX: Format date to Indian standard DD/MM/YYYY --- */}
                 <div className="fw-bold">
                   {new Date(d.nextReminderDate).toLocaleDateString("en-IN")}
                 </div>
@@ -147,7 +146,6 @@ const Renewals = () => {
                 </Button>
               </td>
               <td className="text-end">
-                {/* Disable WhatsApp button if no valid phone number */}
                 {d.donorPhone && d.donorPhone !== "0000000000" && (
                   <Button
                     variant="outline-success"
@@ -316,7 +314,6 @@ const Renewals = () => {
                       size={12}
                     />
                   </div>
-                  {/* --- FIX: Format date to Indian standard DD/MM/YYYY Time --- */}
                   <div className="small fw-bold text-muted">
                     {new Date(log.date).toLocaleString("en-IN")}
                   </div>
