@@ -57,12 +57,15 @@ const Renewals = () => {
   };
 
   const handleWhatsAppClick = (don) => {
-    const dateStr = new Date(don.nextReminderDate).toLocaleDateString();
+    // --- FIX: Format date to Indian standard DD/MM/YYYY ---
+    const dateStr = new Date(don.nextReminderDate).toLocaleDateString("en-IN");
     let cleanNumber = don.donorPhone.replace(/\D/g, "");
     if (cleanNumber.length === 10) cleanNumber = "91" + cleanNumber;
 
     const message = `Namaste ${don.donorName} garu,\n\nWe are from Karunasri Seva Samithi. Last year you generously supported *${don.scheme}*. Your 1-year anniversary is approaching on *${dateStr}*.\n\nWe humbly request you to renew your support and invite you to visit the Ashram.\n\nRegards,\nAshram Management`;
-    const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+
+    // --- FIX: Using api.whatsapp.com which works perfectly with the Desktop App ---
+    const waUrl = `https://api.whatsapp.com/send?phone=${cleanNumber}&text=${encodeURIComponent(message)}`;
     window.open(waUrl, "_blank");
   };
 
@@ -124,12 +127,13 @@ const Renewals = () => {
                   {d.scheme}
                 </Badge>
                 <div className="fw-bold text-success">
-                  ₹{d.amount.toLocaleString()}
+                  ₹{d.amount.toLocaleString("en-IN")}
                 </div>
               </td>
               <td>
+                {/* --- FIX: Format date to Indian standard DD/MM/YYYY --- */}
                 <div className="fw-bold">
-                  {new Date(d.nextReminderDate).toLocaleDateString()}
+                  {new Date(d.nextReminderDate).toLocaleDateString("en-IN")}
                 </div>
               </td>
               <td className="text-center">
@@ -143,15 +147,18 @@ const Renewals = () => {
                 </Button>
               </td>
               <td className="text-end">
-                <Button
-                  variant="outline-success"
-                  size="sm"
-                  className="me-2"
-                  title="WhatsApp Message"
-                  onClick={() => handleWhatsAppClick(d)}
-                >
-                  <FaWhatsapp />
-                </Button>
+                {/* Disable WhatsApp button if no valid phone number */}
+                {d.donorPhone && d.donorPhone !== "0000000000" && (
+                  <Button
+                    variant="outline-success"
+                    size="sm"
+                    className="me-2"
+                    title="WhatsApp Message"
+                    onClick={() => handleWhatsAppClick(d)}
+                  >
+                    <FaWhatsapp />
+                  </Button>
+                )}
                 <Button
                   variant="outline-primary"
                   size="sm"
@@ -255,6 +262,7 @@ const Renewals = () => {
         </Card.Body>
       </Card>
 
+      {/* MODAL: ADD NOTE */}
       <Modal show={showNoteModal} onHide={() => setShowNoteModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Add Call Note</Modal.Title>
@@ -282,6 +290,7 @@ const Renewals = () => {
         </Modal.Body>
       </Modal>
 
+      {/* MODAL: VIEW HISTORY */}
       <Modal
         show={showHistoryModal}
         onHide={() => setShowHistoryModal(false)}
@@ -307,8 +316,9 @@ const Renewals = () => {
                       size={12}
                     />
                   </div>
+                  {/* --- FIX: Format date to Indian standard DD/MM/YYYY Time --- */}
                   <div className="small fw-bold text-muted">
-                    {new Date(log.date).toLocaleString()}
+                    {new Date(log.date).toLocaleString("en-IN")}
                   </div>
                   <div className="fw-bold text-dark">
                     By: {log.actionBy}{" "}

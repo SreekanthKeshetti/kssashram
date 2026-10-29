@@ -818,8 +818,19 @@ const updateDonation = async (req, res) => {
       donation[key] = updates[key];
     });
 
+    // --- FIXED: EDITED DATE BUG ---
     if (updates.donationDate) {
       donation.createdAt = new Date(updates.donationDate);
+    }
+
+    if (donation.isRecurring) {
+      const baseDate = donation.programDate
+        ? new Date(donation.programDate)
+        : new Date(donation.createdAt);
+      baseDate.setFullYear(baseDate.getFullYear() + 1);
+      donation.nextReminderDate = baseDate;
+    } else {
+      donation.nextReminderDate = null;
     }
 
     await donation.save();
@@ -837,10 +848,6 @@ const updateDonation = async (req, res) => {
   }
 };
 
-// --- SPRINT 2: RENEWAL CRM PIPELINE LOGIC ---
-
-// @desc    Get donors nearing their 1-year anniversary
-// @route   GET /api/donations/renewals
 const getRenewals = async (req, res) => {
   try {
     const today = new Date();
@@ -886,8 +893,6 @@ const getRenewals = async (req, res) => {
   }
 };
 
-// @desc    Add a manual staff follow-up note to a donation
-// @route   POST /api/donations/:id/followup
 const addFollowUpNote = async (req, res) => {
   try {
     const { note } = req.body;
@@ -912,7 +917,6 @@ const addFollowUpNote = async (req, res) => {
   }
 };
 
-// --- PUBLIC DONATION INFO ---
 const getPublicDonationInfo = async (req, res) => {
   try {
     const donation = await Donation.findById(req.params.id).select(
