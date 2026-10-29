@@ -31,6 +31,9 @@ import {
   FaBuilding,
   FaClock,
   FaEdit,
+  FaWhatsapp,
+  FaEye,
+  FaTrash,
 } from "react-icons/fa";
 
 const TELUGU_MASAMS = [
@@ -83,6 +86,20 @@ const DonationList = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showTaxModal, setShowTaxModal] = useState(false);
   const [showMediaModal, setShowMediaModal] = useState(false);
+
+  // --- NEW: SPRINT 1 STATES FOR WHATSAPP & PREVIEWS ---
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsAppData, setWhatsAppData] = useState({
+    donorName: "",
+    phone: "",
+    amount: "",
+    receiptNo: "",
+    scheme: "",
+    message: "",
+  });
+
+  const [previewImage, setPreviewImage] = useState(null);
+  const [localFilePreviews, setLocalFilePreviews] = useState([]);
 
   const [receiptType, setReceiptType] = useState("Donation");
   const [cancelData, setCancelData] = useState({ id: "", reason: "" });
@@ -153,7 +170,6 @@ const DonationList = () => {
         const schemeRes = await axios.get(`${BASE_URL}/api/schemes`, config);
         setSchemes(schemeRes.data);
         if (schemeRes.data.length > 0) {
-          // Initialize with first scheme and its rate
           const firstScheme = schemeRes.data[0];
           setFormData((prev) => ({
             ...prev,
@@ -319,7 +335,6 @@ const DonationList = () => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
-    // --- NEW: Auto-populate amount based on scheme selected ---
     if (name === "scheme") {
       const selectedScheme = schemes.find((s) => s.name === value);
       if (selectedScheme && selectedScheme.defaultRate > 0 && !isEditing) {
@@ -572,18 +587,69 @@ const DonationList = () => {
         headers: { Authorization: `Bearer ${currentUser.token}` },
       };
       await axios.post(`${BASE_URL}/api/donations/${id}/email`, {}, config);
-      alert("Sent!");
+      alert("Receipt sent successfully via email!");
       fetchDonations();
     } catch (e) {
-      alert("Error sending email");
+      alert("Error sending email: " + (e.response?.data?.message || e.message));
     }
   };
 
+  // --- NEW: SPRINT 1 WHATSAPP SHARING LOGIC ---
+  const handleOpenWhatsAppModal = (donation) => {
+    const recNo = donation.receiptNo || donation._id.slice(-6).toUpperCase();
+    const downloadUrl = `${BASE_URL}/api/donations/public/receipt/${donation._id}`;
+
+    // Friendly, professional pre-filled temple message
+    const defaultMsg = `Namaste ${donation.donorName} garu,\n\nThank you for your generous donation of Rs. ${donation.amount.toLocaleString()} towards *${donation.scheme}* to Karunasri Seva Samithi.\n\nReceipt No: *${recNo}*\nDate: ${new Date(donation.createdAt).toLocaleDateString()}\n\nYou can download your official 80G tax receipt here:\n${downloadUrl}\n\nWith Gratitude,\n*Karunasri Seva Samithi*`;
+
+    setWhatsAppData({
+      donorName: donation.donorName,
+      phone: donation.donorPhone !== "0000000000" ? donation.donorPhone : "",
+      amount: donation.amount,
+      receiptNo: recNo,
+      scheme: donation.scheme,
+      message: defaultMsg,
+    });
+    setShowWhatsAppModal(true);
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!whatsAppData.phone)
+      return alert("Please enter a valid donor mobile number");
+
+    // Clean phone number (strip non-digits, ensure country code)
+    let cleanNumber = whatsAppData.phone.replace(/\D/g, "");
+    if (cleanNumber.length === 10) cleanNumber = "91" + cleanNumber;
+
+    const encodedMessage = encodeURIComponent(whatsAppData.message);
+    const waUrl = `https://wa.me/${cleanNumber}?text=${encodedMessage}`;
+
+    // Open WhatsApp Web or Mobile WhatsApp App immediately in a new tab
+    window.open(waUrl, "_blank");
+    setShowWhatsAppModal(false);
+  };
+
+  // --- SPRINT 1: MEDIA PREVIEW LOGIC ---
   const openMediaModal = (d) => {
     setSelectedDonation(d);
+    setFiles([]);
+    setLocalFilePreviews([]);
     setShowMediaModal(true);
   };
-  const handleFileChange = (e) => setFiles(e.target.files);
+
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    setFiles(selectedFiles);
+
+    // Generate immediate browser-side previews for selected images
+    const previews = selectedFiles.map((file) => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+      type: file.type,
+    }));
+    setLocalFilePreviews(previews);
+  };
+
   const handleUpload = async (e) => {
     e.preventDefault();
     if (files.length === 0) return alert("Select files");
@@ -598,22 +664,24 @@ const DonationList = () => {
           Authorization: `Bearer ${userInfo.token}`,
         },
       };
-      await axios.post(
+      const { data } = await axios.post(
         `${BASE_URL}/api/donations/${selectedDonation._id}/upload`,
         fd,
         config,
       );
       alert("Uploaded Successfully!");
       setFiles([]);
-      setShowMediaModal(false);
+      setLocalFilePreviews([]);
+      setSelectedDonation((prev) => ({ ...prev, media: data.media }));
       fetchDonations();
     } catch (e) {
-      alert("Upload failed");
+      alert("Upload failed: " + (e.response?.data?.message || e.message));
     }
     setUploading(false);
   };
+
   const handleDeleteMedia = async (filePath) => {
-    if (!window.confirm("Delete file?")) return;
+    if (!window.confirm("Delete this attachment?")) return;
     try {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const config = {
@@ -626,7 +694,7 @@ const DonationList = () => {
       );
       setSelectedDonation({ ...selectedDonation, media: data.media });
       fetchDonations();
-      alert("Deleted");
+      alert("Attachment removed");
     } catch (err) {
       alert("Error deleting file");
     }
@@ -724,7 +792,9 @@ const DonationList = () => {
           >
             Receipts / Donations
           </h2>
-          <p className="text-muted m-0 small">Manage all incoming funds</p>
+          <p className="text-muted m-0 small">
+            Manage all incoming funds & donor communications
+          </p>
         </Col>
         <Col lg={7}>
           <div className="d-flex flex-wrap gap-2 justify-content-lg-end">
@@ -843,7 +913,7 @@ const DonationList = () => {
                 <th style={{ width: "10%" }}>Amount</th>
                 <th style={{ width: "15%" }}>Mode</th>
                 <th style={{ width: "15%" }}>Branch</th>
-                <th style={{ width: "18%" }} className="text-center">
+                <th style={{ width: "20%" }} className="text-center">
                   Actions
                 </th>
               </tr>
@@ -963,18 +1033,17 @@ const DonationList = () => {
                           >
                             <FaEdit />
                           </Button>
-                          {(currentUser?.role === "admin" ||
-                            currentUser?.role === "president" ||
-                            currentUser?.role === "secretary") && (
-                            <Button
-                              size="sm"
-                              variant="outline-danger"
-                              title="Void"
-                              onClick={() => handleCancelClick(d._id)}
-                            >
-                              <FaBan />
-                            </Button>
-                          )}
+
+                          {/* --- SPRINT 1: ONE-CLICK WHATSAPP SHARE BUTTON --- */}
+                          <Button
+                            size="sm"
+                            variant="outline-success"
+                            title="Share on WhatsApp"
+                            onClick={() => handleOpenWhatsAppModal(d)}
+                          >
+                            <FaWhatsapp />
+                          </Button>
+
                           <Button
                             size="sm"
                             variant="outline-dark"
@@ -1002,7 +1071,7 @@ const DonationList = () => {
                                 document.body.appendChild(link);
                                 link.click();
                               } catch (e) {
-                                alert("Error");
+                                alert("Error downloading receipt");
                               }
                             }}
                           >
@@ -1027,14 +1096,23 @@ const DonationList = () => {
                                 ? "warning"
                                 : "outline-secondary"
                             }
-                            onClick={() => {
-                              setSelectedDonation(d);
-                              setShowMediaModal(true);
-                            }}
-                            title="Docs"
+                            onClick={() => openMediaModal(d)}
+                            title="Docs & Photos"
                           >
                             <FaImages />
                           </Button>
+                          {(currentUser?.role === "admin" ||
+                            currentUser?.role === "president" ||
+                            currentUser?.role === "secretary") && (
+                            <Button
+                              size="sm"
+                              variant="outline-danger"
+                              title="Void Receipt"
+                              onClick={() => handleCancelClick(d._id)}
+                            >
+                              <FaBan />
+                            </Button>
+                          )}
                         </div>
                       )}
                       {isCancelled && (
@@ -1549,6 +1627,257 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
+      {/* --- SPRINT 1: ONE-CLICK WHATSAPP SHARE MODAL --- */}
+      <Modal
+        show={showWhatsAppModal}
+        onHide={() => setShowWhatsAppModal(false)}
+        centered
+      >
+        <Modal.Header closeButton className="bg-success text-white">
+          <Modal.Title className="fs-5 d-flex align-items-center">
+            <FaWhatsapp className="me-2" size={24} /> Send Receipt on WhatsApp
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label className="small fw-bold">
+              Donor WhatsApp Mobile Number *
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={whatsAppData.phone}
+              onChange={(e) =>
+                setWhatsAppData({ ...whatsAppData, phone: e.target.value })
+              }
+              placeholder="e.g. 9848012345 (with or without 91)"
+              required
+            />
+            <Form.Text className="text-muted">
+              Standard Indian 10-digit mobile numbers are auto-prefixed with
+              +91.
+            </Form.Text>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="small fw-bold">
+              Message Preview (Editable)
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={7}
+              value={whatsAppData.message}
+              onChange={(e) =>
+                setWhatsAppData({ ...whatsAppData, message: e.target.value })
+              }
+              style={{ fontSize: "0.85rem", lineHeight: "1.4" }}
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => setShowWhatsAppModal(false)}
+          >
+            Close
+          </Button>
+          <Button
+            variant="success"
+            onClick={handleSendWhatsApp}
+            className="fw-bold"
+          >
+            <FaWhatsapp className="me-2" /> Open in WhatsApp
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* --- SPRINT 1: ENHANCED MEDIA ATTACHMENTS & PREVIEW MODAL --- */}
+      <Modal
+        show={showMediaModal}
+        onHide={() => setShowMediaModal(false)}
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title className="d-flex align-items-center justify-content-between w-100 me-3">
+            <span>
+              <FaImages className="me-2 text-warning" />
+              Attachments: {selectedDonation?.donorName}
+            </span>
+            {selectedDonation && (
+              <Button
+                variant="outline-success"
+                size="sm"
+                onClick={() => handleOpenWhatsAppModal(selectedDonation)}
+              >
+                <FaWhatsapp className="me-1" /> WhatsApp Receipt
+              </Button>
+            )}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {/* UPLOAD BOX WITH INSTANT PREVIEWS */}
+          <Card className="p-3 bg-light border-0 mb-4">
+            <Form onSubmit={handleUpload}>
+              <Form.Label className="small fw-bold">
+                Choose Photos or Files to Upload
+              </Form.Label>
+              <div className="d-flex gap-2 mb-2">
+                <Form.Control
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf"
+                  onChange={handleFileChange}
+                />
+                <Button
+                  type="submit"
+                  variant="dark"
+                  disabled={uploading || files.length === 0}
+                >
+                  {uploading ? "Uploading..." : "Upload"}
+                </Button>
+              </div>
+            </Form>
+
+            {/* LIVE PREVIEWS BEFORE UPLOAD */}
+            {localFilePreviews.length > 0 && (
+              <div className="mt-2">
+                <small className="text-muted d-block mb-1 fw-bold">
+                  Selected Files to be Uploaded:
+                </small>
+                <div className="d-flex flex-wrap gap-2">
+                  {localFilePreviews.map((f, i) => (
+                    <div
+                      key={i}
+                      className="border p-1 rounded bg-white text-center"
+                      style={{ width: "90px" }}
+                    >
+                      {f.type.startsWith("image/") ? (
+                        <img
+                          src={f.url}
+                          alt="local preview"
+                          style={{
+                            width: "80px",
+                            height: "60px",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        <div className="py-3 text-muted small">
+                          <FaFilePdf size={24} />
+                        </div>
+                      )}
+                      <small
+                        className="d-block text-truncate"
+                        style={{ fontSize: "0.65rem" }}
+                      >
+                        {f.name}
+                      </small>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* ATTACHED MEDIA GRID */}
+          <h6 className="text-maroon border-bottom pb-2 fw-bold">
+            Uploaded Documents & Photos
+          </h6>
+          <Row>
+            {selectedDonation?.media?.map((path, i) => {
+              const isPdf = path.toLowerCase().endsWith(".pdf");
+              return (
+                <Col md={4} sm={6} xs={12} key={i} className="mb-3">
+                  <Card className="h-100 shadow-sm border position-relative overflow-hidden">
+                    {isPdf ? (
+                      <div className="p-4 text-center bg-light">
+                        <FaFilePdf size={48} className="text-danger mb-2" />
+                        <span className="d-block small text-muted">
+                          PDF Document
+                        </span>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          height: "160px",
+                          cursor: "pointer",
+                          background: "#f8f9fa",
+                        }}
+                        onClick={() => setPreviewImage(path)}
+                        title="Click to view full photo"
+                      >
+                        <img
+                          src={path}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                          alt="Donation attachment"
+                        />
+                      </div>
+                    )}
+                    <Card.Footer className="p-2 bg-white d-flex justify-content-between align-items-center">
+                      <a
+                        href={path}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-sm btn-outline-primary py-0 px-2"
+                        style={{ fontSize: "0.75rem" }}
+                      >
+                        <FaEye className="me-1" /> Open
+                      </a>
+                      <Button
+                        size="sm"
+                        variant="outline-danger"
+                        className="py-0 px-2"
+                        style={{ fontSize: "0.75rem" }}
+                        onClick={() => handleDeleteMedia(path)}
+                      >
+                        <FaTrash className="me-1" /> Delete
+                      </Button>
+                    </Card.Footer>
+                  </Card>
+                </Col>
+              );
+            })}
+            {(!selectedDonation?.media ||
+              selectedDonation.media.length === 0) && (
+              <Col xs={12}>
+                <p className="text-center text-muted py-4">
+                  No photos or documents attached yet.
+                </p>
+              </Col>
+            )}
+          </Row>
+        </Modal.Body>
+      </Modal>
+
+      {/* FULL SIZE IMAGE LIGHTBOX MODAL */}
+      <Modal
+        show={!!previewImage}
+        onHide={() => setPreviewImage(null)}
+        size="lg"
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-6">Full Image Preview</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-0 text-center bg-dark">
+          {previewImage && (
+            <img
+              src={previewImage}
+              alt="Full view"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "80vh",
+                objectFit: "contain",
+              }}
+            />
+          )}
+        </Modal.Body>
+      </Modal>
+
+      {/* CANCEL MODAL */}
       <Modal show={showCancelModal} onHide={() => setShowCancelModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Cancel Receipt</Modal.Title>
@@ -1580,6 +1909,7 @@ const DonationList = () => {
         </Modal.Footer>
       </Modal>
 
+      {/* IMPORT MODAL */}
       <Modal show={showImportModal} onHide={() => setShowImportModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Import CSV</Modal.Title>
@@ -1609,6 +1939,7 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
+      {/* TAX MODAL */}
       <Modal show={showTaxModal} onHide={() => setShowTaxModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Download Tax Certificate</Modal.Title>
@@ -1637,47 +1968,6 @@ const DonationList = () => {
               Download Certificate
             </Button>
           </Form>
-        </Modal.Body>
-      </Modal>
-
-      <Modal show={showMediaModal} onHide={() => setShowMediaModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Attachments</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleUpload} className="mb-3 d-flex gap-2">
-            <Form.Control type="file" multiple onChange={handleFileChange} />
-            <Button type="submit" disabled={uploading}>
-              {uploading ? "..." : "Upload"}
-            </Button>
-          </Form>
-          <Row>
-            {selectedDonation?.media?.map((path, i) => (
-              <Col xs={6} key={i} className="mb-2 position-relative">
-                <a href={path} target="_blank" rel="noreferrer">
-                  <img
-                    src={path}
-                    style={{
-                      width: "100%",
-                      height: "150px",
-                      objectFit: "cover",
-                      borderRadius: "5px",
-                      border: "1px solid #ddd",
-                    }}
-                    alt="attachment"
-                  />
-                </a>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  className="position-absolute top-0 end-0 p-0 px-2 m-1 shadow-sm"
-                  onClick={() => handleDeleteMedia(path)}
-                >
-                  x
-                </Button>
-              </Col>
-            ))}
-          </Row>
         </Modal.Body>
       </Modal>
     </div>
