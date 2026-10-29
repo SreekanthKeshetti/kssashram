@@ -15,6 +15,7 @@ import {
   FaShieldAlt,
   FaBars,
   FaTimes,
+  FaPhoneVolume, // <--- NEW ICON
 } from "react-icons/fa";
 import "./DashboardLayout.css";
 
@@ -51,7 +52,6 @@ const DashboardLayout = () => {
     ) {
       navigate("/dashboard/donations");
     }
-
     setUser(userInfo);
   }, [navigate, location.pathname]);
 
@@ -78,8 +78,7 @@ const DashboardLayout = () => {
             <Link to="/" className="sidebar-brand">
               Karunasri ERP
             </Link>
-            {/* Removing the text-muted  */}
-            <div className=" small mt-1">
+            <div className="small mt-1">
               Branch: {user.branch || "Headquarters"}
             </div>
           </div>
@@ -108,11 +107,20 @@ const DashboardLayout = () => {
               to="/dashboard/donations"
               className={`menu-item ${isActive("donations")}`}
             >
-              <FaHandHoldingHeart /> Donations
+              <FaHandHoldingHeart /> Receipts List
             </Link>
           </li>
 
-          {/* --- UPDATED: ADDED MANAGERS TO STUDENT VIEW --- */}
+          {/* --- NEW RENEWAL PIPELINE LINK --- */}
+          <li>
+            <Link
+              to="/dashboard/renewals"
+              className={`menu-item ${isActive("renewals")}`}
+            >
+              <FaPhoneVolume /> Upcoming Renewals
+            </Link>
+          </li>
+
           {[
             "admin",
             "president",

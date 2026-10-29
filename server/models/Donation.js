@@ -90,6 +90,16 @@ const donationSchema = mongoose.Schema(
 
     comments: { type: String },
 
+    // --- SPRINT 2: CRM FOLLOW UP LOGS ---
+    followUpLogs: [
+      {
+        date: { type: Date, default: Date.now },
+        actionBy: { type: String },
+        type: { type: String, enum: ["System", "Manual"] },
+        note: { type: String },
+      },
+    ],
+
     branch: {
       type: String,
       required: true,

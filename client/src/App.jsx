@@ -1,22 +1,19 @@
 import React from "react";
 import { Routes, Route, Outlet } from "react-router-dom";
 
-// --- Components ---
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import DashboardLayout from "./components/DashboardLayout";
 import DonationList from "./pages/admin/DonationList";
 
-// --- Public Pages ---
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Donate from "./pages/Donate";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import PublicReceipt from "./pages/PublicReceipt"; // <--- NEW PUBLIC PAGE IMPORT
+import PublicReceipt from "./pages/PublicReceipt";
 
-// --- Admin/Dashboard Pages ---
 import DashboardHome from "./pages/admin/DashboardHome";
 import StudentList from "./pages/admin/StudentList";
 import StudentProfile from "./pages/admin/StudentProfile";
@@ -34,6 +31,7 @@ import UserProfile from "./pages/UserProfile";
 import DonationHistory from "./pages/DonationHistory";
 import DailySeva from "./pages/admin/DailySeva";
 import MemberProfile from "./pages/admin/MemberProfile";
+import Renewals from "./pages/admin/Renewals"; // <--- NEW IMPORT
 
 const PublicLayout = () => {
   return (
@@ -50,7 +48,6 @@ const PublicLayout = () => {
 function App() {
   return (
     <Routes>
-      {/* 1. PUBLIC ROUTES GROUP */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/about-us" element={<About />} />
@@ -60,14 +57,16 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/history" element={<DonationHistory />} />
-        {/* --- NEW PUBLIC DONOR RECEIPT WEBPAGE ROUTE --- */}
         <Route path="/receipt/:id" element={<PublicReceipt />} />
       </Route>
 
-      {/* 2. DASHBOARD ROUTES GROUP */}
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<DashboardHome />} />
         <Route path="donations" element={<DonationList />} />
+
+        {/* NEW ROUTE */}
+        <Route path="renewals" element={<Renewals />} />
+
         <Route path="students" element={<StudentList />} />
         <Route path="students/:id" element={<StudentProfile />} />
         <Route path="inventory" element={<InventoryList />} />

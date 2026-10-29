@@ -6,17 +6,21 @@ const { sendEmail } = require("./emailService");
 
 const runScheduler = () => {
   // =========================================================
-  // 1. RECURRING DONATION PAYMENT REMINDERS (Runs 10:00 AM)
+  // 1. RECURRING DONATION CRM REMINDERS (Runs 10:00 AM)
+  // Tracks 30 days, 7 days, and 2 days before the anniversary
   // =========================================================
   cron.schedule("0 10 * * *", async () => {
-    console.log("⏳ Running Daily Donation Payment Reminder Check...");
+    console.log("⏳ Running Daily CRM Donation Renewal Check...");
 
     try {
       const today = new Date();
+
       const target30 = new Date();
       target30.setDate(today.getDate() + 30);
       const target7 = new Date();
       target7.setDate(today.getDate() + 7);
+      const target2 = new Date();
+      target2.setDate(today.getDate() + 2);
 
       const startOfDay = (d) => new Date(new Date(d).setHours(0, 0, 0, 0));
       const endOfDay = (d) => new Date(new Date(d).setHours(23, 59, 59, 999));
@@ -24,7 +28,6 @@ const runScheduler = () => {
       const donationsToRemind = await Donation.find({
         isRecurring: true,
         status: "Active",
-        donorEmail: { $exists: true, $ne: "" },
         $or: [
           {
             nextReminderDate: {
@@ -38,6 +41,12 @@ const runScheduler = () => {
               $lte: endOfDay(target7),
             },
           },
+          {
+            nextReminderDate: {
+              $gte: startOfDay(target2),
+              $lte: endOfDay(target2),
+            },
+          },
         ],
       });
 
@@ -47,30 +56,41 @@ const runScheduler = () => {
         const daysLeft = Math.ceil(
           (new Date(don.nextReminderDate) - today) / (1000 * 60 * 60 * 24),
         );
+        let logMessage = `Sent ${daysLeft}-day automated reminder`;
 
-        // --- 1. SEND EMAIL VIA RESEND HTTPS API ---
-        await sendEmail({
-          to: don.donorEmail,
-          subject: `Gentle Reminder: Upcoming Donation for ${don.scheme}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee;">
-              <h3 style="color: #581818;">Namaste ${don.donorName},</h3>
-              <p>This is a gentle reminder that your annual support for <strong>${don.scheme}</strong> is upcoming in <strong>${daysLeft} days</strong> (on ${new Date(don.nextReminderDate).toLocaleDateString()}).</p>
-              <p>Last year, your generous contribution of <strong>Rs. ${don.amount}</strong> helped us serve the needy effectively.</p>
-              <p>We look forward to your continued support.</p>
-              <br/><p>With Gratitude,<br/><strong>Karunasri Seva Samithi</strong></p>
-            </div>
-          `,
-        });
+        if (don.donorEmail) {
+          await sendEmail({
+            to: don.donorEmail,
+            subject: `Gentle Reminder: Upcoming Anniversary for ${don.scheme}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee;">
+                <h3 style="color: #581818;">Namaste ${don.donorName} garu,</h3>
+                <p>This is a gentle reminder that your annual support for <strong>${don.scheme}</strong> is approaching in <strong>${daysLeft} days</strong> (on ${new Date(don.nextReminderDate).toLocaleDateString()}).</p>
+                <p>Last year, your generous contribution of <strong>Rs. ${don.amount}</strong> helped us serve the needy effectively.</p>
+                <p>We look forward to your continued support and invite you to visit the Ashram on this special day.</p>
+                <br/><p>With Gratitude,<br/><strong>Karunasri Seva Samithi</strong></p>
+              </div>
+            `,
+          });
+          logMessage += " via Email";
+        }
 
-        // --- 2. SEND WHATSAPP ---
         if (don.donorPhone && don.donorPhone !== "0000000000") {
           await sendWhatsAppMessage(don.donorPhone, "recurring_reminder", {
             name: don.donorName,
             scheme: don.scheme,
             daysLeft: daysLeft,
           });
+          logMessage += " & WhatsApp";
         }
+
+        don.followUpLogs.push({
+          date: new Date(),
+          actionBy: "System Robot",
+          type: "System",
+          note: logMessage,
+        });
+        await don.save();
       }
     } catch (error) {
       console.error("❌ Scheduler Error:", error);
@@ -79,7 +99,6 @@ const runScheduler = () => {
 
   // =========================================================
   // 2. SEVA EVENT INVITATIONS (Runs 9:30 AM)
-  // Sends an invite 7 Days and 2 Days before the Annadhanam/Seva
   // =========================================================
   cron.schedule("30 9 * * *", async () => {
     console.log("⏳ Running Seva Invitation Check (7 Days & 2 Days prior)...");
@@ -141,7 +160,6 @@ const runScheduler = () => {
             : "";
           const nameText = don.inNameOf ? `in the name of ${don.inNameOf}` : "";
 
-          // --- 1. SEND EMAIL VIA RESEND HTTPS API ---
           if (don.donorEmail) {
             await sendEmail({
               to: don.donorEmail,
@@ -172,7 +190,6 @@ const runScheduler = () => {
             );
           }
 
-          // --- 2. SEND WHATSAPP ---
           if (don.donorPhone && don.donorPhone !== "0000000000") {
             await sendWhatsAppMessage(don.donorPhone, "event_invitation", {
               name: don.donorName,
