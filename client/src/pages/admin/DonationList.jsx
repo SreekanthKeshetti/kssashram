@@ -87,7 +87,6 @@ const DonationList = () => {
   const [showTaxModal, setShowTaxModal] = useState(false);
   const [showMediaModal, setShowMediaModal] = useState(false);
 
-  // --- NEW: SPRINT 1 STATES FOR WHATSAPP & PREVIEWS ---
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [whatsAppData, setWhatsAppData] = useState({
     donorName: "",
@@ -594,13 +593,15 @@ const DonationList = () => {
     }
   };
 
-  // --- NEW: SPRINT 1 WHATSAPP SHARING LOGIC ---
+  // --- UPDATED FOR OPTION 2: WEBPAGE RECEIPT LINK ---
   const handleOpenWhatsAppModal = (donation) => {
     const recNo = donation.receiptNo || donation._id.slice(-6).toUpperCase();
-    const downloadUrl = `${BASE_URL}/api/donations/public/receipt/${donation._id}`;
 
-    // Friendly, professional pre-filled temple message
-    const defaultMsg = `Namaste ${donation.donorName} garu,\n\nThank you for your generous donation of Rs. ${donation.amount.toLocaleString()} towards *${donation.scheme}* to Karunasri Seva Samithi.\n\nReceipt No: *${recNo}*\nDate: ${new Date(donation.createdAt).toLocaleDateString()}\n\nYou can download your official 80G tax receipt here:\n${downloadUrl}\n\nWith Gratitude,\n*Karunasri Seva Samithi*`;
+    // Generates link pointing to the donor's web page (Works on Localhost or live Vercel domain!)
+    const frontendBaseUrl = window.location.origin;
+    const downloadUrl = `${frontendBaseUrl}/receipt/${donation._id}`;
+
+    const defaultMsg = `Namaste ${donation.donorName} garu,\n\nThank you for your generous donation of Rs. ${donation.amount.toLocaleString()} towards *${donation.scheme}* to Karunasri Seva Samithi.\n\nReceipt No: *${recNo}*\nDate: ${new Date(donation.createdAt).toLocaleDateString()}\n\nYou can view your official receipt and download the 80G tax certificate here:\n${downloadUrl}\n\nWith Gratitude,\n*Karunasri Seva Samithi*`;
 
     setWhatsAppData({
       donorName: donation.donorName,
@@ -617,19 +618,16 @@ const DonationList = () => {
     if (!whatsAppData.phone)
       return alert("Please enter a valid donor mobile number");
 
-    // Clean phone number (strip non-digits, ensure country code)
     let cleanNumber = whatsAppData.phone.replace(/\D/g, "");
     if (cleanNumber.length === 10) cleanNumber = "91" + cleanNumber;
 
     const encodedMessage = encodeURIComponent(whatsAppData.message);
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodedMessage}`;
 
-    // Open WhatsApp Web or Mobile WhatsApp App immediately in a new tab
     window.open(waUrl, "_blank");
     setShowWhatsAppModal(false);
   };
 
-  // --- SPRINT 1: MEDIA PREVIEW LOGIC ---
   const openMediaModal = (d) => {
     setSelectedDonation(d);
     setFiles([]);
@@ -641,7 +639,6 @@ const DonationList = () => {
     const selectedFiles = Array.from(e.target.files);
     setFiles(selectedFiles);
 
-    // Generate immediate browser-side previews for selected images
     const previews = selectedFiles.map((file) => ({
       name: file.name,
       url: URL.createObjectURL(file),
@@ -1034,7 +1031,6 @@ const DonationList = () => {
                             <FaEdit />
                           </Button>
 
-                          {/* --- SPRINT 1: ONE-CLICK WHATSAPP SHARE BUTTON --- */}
                           <Button
                             size="sm"
                             variant="outline-success"
@@ -1627,7 +1623,7 @@ const DonationList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* --- SPRINT 1: ONE-CLICK WHATSAPP SHARE MODAL --- */}
+      {/* --- WHATSAPP SHARE MODAL --- */}
       <Modal
         show={showWhatsAppModal}
         onHide={() => setShowWhatsAppModal(false)}
@@ -1690,7 +1686,7 @@ const DonationList = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* --- SPRINT 1: ENHANCED MEDIA ATTACHMENTS & PREVIEW MODAL --- */}
+      {/* --- MEDIA ATTACHMENTS & PREVIEW MODAL --- */}
       <Modal
         show={showMediaModal}
         onHide={() => setShowMediaModal(false)}
@@ -1714,7 +1710,6 @@ const DonationList = () => {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {/* UPLOAD BOX WITH INSTANT PREVIEWS */}
           <Card className="p-3 bg-light border-0 mb-4">
             <Form onSubmit={handleUpload}>
               <Form.Label className="small fw-bold">
@@ -1737,7 +1732,6 @@ const DonationList = () => {
               </div>
             </Form>
 
-            {/* LIVE PREVIEWS BEFORE UPLOAD */}
             {localFilePreviews.length > 0 && (
               <div className="mt-2">
                 <small className="text-muted d-block mb-1 fw-bold">
@@ -1778,7 +1772,6 @@ const DonationList = () => {
             )}
           </Card>
 
-          {/* ATTACHED MEDIA GRID */}
           <h6 className="text-maroon border-bottom pb-2 fw-bold">
             Uploaded Documents & Photos
           </h6>
