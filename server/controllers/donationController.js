@@ -17,6 +17,7 @@ const getAccountHeadForScheme = async (schemeName) => {
   return schemeObj ? schemeObj.accountHead : null;
 };
 
+// @desc    Create new donation
 const createDonation = async (req, res) => {
   try {
     const {
@@ -805,7 +806,7 @@ const cancelDonation = async (req, res) => {
   }
 };
 
-// --- FIX: EXACT IMPLEMENTATION FOR DATE EDIT BUG ---
+// --- FIX: BYPASS MONGOOSE TIMESTAMP LOCK FOR EDITING DATES ---
 const updateDonation = async (req, res) => {
   try {
     const { id } = req.params;
@@ -813,13 +814,17 @@ const updateDonation = async (req, res) => {
 
     let updateObj = { ...updates };
 
-    // Bypass Mongoose timestamp block by dynamically updating createdAt
+    // Convert empty strings to null for ObjectId mapping to prevent CastError
+    if (updateObj.depositBank === "") updateObj.depositBank = null;
+    if (updateObj.accountHead === "") updateObj.accountHead = null;
+
+    // 1. Force the new date
     if (updates.donationDate) {
       updateObj.createdAt = new Date(updates.donationDate);
       delete updateObj.donationDate;
     }
 
-    // Force recalculate the next reminder date based on the newly edited date
+    // 2. Force recalculate the 1-year anniversary based on the new date
     if (updates.isRecurring) {
       const baseDate = updates.programDate
         ? new Date(updates.programDate)
@@ -832,11 +837,11 @@ const updateDonation = async (req, res) => {
       updateObj.nextReminderDate = null;
     }
 
-    // Use findByIdAndUpdate to force Mongoose to apply createdAt changes
+    // 3. MAGIC FLAG: { timestamps: false } forces Mongoose to allow modifying 'createdAt'
     const donation = await Donation.findByIdAndUpdate(
       id,
       { $set: updateObj },
-      { new: true },
+      { new: true, timestamps: false },
     );
 
     if (!donation)
@@ -851,6 +856,7 @@ const updateDonation = async (req, res) => {
     );
     res.json(donation);
   } catch (error) {
+    console.error("Update Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
