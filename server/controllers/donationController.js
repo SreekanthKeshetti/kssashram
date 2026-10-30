@@ -17,7 +17,6 @@ const getAccountHeadForScheme = async (schemeName) => {
   return schemeObj ? schemeObj.accountHead : null;
 };
 
-// @desc    Create new donation
 const createDonation = async (req, res) => {
   try {
     const {
@@ -806,46 +805,35 @@ const cancelDonation = async (req, res) => {
   }
 };
 
-// --- FIX: MONGOOSE 9 OVERWRITE IMMUTABLE FLAG ---
 const updateDonation = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    let updateObj = { ...updates };
-
-    // Convert empty strings to null for ObjectId mapping to prevent CastError
-    if (updateObj.depositBank === "") updateObj.depositBank = null;
-    if (updateObj.accountHead === "") updateObj.accountHead = null;
-
-    // 1. Force the new date
-    if (updates.donationDate) {
-      updateObj.createdAt = new Date(updates.donationDate);
-      delete updateObj.donationDate;
-    }
-
-    // 2. Force recalculate the 1-year anniversary based on the new date
-    if (updates.isRecurring) {
-      const baseDate = updates.programDate
-        ? new Date(updates.programDate)
-        : updateObj.createdAt
-          ? new Date(updateObj.createdAt)
-          : new Date();
-      baseDate.setFullYear(baseDate.getFullYear() + 1);
-      updateObj.nextReminderDate = baseDate;
-    } else {
-      updateObj.nextReminderDate = null;
-    }
-
-    // 3. MAGIC FLAG: overwriteImmutable: true explicitly tells Mongoose 9+ to allow changing createdAt
-    const donation = await Donation.findByIdAndUpdate(
-      id,
-      { $set: updateObj },
-      { new: true, overwriteImmutable: true },
-    );
-
+    const donation = await Donation.findById(id);
     if (!donation)
       return res.status(404).json({ message: "Donation not found" });
+
+    Object.keys(updates).forEach((key) => {
+      donation[key] = updates[key];
+    });
+
+    // --- FIXED: EDITED DATE BUG ---
+    if (updates.donationDate) {
+      donation.createdAt = new Date(updates.donationDate);
+    }
+
+    if (donation.isRecurring) {
+      const baseDate = donation.programDate
+        ? new Date(donation.programDate)
+        : new Date(donation.createdAt);
+      baseDate.setFullYear(baseDate.getFullYear() + 1);
+      donation.nextReminderDate = baseDate;
+    } else {
+      donation.nextReminderDate = null;
+    }
+
+    await donation.save();
 
     await logAudit(
       req,
@@ -856,7 +844,6 @@ const updateDonation = async (req, res) => {
     );
     res.json(donation);
   } catch (error) {
-    console.error("Update Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
