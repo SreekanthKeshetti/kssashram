@@ -806,7 +806,7 @@ const cancelDonation = async (req, res) => {
   }
 };
 
-// --- FIX: BYPASS MONGOOSE TIMESTAMP LOCK FOR EDITING DATES ---
+// --- FIX: MONGOOSE 9 OVERWRITE IMMUTABLE FLAG ---
 const updateDonation = async (req, res) => {
   try {
     const { id } = req.params;
@@ -837,11 +837,11 @@ const updateDonation = async (req, res) => {
       updateObj.nextReminderDate = null;
     }
 
-    // 3. MAGIC FLAG: { timestamps: false } forces Mongoose to allow modifying 'createdAt'
+    // 3. MAGIC FLAG: overwriteImmutable: true explicitly tells Mongoose 9+ to allow changing createdAt
     const donation = await Donation.findByIdAndUpdate(
       id,
       { $set: updateObj },
-      { new: true, timestamps: false },
+      { new: true, overwriteImmutable: true },
     );
 
     if (!donation)
