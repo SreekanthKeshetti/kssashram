@@ -805,35 +805,42 @@ const cancelDonation = async (req, res) => {
   }
 };
 
+// --- FIX: EXACT IMPLEMENTATION FOR DATE EDIT BUG ---
 const updateDonation = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    const donation = await Donation.findById(id);
+    let updateObj = { ...updates };
+
+    // Bypass Mongoose timestamp block by dynamically updating createdAt
+    if (updates.donationDate) {
+      updateObj.createdAt = new Date(updates.donationDate);
+      delete updateObj.donationDate;
+    }
+
+    // Force recalculate the next reminder date based on the newly edited date
+    if (updates.isRecurring) {
+      const baseDate = updates.programDate
+        ? new Date(updates.programDate)
+        : updateObj.createdAt
+          ? new Date(updateObj.createdAt)
+          : new Date();
+      baseDate.setFullYear(baseDate.getFullYear() + 1);
+      updateObj.nextReminderDate = baseDate;
+    } else {
+      updateObj.nextReminderDate = null;
+    }
+
+    // Use findByIdAndUpdate to force Mongoose to apply createdAt changes
+    const donation = await Donation.findByIdAndUpdate(
+      id,
+      { $set: updateObj },
+      { new: true },
+    );
+
     if (!donation)
       return res.status(404).json({ message: "Donation not found" });
-
-    Object.keys(updates).forEach((key) => {
-      donation[key] = updates[key];
-    });
-
-    // --- FIXED: EDITED DATE BUG ---
-    if (updates.donationDate) {
-      donation.createdAt = new Date(updates.donationDate);
-    }
-
-    if (donation.isRecurring) {
-      const baseDate = donation.programDate
-        ? new Date(donation.programDate)
-        : new Date(donation.createdAt);
-      baseDate.setFullYear(baseDate.getFullYear() + 1);
-      donation.nextReminderDate = baseDate;
-    } else {
-      donation.nextReminderDate = null;
-    }
-
-    await donation.save();
 
     await logAudit(
       req,
