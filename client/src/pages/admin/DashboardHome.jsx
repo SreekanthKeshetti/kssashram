@@ -14,7 +14,8 @@ import {
   FaUserTie,
   FaFileInvoiceDollar,
   FaChevronRight,
-  FaTruck, // <--- New Icon
+  FaTruck,
+  FaGavel,
 } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -88,13 +89,15 @@ const DashboardHome = () => {
     members: 0,
     vouchers: 0,
     transfers: 0,
+    donationEdits: 0,
   };
 
   const hasActions =
     actions.students > 0 ||
     actions.members > 0 ||
     actions.vouchers > 0 ||
-    actions.transfers > 0;
+    actions.transfers > 0 ||
+    actions.donationEdits > 0;
 
   return (
     <div>
@@ -155,7 +158,6 @@ const DashboardHome = () => {
                 color="#c0392b"
               />
             )}
-            {/* --- NEW CARD: TRANSFER APPROVALS --- */}
             {actions.transfers > 0 && (
               <ActionCard
                 title="Stock Transfers"
@@ -163,6 +165,16 @@ const DashboardHome = () => {
                 link="/dashboard/inventory"
                 icon={<FaTruck size={24} />}
                 color="#8e44ad"
+              />
+            )}
+            {/* Action card for receipt edit approvals */}
+            {actions.donationEdits > 0 && (
+              <ActionCard
+                title="Receipt Edits"
+                count={actions.donationEdits}
+                link="/dashboard/donations"
+                icon={<FaGavel size={24} />}
+                color="#e67e22"
               />
             )}
           </Row>

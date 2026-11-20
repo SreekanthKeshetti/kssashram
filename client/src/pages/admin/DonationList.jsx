@@ -34,6 +34,8 @@ import {
   FaWhatsapp,
   FaEye,
   FaTrash,
+  FaGavel,
+  FaUserCheck,
 } from "react-icons/fa";
 
 const TELUGU_MASAMS = [
@@ -80,12 +82,19 @@ const DonationList = () => {
 
   const [filterCategory, setFilterCategory] = useState("Household");
   const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
+  const [showOnlyEdits, setShowOnlyEdits] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showTaxModal, setShowTaxModal] = useState(false);
   const [showMediaModal, setShowMediaModal] = useState(false);
+
+  // 3-TIER COMMITTEE EDIT WORKFLOW STATES
+  const [showReviewEditModal, setShowReviewEditModal] = useState(false);
+  const [selectedReviewDonation, setSelectedReviewDonation] = useState(null);
+  const [editReason, setEditReason] = useState("");
+  const [reviewRemark, setReviewRemark] = useState("");
 
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [whatsAppData, setWhatsAppData] = useState({
@@ -120,6 +129,7 @@ const DonationList = () => {
     tithi: TITHIS[0],
   });
 
+  // INITIAL STATE WITH isRecurring DEFAULTED TO TRUE
   const [formData, setFormData] = useState({
     donationDate: new Date().toISOString().split("T")[0],
     donorName: "",
@@ -140,7 +150,7 @@ const DonationList = () => {
     calendarType: "Gregorian",
     programDate: "",
     tithi: "",
-    isRecurring: false,
+    isRecurring: true, // DEFAULTED TO TRUE
     comments: "",
     manualReceiptNo: "",
     paymentDetails: {
@@ -217,6 +227,7 @@ const DonationList = () => {
     setIsEditing(false);
     setEditId(null);
     setReceiptType("Donation");
+    setEditReason("");
 
     setFormData({
       donationDate: new Date().toISOString().split("T")[0],
@@ -241,7 +252,7 @@ const DonationList = () => {
       calendarType: "Gregorian",
       programDate: "",
       tithi: "",
-      isRecurring: false,
+      isRecurring: true, // DEFAULTED TO TRUE
       comments: "",
       manualReceiptNo: "",
       paymentDetails: {
@@ -258,6 +269,7 @@ const DonationList = () => {
   const handleEditClick = (d) => {
     setIsEditing(true);
     setEditId(d._id);
+    setEditReason("");
 
     if (d.scheme === "Interest Received" || d.donorName === "Bank Interest") {
       setReceiptType("General");
@@ -288,7 +300,7 @@ const DonationList = () => {
       calendarType: d.calendarType || "Gregorian",
       programDate: formatDate(d.programDate),
       tithi: d.tithi,
-      isRecurring: d.isRecurring || false,
+      isRecurring: d.isRecurring !== undefined ? d.isRecurring : true,
       comments: d.comments || "",
       manualReceiptNo: d.manualReceiptNo || "",
       paymentDetails: {
@@ -426,8 +438,24 @@ const DonationList = () => {
       };
 
       if (isEditing) {
-        await axios.put(`${BASE_URL}/api/donations/${editId}`, payload, config);
-        alert("Receipt Updated Successfully!");
+        // Requirement 1: Enforce 3-Tier Committee Consensus Request
+        if (!editReason.trim()) {
+          setSubmitLoading(false);
+          return alert(
+            "Please enter the mandatory reason for this edit request.",
+          );
+        }
+
+        const { data } = await axios.post(
+          `${BASE_URL}/api/donations/${editId}/request-edit`,
+          { updates: payload, reason: editReason },
+          config,
+        );
+
+        alert(
+          data.message ||
+            "Edit Request submitted for 3-tier committee approval.",
+        );
       } else {
         await axios.post(`${BASE_URL}/api/donations`, payload, config);
         alert("Receipt Created Successfully!");
@@ -439,6 +467,34 @@ const DonationList = () => {
       alert(err.response?.data?.message || "Error saving record");
     }
     setSubmitLoading(false);
+  };
+
+  // Requirement 1: Committee Vote Action (Majority: 2 of 3)
+  const handleVoteEdit = async (status) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to vote ${status} on this edit request?`,
+      )
+    )
+      return;
+    try {
+      const config = {
+        headers: { Authorization: `Bearer ${currentUser.token}` },
+      };
+      const { data } = await axios.put(
+        `${BASE_URL}/api/donations/${selectedReviewDonation._id}/approve-edit`,
+        { status, remark: reviewRemark },
+        config,
+      );
+      alert(data.message);
+      setShowReviewEditModal(false);
+      setReviewRemark("");
+      fetchDonations();
+    } catch (err) {
+      alert(
+        err.response?.data?.message || "Error recording committee decision.",
+      );
+    }
   };
 
   const handleExport = () => {
@@ -466,6 +522,7 @@ const DonationList = () => {
       "Donor Bank",
       "Deposited To (Org Account)",
       "Branch",
+      "Recurring",
       "Manual Ref",
       "Comments",
     ];
@@ -502,6 +559,7 @@ const DonationList = () => {
         safeString(pd.bankName),
         safeString(d.depositBank?.name),
         safeString(d.branch),
+        d.isRecurring ? "Yes" : "No",
         safeString(d.manualReceiptNo),
         safeString(d.comments),
       ];
@@ -593,32 +651,11 @@ const DonationList = () => {
     }
   };
 
-  // --- UPDATED FOR OPTION 2: WEBPAGE RECEIPT LINK ---
-  // const handleOpenWhatsAppModal = (donation) => {
-  //   const recNo = donation.receiptNo || donation._id.slice(-6).toUpperCase();
-
-  //   // Generates link pointing to the donor's web page (Works on Localhost or live Vercel domain!)
-  //   const frontendBaseUrl = window.location.origin;
-  //   const downloadUrl = `${frontendBaseUrl}/receipt/${donation._id}`;
-
-  //   const defaultMsg = `Namaste ${donation.donorName} garu,\n\nThank you for your generous donation of Rs. ${donation.amount.toLocaleString()} towards *${donation.scheme}* to Karunasri Seva Samithi.\n\nReceipt No: *${recNo}*\nDate: ${new Date(donation.createdAt).toLocaleDateString()}\n\nYou can view your official receipt and download the 80G tax certificate here:\n${downloadUrl}\n\nWith Gratitude,\n*Karunasri Seva Samithi*`;
-
-  //   setWhatsAppData({
-  //     donorName: donation.donorName,
-  //     phone: donation.donorPhone !== "0000000000" ? donation.donorPhone : "",
-  //     amount: donation.amount,
-  //     receiptNo: recNo,
-  //     scheme: donation.scheme,
-  //     message: defaultMsg,
-  //   });
-  //   setShowWhatsAppModal(true);
-  // };
   const handleOpenWhatsAppModal = (donation) => {
     const recNo = donation.receiptNo || donation._id.slice(-6).toUpperCase();
     const frontendBaseUrl = window.location.origin;
     const downloadUrl = `${frontendBaseUrl}/receipt/${donation._id}`;
 
-    // Using a clear structure that Desktop and Web WhatsApp both understand
     const defaultMsg = `Namaste ${donation.donorName} garu,\n\nThank you for your generous donation of Rs. ${donation.amount.toLocaleString("en-IN")} towards *${donation.scheme}* to Karunasri Seva Samithi.\n\nReceipt No: *${recNo}*\nDate: ${new Date(donation.createdAt).toLocaleDateString("en-IN")}\n\nYou can view your official receipt and download the 80G tax certificate here:\n${downloadUrl}\n\nWith Gratitude,\n*Karunasri Seva Samithi*`;
 
     setWhatsAppData({
@@ -636,25 +673,10 @@ const DonationList = () => {
     let cleanNumber = whatsAppData.phone.replace(/\D/g, "");
     if (cleanNumber.length === 10) cleanNumber = "91" + cleanNumber;
 
-    // --- ROBUST FORMAT ---
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(whatsAppData.message)}`;
     window.open(waUrl, "_blank");
     setShowWhatsAppModal(false);
   };
-
-  // const handleSendWhatsApp = () => {
-  //   if (!whatsAppData.phone)
-  //     return alert("Please enter a valid donor mobile number");
-
-  //   let cleanNumber = whatsAppData.phone.replace(/\D/g, "");
-  //   if (cleanNumber.length === 10) cleanNumber = "91" + cleanNumber;
-
-  //   const encodedMessage = encodeURIComponent(whatsAppData.message);
-  //   const waUrl = `https://wa.me/${cleanNumber}?text=${encodedMessage}`;
-
-  //   window.open(waUrl, "_blank");
-  //   setShowWhatsAppModal(false);
-  // };
 
   const openMediaModal = (d) => {
     setSelectedDonation(d);
@@ -791,6 +813,10 @@ const DonationList = () => {
   };
 
   const filteredDonations = donations.filter((d) => {
+    if (showOnlyEdits) {
+      return d.editRequest && d.editRequest.status === "Pending";
+    }
+
     let matchesCategory = true;
     if (filterCategory !== "All") {
       const cat = d.category || "Household";
@@ -807,6 +833,13 @@ const DonationList = () => {
     return matchesCategory && matchesDate;
   });
 
+  const isCommitteeMember = [
+    "admin",
+    "president",
+    "secretary",
+    "treasurer",
+  ].includes(currentUser?.role);
+
   return (
     <div>
       <Row className="mb-4 align-items-center">
@@ -818,7 +851,7 @@ const DonationList = () => {
             Receipts / Donations
           </h2>
           <p className="text-muted m-0 small">
-            Manage all incoming funds & donor communications
+            Manage incoming funds, recurring Sevas & 3-tier approvals
           </p>
         </Col>
         <Col lg={7}>
@@ -863,39 +896,67 @@ const DonationList = () => {
         </Col>
       </Row>
 
-      <Row className="mb-3 g-2">
-        <Col md={6}>
+      <Row className="mb-3 g-2 align-items-center">
+        <Col md={7}>
           <ButtonGroup>
             <Button
-              variant={filterCategory === "Household" ? "dark" : "outline-dark"}
+              variant={
+                !showOnlyEdits && filterCategory === "Household"
+                  ? "dark"
+                  : "outline-dark"
+              }
               size="sm"
-              onClick={() => setFilterCategory("Household")}
+              onClick={() => {
+                setShowOnlyEdits(false);
+                setFilterCategory("Household");
+              }}
             >
               Household
             </Button>
             <Button
               variant={
-                filterCategory === "Organizational"
+                !showOnlyEdits && filterCategory === "Organizational"
                   ? "warning"
                   : "outline-warning"
               }
               size="sm"
-              onClick={() => setFilterCategory("Organizational")}
+              onClick={() => {
+                setShowOnlyEdits(false);
+                setFilterCategory("Organizational");
+              }}
             >
               Organization
             </Button>
             <Button
               variant={
-                filterCategory === "All" ? "secondary" : "outline-secondary"
+                !showOnlyEdits && filterCategory === "All"
+                  ? "secondary"
+                  : "outline-secondary"
               }
               size="sm"
-              onClick={() => setFilterCategory("All")}
+              onClick={() => {
+                setShowOnlyEdits(false);
+                setFilterCategory("All");
+              }}
             >
               All
             </Button>
+            <Button
+              variant={showOnlyEdits ? "danger" : "outline-danger"}
+              size="sm"
+              onClick={() => setShowOnlyEdits(!showOnlyEdits)}
+            >
+              <FaGavel className="me-1" /> Pending Edits (
+              {
+                donations.filter(
+                  (d) => d.editRequest && d.editRequest.status === "Pending",
+                ).length
+              }
+              )
+            </Button>
           </ButtonGroup>
         </Col>
-        <Col md={6}>
+        <Col md={5}>
           <div className="d-flex gap-2 justify-content-end">
             <Form.Control
               type="date"
@@ -932,13 +993,14 @@ const DonationList = () => {
                 <th className="ps-3" style={{ width: "12%" }}>
                   Date / ID
                 </th>
-                <th style={{ width: "20%" }}>Donor</th>
-                <th style={{ width: "20%" }}>Scheme / Head</th>
-                <th style={{ width: "10%" }}>Category</th>
+                <th style={{ width: "16%" }}>Donor</th>
+                <th style={{ width: "16%" }}>Scheme / Head</th>
+                <th style={{ width: "8%" }}>Category</th>
                 <th style={{ width: "10%" }}>Amount</th>
-                <th style={{ width: "15%" }}>Mode</th>
-                <th style={{ width: "15%" }}>Branch</th>
-                <th style={{ width: "20%" }} className="text-center">
+                <th style={{ width: "10%" }}>Mode</th>
+                <th style={{ width: "10%" }}>Branch</th>
+                <th style={{ width: "10%" }}>Status / Consensus</th>
+                <th style={{ width: "18%" }} className="text-center">
                   Actions
                 </th>
               </tr>
@@ -946,13 +1008,24 @@ const DonationList = () => {
             <tbody>
               {filteredDonations.map((d) => {
                 const isCancelled = d.status === "Cancelled";
+                const hasPendingEdit =
+                  d.editRequest && d.editRequest.status === "Pending";
+                const p =
+                  d.editRequest?.approvals?.president?.status || "Pending";
+                const s =
+                  d.editRequest?.approvals?.secretary?.status || "Pending";
+                const t =
+                  d.editRequest?.approvals?.treasurer?.status || "Pending";
+
                 return (
                   <tr
                     key={d._id}
                     style={
                       isCancelled
                         ? { opacity: 0.6, backgroundColor: "#f8f9fa" }
-                        : {}
+                        : hasPendingEdit
+                          ? { backgroundColor: "#fff9e6" }
+                          : {}
                     }
                   >
                     <td className="ps-3">
@@ -968,9 +1041,9 @@ const DonationList = () => {
                       <small className="text-muted">
                         {d.receiptNo || d._id.slice(-6).toUpperCase()}
                       </small>
-                      {d.manualReceiptNo && (
-                        <div className="text-danger small mt-1">
-                          Ref: {d.manualReceiptNo}
+                      {d.isRecurring && (
+                        <div className="text-primary small fw-bold">
+                          ↻ Annual Seva
                         </div>
                       )}
                     </td>
@@ -1034,7 +1107,7 @@ const DonationList = () => {
                     <td>
                       <small
                         className="text-truncate d-block"
-                        style={{ maxWidth: "150px" }}
+                        style={{ maxWidth: "130px" }}
                         title={d.branch}
                       >
                         {d.branch}
@@ -1043,6 +1116,45 @@ const DonationList = () => {
                     <td>
                       {isCancelled ? (
                         <Badge bg="danger">Cancelled</Badge>
+                      ) : hasPendingEdit ? (
+                        <div>
+                          <Badge
+                            bg="warning"
+                            text="dark"
+                            className="d-block mb-1"
+                          >
+                            Edit Pending (2/3)
+                          </Badge>
+                          <div
+                            className="d-flex justify-content-start gap-1"
+                            style={{ fontSize: "0.7rem" }}
+                          >
+                            <span title="President">
+                              P:
+                              {p === "Approved"
+                                ? "✅"
+                                : p === "Rejected"
+                                  ? "❌"
+                                  : "⏳"}
+                            </span>
+                            <span title="Secretary">
+                              S:
+                              {s === "Approved"
+                                ? "✅"
+                                : s === "Rejected"
+                                  ? "❌"
+                                  : "⏳"}
+                            </span>
+                            <span title="Treasurer">
+                              T:
+                              {t === "Approved"
+                                ? "✅"
+                                : t === "Rejected"
+                                  ? "❌"
+                                  : "⏳"}
+                            </span>
+                          </div>
+                        </div>
                       ) : (
                         <Badge bg="success">Active</Badge>
                       )}
@@ -1050,11 +1162,34 @@ const DonationList = () => {
                     <td className="text-center">
                       {!isCancelled && (
                         <div className="d-flex justify-content-center gap-1">
+                          {/* COMMITTEE VOTE BUTTON */}
+                          {hasPendingEdit && isCommitteeMember && (
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              title="Review & Vote on Edit Request"
+                              onClick={() => {
+                                setSelectedReviewDonation(d);
+                                setShowReviewEditModal(true);
+                              }}
+                            >
+                              <FaUserCheck className="me-1" /> Vote
+                            </Button>
+                          )}
+
+                          {/* REQUEST EDIT BUTTON */}
                           <Button
                             size="sm"
-                            variant="outline-primary"
-                            title="Edit"
+                            variant={
+                              hasPendingEdit ? "secondary" : "outline-primary"
+                            }
+                            title={
+                              hasPendingEdit
+                                ? "Edit Pending Approval"
+                                : "Request Edit (Requires 3-Tier Approval)"
+                            }
                             onClick={() => handleEditClick(d)}
+                            disabled={hasPendingEdit}
                           >
                             <FaEdit />
                           </Button>
@@ -1153,14 +1288,29 @@ const DonationList = () => {
         </Card.Body>
       </Card>
 
-      {/* --- ADD/EDIT RECEIPT MODAL --- */}
+      {/* --- ADD / EDIT REQUEST MODAL --- */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton className="bg-light">
           <Modal.Title>
-            {isEditing ? "Edit" : "New"} Receipt / Transaction
+            {isEditing
+              ? "Request Edit (Requires 3-Tier Committee Approval)"
+              : "New Receipt / Transaction"}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          {isEditing && (
+            <Alert variant="warning" className="small mb-3">
+              <strong>⚠️ Locked Receipt Policy:</strong> Edits to official
+              receipts cannot be committed directly. Submitting this form will
+              route your changes to the{" "}
+              <strong>
+                3-Tier Committee (President, Secretary, Treasurer)
+              </strong>
+              . The live receipt updates automatically when at least 2 of 3
+              committee members approve.
+            </Alert>
+          )}
+
           <Form onSubmit={handleSubmit}>
             <div className="d-flex justify-content-center mb-4">
               <ButtonGroup className="w-100 shadow-sm">
@@ -1404,14 +1554,28 @@ const DonationList = () => {
                     </Form.Select>
                   </Col>
                 </Row>
-                <Form.Check
-                  type="switch"
-                  label="Is Recurring?"
-                  name="isRecurring"
-                  checked={formData.isRecurring}
-                  onChange={handleChange}
-                  className="mb-2 text-primary"
-                />
+
+                {/* Requirement 2: ALWAYS ENABLED RECURRING SWITCH */}
+                <div className="p-2 mb-2 rounded bg-light border d-flex align-items-center justify-content-between">
+                  <div>
+                    <span className="fw-bold text-dark">
+                      ↻ Annual Recurring Seva
+                    </span>
+                    <small className="d-block text-muted">
+                      Keeps this donor in the CRM renewal engine. Turn off only
+                      if donor explicitly declined annual support.
+                    </small>
+                  </div>
+                  <Form.Check
+                    type="switch"
+                    id="isRecurringSwitch"
+                    name="isRecurring"
+                    checked={formData.isRecurring}
+                    onChange={handleChange}
+                    className="fs-5"
+                  />
+                </div>
+
                 {renderPaymentFields()}
 
                 <Row className="g-2 mb-2">
@@ -1526,6 +1690,23 @@ const DonationList = () => {
                     />
                   </Col>
                 </Row>
+
+                {/* Requirement 1: MANDATORY REASON WHEN REQUESTING EDIT */}
+                {isEditing && (
+                  <Form.Group className="mt-3 p-3 bg-white border border-danger rounded">
+                    <Form.Label className="small fw-bold text-danger">
+                      Mandatory Reason for Edit Request *
+                    </Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={2}
+                      placeholder="Explain to President, Secretary, and Treasurer why this change is necessary..."
+                      value={editReason}
+                      onChange={(e) => setEditReason(e.target.value)}
+                      required
+                    />
+                  </Form.Group>
+                )}
               </>
             )}
 
@@ -1618,6 +1799,8 @@ const DonationList = () => {
                     <option value="Karunya Bharathi">Karunya Bharathi</option>
                   </Form.Select>
                 </Form.Group>
+
+                {/* RESTORED EXACT INTEREST PERIOD INPUTS */}
                 <label className="small fw-bold mb-1">
                   Interest Period (Duration)
                 </label>
@@ -1641,14 +1824,259 @@ const DonationList = () => {
                   <FaClock className="me-2" /> Recorded under{" "}
                   <strong>"Interest Received"</strong>.
                 </Alert>
+
+                {isEditing && (
+                  <Form.Group className="mt-3 p-3 bg-white border border-danger rounded">
+                    <Form.Label className="small fw-bold text-danger">
+                      Mandatory Reason for Edit Request *
+                    </Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={2}
+                      placeholder="Explain reason for adjusting this transaction..."
+                      value={editReason}
+                      onChange={(e) => setEditReason(e.target.value)}
+                      required
+                    />
+                  </Form.Group>
+                )}
               </div>
             )}
 
-            <Button type="submit" className="btn-ashram w-100 mt-3">
-              {submitLoading ? "Saving..." : isEditing ? "Update" : "Save"}
+            <Button
+              type="submit"
+              className="btn-ashram w-100 mt-3"
+              disabled={submitLoading}
+            >
+              {submitLoading
+                ? "Processing..."
+                : isEditing
+                  ? "Submit for Committee Approval"
+                  : "Save Receipt"}
             </Button>
           </Form>
         </Modal.Body>
+      </Modal>
+
+      {/* --- COMMITTEE EDIT REVIEW & VOTE MODAL (2 of 3 CONSENSUS) --- */}
+      <Modal
+        show={showReviewEditModal}
+        onHide={() => setShowReviewEditModal(false)}
+        size="lg"
+      >
+        <Modal.Header closeButton className="bg-danger text-white">
+          <Modal.Title className="fs-5 d-flex align-items-center">
+            <FaGavel className="me-2" /> 3-Tier Committee Consensus: Edit Review
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedReviewDonation && (
+            <>
+              <div className="p-3 bg-light rounded border mb-3">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h5 className="text-maroon fw-bold mb-1">
+                      Receipt: {selectedReviewDonation.receiptNo}
+                    </h5>
+                    <div className="text-muted small">
+                      Requested By:{" "}
+                      <strong>
+                        {selectedReviewDonation.editRequest?.requestedBy
+                          ?.name || "Staff"}
+                      </strong>{" "}
+                      on{" "}
+                      {new Date(
+                        selectedReviewDonation.editRequest?.requestedAt ||
+                          Date.now(),
+                      ).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <Badge bg="warning" text="dark" className="fs-6 p-2">
+                    Pending Consensus (2 of 3 Required)
+                  </Badge>
+                </div>
+
+                <div className="mt-3 p-2 bg-white rounded border border-warning">
+                  <strong className="text-danger">
+                    Reason for Requested Edit:
+                  </strong>
+                  <p className="mb-0 mt-1 fst-italic">
+                    "{selectedReviewDonation.editRequest?.reason}"
+                  </p>
+                </div>
+              </div>
+
+              {/* Side-by-Side Diff Table */}
+              <h6 className="fw-bold text-dark mb-2">
+                Proposed Changes Comparison:
+              </h6>
+              <Table bordered size="sm" className="align-middle mb-4">
+                <thead
+                  className="bg-light text-uppercase"
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  <tr>
+                    <th>Field</th>
+                    <th className="text-muted">Current Live Value</th>
+                    <th className="text-success">Proposed New Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(
+                    selectedReviewDonation.editRequest?.proposedUpdates || {},
+                  )
+                    .filter(
+                      ([key]) =>
+                        key !== "paymentDetails" && key !== "interestPeriod",
+                    )
+                    .map(([key, rawNewVal]) => {
+                      let oldVal = selectedReviewDonation[key];
+                      let newVal = rawNewVal;
+
+                      if (key === "depositBank") {
+                        oldVal =
+                          selectedReviewDonation.depositBank?.name || oldVal;
+                        const matchedBank = bankAccounts.find(
+                          (b) => b._id === newVal,
+                        );
+                        newVal = matchedBank ? matchedBank.name : newVal;
+                      }
+
+                      if (key === "accountHead") {
+                        oldVal =
+                          selectedReviewDonation.accountHead?.name || oldVal;
+                      }
+
+                      const isChanged =
+                        String(oldVal ?? "") !== String(newVal ?? "");
+                      return (
+                        <tr
+                          key={key}
+                          className={isChanged ? "table-warning" : ""}
+                        >
+                          <td className="fw-bold text-capitalize">
+                            {key.replace(/([A-Z])/g, " $1")}
+                          </td>
+                          <td className="text-muted">
+                            {String(oldVal ?? "-")}
+                          </td>
+                          <td
+                            className={isChanged ? "fw-bold text-success" : ""}
+                          >
+                            {String(newVal ?? "-")}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </Table>
+
+              {/* 3-Tier Committee Votes Table */}
+              <h6 className="fw-bold text-dark mb-2">
+                Committee Consensus Status:
+              </h6>
+              <Table
+                bordered
+                size="sm"
+                className="text-center align-middle mb-4"
+              >
+                <thead
+                  className="bg-light text-uppercase"
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  <tr>
+                    <th>President</th>
+                    <th>Secretary</th>
+                    <th>Treasurer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <Badge
+                        bg={
+                          selectedReviewDonation.editRequest?.approvals
+                            ?.president?.status === "Approved"
+                            ? "success"
+                            : selectedReviewDonation.editRequest?.approvals
+                                  ?.president?.status === "Rejected"
+                              ? "danger"
+                              : "secondary"
+                        }
+                      >
+                        {selectedReviewDonation.editRequest?.approvals
+                          ?.president?.status || "Pending"}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge
+                        bg={
+                          selectedReviewDonation.editRequest?.approvals
+                            ?.secretary?.status === "Approved"
+                            ? "success"
+                            : selectedReviewDonation.editRequest?.approvals
+                                  ?.secretary?.status === "Rejected"
+                              ? "danger"
+                              : "secondary"
+                        }
+                      >
+                        {selectedReviewDonation.editRequest?.approvals
+                          ?.secretary?.status || "Pending"}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge
+                        bg={
+                          selectedReviewDonation.editRequest?.approvals
+                            ?.treasurer?.status === "Approved"
+                            ? "success"
+                            : selectedReviewDonation.editRequest?.approvals
+                                  ?.treasurer?.status === "Rejected"
+                              ? "danger"
+                              : "secondary"
+                        }
+                      >
+                        {selectedReviewDonation.editRequest?.approvals
+                          ?.treasurer?.status || "Pending"}
+                      </Badge>
+                    </td>
+                  </tr>
+                </tbody>
+              </Table>
+
+              <Form.Group className="mb-3">
+                <Form.Label className="small fw-bold">
+                  Your Remark / Feedback (Optional)
+                </Form.Label>
+                <Form.Control
+                  size="sm"
+                  placeholder="e.g. Verified donor receipt discrepancy with bank statement"
+                  value={reviewRemark}
+                  onChange={(e) => setReviewRemark(e.target.value)}
+                />
+              </Form.Group>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer className="d-flex justify-content-between">
+          <Button
+            variant="secondary"
+            onClick={() => setShowReviewEditModal(false)}
+          >
+            Close
+          </Button>
+          <div className="d-flex gap-2">
+            <Button variant="danger" onClick={() => handleVoteEdit("Rejected")}>
+              Vote to Reject
+            </Button>
+            <Button
+              variant="success"
+              onClick={() => handleVoteEdit("Approved")}
+            >
+              Vote to Approve (2/3)
+            </Button>
+          </div>
+        </Modal.Footer>
       </Modal>
 
       {/* --- WHATSAPP SHARE MODAL --- */}
@@ -1676,10 +2104,6 @@ const DonationList = () => {
               placeholder="e.g. 9848012345 (with or without 91)"
               required
             />
-            <Form.Text className="text-muted">
-              Standard Indian 10-digit mobile numbers are auto-prefixed with
-              +91.
-            </Form.Text>
           </Form.Group>
 
           <Form.Group className="mb-3">
@@ -1714,7 +2138,7 @@ const DonationList = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* --- MEDIA ATTACHMENTS & PREVIEW MODAL --- */}
+      {/* --- MEDIA ATTACHMENTS MODAL --- */}
       <Modal
         show={showMediaModal}
         onHide={() => setShowMediaModal(false)}
@@ -1726,15 +2150,6 @@ const DonationList = () => {
               <FaImages className="me-2 text-warning" />
               Attachments: {selectedDonation?.donorName}
             </span>
-            {selectedDonation && (
-              <Button
-                variant="outline-success"
-                size="sm"
-                onClick={() => handleOpenWhatsAppModal(selectedDonation)}
-              >
-                <FaWhatsapp className="me-1" /> WhatsApp Receipt
-              </Button>
-            )}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -1759,50 +2174,8 @@ const DonationList = () => {
                 </Button>
               </div>
             </Form>
-
-            {localFilePreviews.length > 0 && (
-              <div className="mt-2">
-                <small className="text-muted d-block mb-1 fw-bold">
-                  Selected Files to be Uploaded:
-                </small>
-                <div className="d-flex flex-wrap gap-2">
-                  {localFilePreviews.map((f, i) => (
-                    <div
-                      key={i}
-                      className="border p-1 rounded bg-white text-center"
-                      style={{ width: "90px" }}
-                    >
-                      {f.type.startsWith("image/") ? (
-                        <img
-                          src={f.url}
-                          alt="local preview"
-                          style={{
-                            width: "80px",
-                            height: "60px",
-                            objectFit: "cover",
-                          }}
-                        />
-                      ) : (
-                        <div className="py-3 text-muted small">
-                          <FaFilePdf size={24} />
-                        </div>
-                      )}
-                      <small
-                        className="d-block text-truncate"
-                        style={{ fontSize: "0.65rem" }}
-                      >
-                        {f.name}
-                      </small>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </Card>
 
-          <h6 className="text-maroon border-bottom pb-2 fw-bold">
-            Uploaded Documents & Photos
-          </h6>
           <Row>
             {selectedDonation?.media?.map((path, i) => {
               const isPdf = path.toLowerCase().endsWith(".pdf");
@@ -1824,7 +2197,6 @@ const DonationList = () => {
                           background: "#f8f9fa",
                         }}
                         onClick={() => setPreviewImage(path)}
-                        title="Click to view full photo"
                       >
                         <img
                           src={path}
@@ -1861,19 +2233,11 @@ const DonationList = () => {
                 </Col>
               );
             })}
-            {(!selectedDonation?.media ||
-              selectedDonation.media.length === 0) && (
-              <Col xs={12}>
-                <p className="text-center text-muted py-4">
-                  No photos or documents attached yet.
-                </p>
-              </Col>
-            )}
           </Row>
         </Modal.Body>
       </Modal>
 
-      {/* FULL SIZE IMAGE LIGHTBOX MODAL */}
+      {/* FULL SIZE IMAGE LIGHTBOX */}
       <Modal
         show={!!previewImage}
         onHide={() => setPreviewImage(null)}

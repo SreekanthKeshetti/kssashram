@@ -64,7 +64,8 @@ const donationSchema = mongoose.Schema(
       default: "Household",
     },
 
-    isRecurring: { type: Boolean, default: false },
+    // Requirement 2: Default is recurring always
+    isRecurring: { type: Boolean, default: true },
     reminderFrequency: {
       type: String,
       enum: ["Annual", "Monthly"],
@@ -90,7 +91,7 @@ const donationSchema = mongoose.Schema(
 
     comments: { type: String },
 
-    // --- SPRINT 2: CRM FOLLOW UP LOGS ---
+    // --- CRM FOLLOW UP LOGS ---
     followUpLogs: [
       {
         date: { type: Date, default: Date.now },
@@ -99,6 +100,51 @@ const donationSchema = mongoose.Schema(
         note: { type: String },
       },
     ],
+
+    // --- Requirement 1: 3-TIER COMMITTEE APPROVAL WORKFLOW ---
+    editRequest: {
+      status: {
+        type: String,
+        enum: ["None", "Pending", "Approved", "Rejected"],
+        default: "None",
+      },
+      reason: { type: String },
+      requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      requestedAt: { type: Date },
+      proposedUpdates: { type: mongoose.Schema.Types.Mixed },
+      approvals: {
+        president: {
+          status: {
+            type: String,
+            enum: ["Pending", "Approved", "Rejected"],
+            default: "Pending",
+          },
+          date: Date,
+          remark: String,
+          approver: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        },
+        secretary: {
+          status: {
+            type: String,
+            enum: ["Pending", "Approved", "Rejected"],
+            default: "Pending",
+          },
+          date: Date,
+          remark: String,
+          approver: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        },
+        treasurer: {
+          status: {
+            type: String,
+            enum: ["Pending", "Approved", "Rejected"],
+            default: "Pending",
+          },
+          date: Date,
+          remark: String,
+          approver: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        },
+      },
+    },
 
     branch: {
       type: String,

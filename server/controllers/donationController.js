@@ -82,11 +82,15 @@ const createDonation = async (req, res) => {
     else if (req.user.role === "ksa_manager") finalBranch = "Karunya Sindhu";
     else finalBranch = branch || "KarunaSri Seva Samithi";
 
+    // Requirement 2: Default is recurring always
+    const finalIsRecurring =
+      isRecurring !== undefined ? Boolean(isRecurring) : true;
+
     let nextDate = null;
-    if (isRecurring) {
+    if (finalIsRecurring) {
       const baseDate = programDate
         ? new Date(programDate)
-        : new Date(donationDate);
+        : new Date(donationDate || Date.now());
       baseDate.setFullYear(baseDate.getFullYear() + 1);
       nextDate = baseDate;
     }
@@ -125,7 +129,7 @@ const createDonation = async (req, res) => {
       programDate: programDate || null,
       category: category || "Household",
       address,
-      isRecurring: isRecurring || false,
+      isRecurring: finalIsRecurring,
       nextReminderDate: nextDate,
       calendarType: calendarType || "Gregorian",
       tithi: tithi || "",
@@ -229,6 +233,10 @@ const getDonations = async (req, res) => {
     const donations = await Donation.find(query)
       .populate("accountHead", "code name")
       .populate("depositBank", "name")
+      .populate("editRequest.requestedBy", "name email")
+      .populate("editRequest.approvals.president.approver", "name")
+      .populate("editRequest.approvals.secretary.approver", "name")
+      .populate("editRequest.approvals.treasurer.approver", "name")
       .sort({ _id: -1 });
 
     res.json(donations);
@@ -334,6 +342,10 @@ const createPublicDonation = async (req, res) => {
       comments,
       branch: "KarunaSri Seva Samithi",
       receiptStatus: "Generated",
+      isRecurring: true,
+      nextReminderDate: new Date(
+        new Date().setFullYear(new Date().getFullYear() + 1),
+      ),
     });
     res.status(201).json(donation);
   } catch (error) {
@@ -695,16 +707,13 @@ const importDonations = async (req, res) => {
             collectedBy: req.user._id,
             comments: dComments,
             manualReceiptNo: dManualRef,
+            isRecurring: true, // Default true on import
 
             status: isCancelled ? "Cancelled" : "Active",
             cancellationReason: isCancelled
               ? "Cancelled during legacy data import"
               : "",
           });
-        } else {
-          console.log(
-            `❌ SKIPPED ROW -> Name: "${dName}", Amount Found: "${dAmountStr}"`,
-          );
         }
       })
       .on("end", async () => {
@@ -805,8 +814,199 @@ const cancelDonation = async (req, res) => {
   }
 };
 
+// Requirement 1: Submit Edit Request for 3-Tier Committee Approval
+const requestDonationEdit = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { updates, reason } = req.body;
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({
+        message: "A clear reason is required to request editing this receipt.",
+      });
+    }
+
+    const donation = await Donation.findById(id);
+    if (!donation) {
+      return res.status(404).json({ message: "Donation record not found" });
+    }
+
+    if (donation.status === "Cancelled") {
+      return res.status(400).json({
+        message: "Cannot edit a cancelled receipt.",
+      });
+    }
+
+    donation.editRequest = {
+      status: "Pending",
+      reason: reason.trim(),
+      requestedBy: req.user._id,
+      requestedAt: new Date(),
+      proposedUpdates: updates,
+      approvals: {
+        president: { status: "Pending" },
+        secretary: { status: "Pending" },
+        treasurer: { status: "Pending" },
+      },
+    };
+
+    await donation.save();
+
+    await logAudit(
+      req,
+      "REQUEST_EDIT",
+      "Donation",
+      donation._id,
+      `Requested edit on Receipt ${donation.receiptNo || donation._id}. Reason: ${reason}`,
+    );
+
+    res.status(200).json({
+      message:
+        "Edit request submitted! Waiting for 3-tier committee consensus approval (2 of 3).",
+      donation,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Requirement 1: Committee Vote (Majority Consensus: 2 of 3)
+const approveDonationEdit = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, remark } = req.body; // "Approved" or "Rejected"
+    const { role } = req.user;
+
+    const donation = await Donation.findById(id)
+      .populate("depositBank", "name")
+      .populate("accountHead", "code name")
+      .populate("collectedBy", "name")
+      .populate("editRequest.requestedBy", "name email");
+
+    if (!donation) {
+      return res.status(404).json({ message: "Donation not found" });
+    }
+
+    if (!donation.editRequest || donation.editRequest.status !== "Pending") {
+      return res.status(400).json({
+        message: "No active pending edit request found for this donation.",
+      });
+    }
+
+    let roleKey = null;
+    if (role === "president" || role === "admin") {
+      roleKey = "president";
+    } else if (role === "secretary") {
+      roleKey = "secretary";
+    } else if (role === "treasurer") {
+      roleKey = "treasurer";
+    } else {
+      return res.status(403).json({
+        message: "Only President, Secretary, or Treasurer can approve edits.",
+      });
+    }
+
+    donation.editRequest.approvals[roleKey] = {
+      status,
+      date: new Date(),
+      remark: remark || `Voted ${status} by ${role}`,
+      approver: req.user._id,
+    };
+
+    const p = donation.editRequest.approvals.president.status;
+    const s = donation.editRequest.approvals.secretary.status;
+    const t = donation.editRequest.approvals.treasurer.status;
+
+    let approveCount = 0;
+    let rejectCount = 0;
+    if (p === "Approved") approveCount++;
+    if (s === "Approved") approveCount++;
+    if (t === "Approved") approveCount++;
+    if (p === "Rejected") rejectCount++;
+    if (s === "Rejected") rejectCount++;
+    if (t === "Rejected") rejectCount++;
+
+    // 2-OUT-OF-3 MAJORITY CONSENSUS
+    if (approveCount >= 2) {
+      const updates = donation.editRequest.proposedUpdates || {};
+
+      for (const key of Object.keys(updates)) {
+        if (key === "donationDate" && updates.donationDate) {
+          donation.createdAt = new Date(updates.donationDate);
+        } else if (key === "scheme" && updates.scheme) {
+          donation.scheme = updates.scheme;
+          const accId = await getAccountHeadForScheme(updates.scheme);
+          if (accId) donation.accountHead = accId;
+        } else if (key === "amount" && updates.amount !== undefined) {
+          donation.amount = Number(updates.amount);
+        } else if (
+          key !== "_id" &&
+          key !== "receiptNo" &&
+          key !== "editRequest" &&
+          key !== "createdAt"
+        ) {
+          donation[key] = updates[key];
+        }
+      }
+
+      if (donation.isRecurring) {
+        const baseDate = donation.programDate
+          ? new Date(donation.programDate)
+          : new Date(donation.createdAt);
+        baseDate.setFullYear(baseDate.getFullYear() + 1);
+        donation.nextReminderDate = baseDate;
+      } else {
+        donation.nextReminderDate = null;
+      }
+
+      donation.editRequest.status = "Approved";
+
+      await logAudit(
+        req,
+        "UPDATE_APPROVED",
+        "Donation",
+        donation._id,
+        `Consensus approved (${approveCount}/3). Receipt ${donation.receiptNo} updated.`,
+      );
+    } else if (rejectCount >= 2) {
+      donation.editRequest.status = "Rejected";
+
+      await logAudit(
+        req,
+        "UPDATE_REJECTED",
+        "Donation",
+        donation._id,
+        `Consensus rejected (${rejectCount}/3). Receipt ${donation.receiptNo} remained unchanged.`,
+      );
+    }
+
+    await donation.save();
+
+    const updated = await Donation.findById(id)
+      .populate("depositBank", "name")
+      .populate("accountHead", "code name")
+      .populate("collectedBy", "name")
+      .populate("editRequest.requestedBy", "name email");
+
+    res.json({
+      message: `Vote recorded (${status}). Total Approvals: ${approveCount}/3, Rejections: ${rejectCount}/3.`,
+      donation: updated,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Direct Update: Locked for normal staff, restricted strictly to Admin emergency overrides
 const updateDonation = async (req, res) => {
   try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        message:
+          "Direct editing is disabled. You must submit an Edit Request for 3-tier committee approval.",
+      });
+    }
+
     const { id } = req.params;
     const updates = req.body;
 
@@ -818,7 +1018,6 @@ const updateDonation = async (req, res) => {
       donation[key] = updates[key];
     });
 
-    // --- FIXED: EDITED DATE BUG ---
     if (updates.donationDate) {
       donation.createdAt = new Date(updates.donationDate);
     }
@@ -837,10 +1036,10 @@ const updateDonation = async (req, res) => {
 
     await logAudit(
       req,
-      "UPDATE",
+      "ADMIN_OVERRIDE_UPDATE",
       "Donation",
       donation._id,
-      `Updated Receipt ${donation.receiptNo}`,
+      `Admin override updated Receipt ${donation.receiptNo}`,
     );
     res.json(donation);
   } catch (error) {
@@ -946,6 +1145,8 @@ module.exports = {
   importDonations,
   cancelDonation,
   updateDonation,
+  requestDonationEdit,
+  approveDonationEdit,
   getPublicDonationInfo,
   getRenewals,
   addFollowUpNote,

@@ -34,19 +34,21 @@ const {
   importDonations,
   cancelDonation,
   updateDonation,
+  requestDonationEdit,
+  approveDonationEdit,
   getPublicDonationInfo,
   getRenewals,
   addFollowUpNote,
 } = require("../controllers/donationController");
 
-const { protect, staff } = require("../middleware/authMiddleware");
+const { protect, staff, committee } = require("../middleware/authMiddleware");
 
 // --- ROUTES ---
 
 router.get("/search", protect, getDonorByPhone);
 router.get("/tax-certificate", protect, generateTaxCertificate);
 
-// --- SPRINT 2 CRM ROUTES ---
+// --- CRM & RENEWAL ROUTES ---
 router.get("/renewals", protect, staff, getRenewals);
 router.post("/:id/followup", protect, staff, addFollowUpNote);
 
@@ -67,6 +69,12 @@ router.get("/daily-seva", protect, getDailySevaList);
 
 router.post("/import", protect, uploadLocal.single("file"), importDonations);
 router.put("/:id/cancel", protect, cancelDonation);
+
+// --- 3-TIER COMMITTEE EDIT APPROVAL ROUTES ---
+router.post("/:id/request-edit", protect, staff, requestDonationEdit);
+router.put("/:id/approve-edit", protect, committee, approveDonationEdit);
+
+// Direct update route (Locked for Admin emergency override only)
 router.put("/:id", protect, updateDonation);
 
 module.exports = router;

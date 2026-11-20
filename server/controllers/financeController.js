@@ -1,9 +1,578 @@
+// const Voucher = require("../models/Voucher");
+// const Donation = require("../models/Donation");
+// const { buildVoucherPDF } = require("../utils/generateVoucherPDF");
+// const { logAudit } = require("../utils/auditLogger");
+// const AccountHead = require("../models/AccountHead");
+
+// // @desc    Create a new Voucher (Supports Direct Bill Attachments)
+// // @route   POST /api/finance/vouchers
+// const createVoucher = async (req, res) => {
+//   try {
+//     const {
+//       voucherType,
+//       accountHead,
+//       amount,
+//       description,
+//       paymentMode,
+//       branch,
+//       recipientName,
+//       paymentDetails,
+//     } = req.body;
+
+//     let finalBranch = "KarunaSri Seva Samithi";
+//     if (req.user.role === "kba_manager") finalBranch = "Karunya Bharathi";
+//     else if (req.user.role === "ksa_manager") finalBranch = "Karunya Sindhu";
+//     else finalBranch = branch || "KarunaSri Seva Samithi";
+
+//     const voucherNo = "VCH-" + Date.now().toString().slice(-6);
+
+//     // Parse paymentDetails safely if passed via FormData as string
+//     let parsedPaymentDetails = paymentDetails;
+//     if (typeof paymentDetails === "string") {
+//       try {
+//         parsedPaymentDetails = JSON.parse(paymentDetails);
+//       } catch (e) {
+//         parsedPaymentDetails = {};
+//       }
+//     }
+
+//     // Collect uploaded bill images/PDFs if attached during creation (Option B)
+//     let initialAttachments = [];
+//     if (req.files && req.files.length > 0) {
+//       initialAttachments = req.files.map((file) => file.path);
+//     }
+
+//     const voucher = await Voucher.create({
+//       voucherType,
+//       voucherNo,
+//       accountHead,
+//       amount: Number(amount),
+//       description,
+//       paymentMode,
+//       paymentDetails: parsedPaymentDetails,
+//       branch: finalBranch,
+//       recipientName,
+//       preparedBy: req.user._id,
+//       status: "Pending",
+//       attachments: initialAttachments,
+//     });
+
+//     await logAudit(
+//       req,
+//       "CREATE",
+//       "Finance",
+//       voucher._id,
+//       `Created Voucher ${voucherNo} for Rs.${amount} with ${initialAttachments.length} bill attachment(s)`,
+//     );
+
+//     res.status(201).json(voucher);
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Get all vouchers
+// // @route   GET /api/finance/vouchers
+// const getVouchers = async (req, res) => {
+//   try {
+//     const { role, branch } = req.user;
+//     let query = {};
+
+//     if (["admin", "president", "secretary", "treasurer"].includes(role)) {
+//       // Global View
+//     } else if (role === "kba_manager") {
+//       query.branch = "Karunya Bharathi";
+//     } else if (role === "ksa_manager") {
+//       query.branch = "Karunya Sindhu";
+//     } else {
+//       query.branch = branch || "KarunaSri Seva Samithi";
+//     }
+
+//     const vouchers = await Voucher.find(query)
+//       .populate("accountHead", "code name")
+//       .populate("preparedBy", "name")
+//       .populate("approvals.level1.approver", "name")
+//       .populate("approvals.level2.approver", "name")
+//       .sort({ createdAt: -1 });
+
+//     res.json(vouchers);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Approve Voucher (Strict Hierarchy: L1 Secretary/President -> L2 Treasurer)
+// // @route   PUT /api/finance/vouchers/:id/approve
+// const approveVoucher = async (req, res) => {
+//   try {
+//     const voucher = await Voucher.findById(req.params.id);
+//     if (!voucher) return res.status(404).json({ message: "Voucher not found" });
+
+//     const { role } = req.user;
+
+//     // --- LEVEL 1 APPROVAL (Secretary OR President OR Admin) ---
+//     if (role === "secretary" || role === "president" || role === "admin") {
+//       if (voucher.approvals.level1.status === "Approved") {
+//         return res.status(400).json({ message: "Level 1 already approved." });
+//       }
+
+//       voucher.approvals.level1 = {
+//         approver: req.user._id,
+//         date: Date.now(),
+//         status: "Approved",
+//       };
+
+//       voucher.status = "Partially Approved";
+//     }
+//     // --- LEVEL 2 APPROVAL (Treasurer) ---
+//     else if (role === "treasurer") {
+//       if (voucher.approvals.level1.status !== "Approved") {
+//         return res.status(400).json({
+//           message:
+//             "Cannot approve: Waiting for President/Secretary approval first.",
+//         });
+//       }
+
+//       voucher.approvals.level2 = {
+//         approver: req.user._id,
+//         date: Date.now(),
+//         status: "Approved",
+//       };
+
+//       voucher.status = "Approved"; // Fully Approved
+//     } else {
+//       return res
+//         .status(403)
+//         .json({ message: "Not authorized to approve vouchers." });
+//     }
+
+//     await logAudit(
+//       req,
+//       "APPROVE",
+//       "Finance",
+//       voucher._id,
+//       `Voucher Signed by ${role} (${req.user.name})`,
+//     );
+
+//     await voucher.save();
+
+//     const updatedVoucher = await Voucher.findById(req.params.id)
+//       .populate("accountHead", "code name")
+//       .populate("preparedBy", "name")
+//       .populate("approvals.level1.approver", "name")
+//       .populate("approvals.level2.approver", "name");
+
+//     res.json(updatedVoucher);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Download Voucher PDF
+// // @route   GET /api/finance/vouchers/:id/pdf
+// const downloadVoucherPDF = async (req, res) => {
+//   try {
+//     const voucher = await Voucher.findById(req.params.id)
+//       .populate("accountHead", "code name")
+//       .populate("preparedBy", "name")
+//       .populate("approvals.level1.approver", "name")
+//       .populate("approvals.level2.approver", "name");
+
+//     if (!voucher) return res.status(404).json({ message: "Voucher not found" });
+
+//     const filename = `${voucher.voucherNo}.pdf`;
+//     res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+//     res.setHeader("Content-type", "application/pdf");
+
+//     buildVoucherPDF(
+//       voucher,
+//       (chunk) => res.write(chunk),
+//       () => res.end(),
+//     );
+//   } catch (error) {
+//     console.error("PDF Error:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Get Current Cash Balance
+// // @route   GET /api/finance/cash-balance
+// const getCashBalance = async (req, res) => {
+//   try {
+//     const { role, branch } = req.user;
+//     let queryBranch = "KarunaSri Seva Samithi";
+
+//     if (role === "kba_manager") {
+//       queryBranch = "Karunya Bharathi";
+//     } else if (role === "ksa_manager") {
+//       queryBranch = "Karunya Sindhu";
+//     } else {
+//       queryBranch = branch || "KarunaSri Seva Samithi";
+//     }
+
+//     let totalDonationCash = 0;
+
+//     if (queryBranch === "KarunaSri Seva Samithi") {
+//       const donations = await Donation.find({
+//         paymentMode: "Cash",
+//         status: "Active",
+//       });
+//       totalDonationCash = donations.reduce((acc, item) => acc + item.amount, 0);
+//     } else {
+//       totalDonationCash = 0;
+//     }
+
+//     const vouchers = await Voucher.find({
+//       branch: queryBranch,
+//       status: "Approved",
+//     });
+
+//     const voucherIncome = vouchers
+//       .filter((v) => {
+//         if (v.voucherType !== "Credit") return false;
+//         if (queryBranch === "KarunaSri Seva Samithi") return true;
+//         return (
+//           v.description && v.description.includes("Funds Received from HQ")
+//         );
+//       })
+//       .reduce((acc, v) => acc + v.amount, 0);
+
+//     const voucherExpense = vouchers
+//       .filter((v) => v.voucherType === "Debit")
+//       .reduce((acc, v) => acc + v.amount, 0);
+
+//     const systemBalance = totalDonationCash + voucherIncome - voucherExpense;
+
+//     res.json({
+//       branch: queryBranch,
+//       systemBalance,
+//     });
+//   } catch (error) {
+//     console.error("Balance Error:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Reconcile Cash (Create Adjustment Voucher)
+// // @route   POST /api/finance/reconcile
+// const reconcileCash = async (req, res) => {
+//   try {
+//     const { systemBalance, physicalBalance, remark } = req.body;
+//     const difference = physicalBalance - systemBalance;
+
+//     if (difference === 0) {
+//       return res
+//         .status(400)
+//         .json({ message: "Balances match. No adjustment needed." });
+//     }
+
+//     const type = difference < 0 ? "Debit" : "Credit";
+//     const amount = Math.abs(difference);
+
+//     // Safely retrieve an account head to prevent CastError
+//     let adjustmentHead = await AccountHead.findOne({
+//       name: { $regex: /adjustment|reconciliation|cash/i },
+//     });
+//     if (!adjustmentHead) {
+//       adjustmentHead = await AccountHead.findOne({ type: type });
+//     }
+
+//     const voucherNo = "ADJ-" + Date.now().toString().slice(-6);
+
+//     const adjustmentVoucher = await Voucher.create({
+//       voucherType: type,
+//       voucherNo,
+//       accountHead: adjustmentHead ? adjustmentHead._id : null,
+//       amount,
+//       description: `Cash Reconciliation | System: ${systemBalance} | Physical: ${physicalBalance} | Reason: ${remark}`,
+//       paymentMode: "Cash",
+//       branch: "KarunaSri Seva Samithi",
+//       status: "Approved",
+//       preparedBy: req.user._id,
+//       approvals: {
+//         level1: {
+//           status: "Approved",
+//           date: Date.now(),
+//           approver: req.user._id,
+//         },
+//         level2: {
+//           status: "Approved",
+//           date: Date.now(),
+//           approver: req.user._id,
+//         },
+//       },
+//     });
+
+//     res.status(201).json(adjustmentVoucher);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Transfer Funds from HQ to Branch
+// // @route   POST /api/finance/transfer
+// const transferFunds = async (req, res) => {
+//   try {
+//     const { toBranch, amount, paymentMode, description, paymentDetails } =
+//       req.body;
+//     const fromBranch = "KarunaSri Seva Samithi";
+
+//     let transferHead = await AccountHead.findOne({ code: "220" });
+//     if (!transferHead)
+//       transferHead = await AccountHead.findOne({ type: "Credit" });
+
+//     if (!transferHead) {
+//       return res.status(500).json({
+//         message: "System Error: No Account Head found for Transfer logic.",
+//       });
+//     }
+
+//     const debitVoucherNo = "TRF-DR-" + Date.now().toString().slice(-6);
+//     await Voucher.create({
+//       voucherType: "Debit",
+//       voucherNo: debitVoucherNo,
+//       accountHead: transferHead._id,
+//       amount: Number(amount),
+//       description: `Fund Transfer to ${toBranch} | ${description}`,
+//       paymentMode,
+//       paymentDetails,
+//       branch: fromBranch,
+//       status: "Approved",
+//       preparedBy: req.user._id,
+//       recipientName: toBranch,
+//       approvals: {
+//         level1: {
+//           status: "Approved",
+//           date: Date.now(),
+//           approver: req.user._id,
+//         },
+//         level2: {
+//           status: "Approved",
+//           date: Date.now(),
+//           approver: req.user._id,
+//         },
+//       },
+//     });
+
+//     const creditVoucherNo = "TRF-CR-" + Date.now().toString().slice(-6);
+//     await Voucher.create({
+//       voucherType: "Credit",
+//       voucherNo: creditVoucherNo,
+//       accountHead: transferHead._id,
+//       amount: Number(amount),
+//       description: `Funds Received from HQ | ${description}`,
+//       paymentMode,
+//       paymentDetails,
+//       branch: toBranch,
+//       status: "Approved",
+//       preparedBy: req.user._id,
+//       recipientName: "KarunaSri Seva Samithi",
+//       approvals: {
+//         level1: {
+//           status: "Approved",
+//           date: Date.now(),
+//           approver: req.user._id,
+//         },
+//         level2: {
+//           status: "Approved",
+//           date: Date.now(),
+//           approver: req.user._id,
+//         },
+//       },
+//     });
+
+//     await logAudit(
+//       req,
+//       "CREATE",
+//       "Finance",
+//       debitVoucherNo,
+//       `Transferred ${amount} to ${toBranch}`,
+//     );
+
+//     res
+//       .status(201)
+//       .json({ message: `Successfully transferred ₹${amount} to ${toBranch}` });
+//   } catch (error) {
+//     console.error("Transfer Error:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // @desc    Cancel a Voucher
+// // @route   PUT /api/finance/vouchers/:id/cancel
+// const cancelVoucher = async (req, res) => {
+//   try {
+//     const { reason } = req.body;
+//     if (!reason) return res.status(400).json({ message: "Reason required" });
+
+//     const voucher = await Voucher.findById(req.params.id);
+//     if (!voucher) return res.status(404).json({ message: "Voucher not found" });
+
+//     voucher.status = "Cancelled";
+//     voucher.cancellationReason = reason;
+//     voucher.cancelledBy = req.user._id;
+
+//     await voucher.save();
+
+//     await logAudit(
+//       req,
+//       "CANCEL",
+//       "Finance",
+//       voucher.voucherNo,
+//       `Cancelled Voucher. Reason: ${reason}`,
+//     );
+
+//     res.json({ message: "Voucher Cancelled" });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // =========================================================
+// // NEW: UPLOAD BILL ATTACHMENTS (Cloudinary)
+// // =========================================================
+// // @desc    Upload Bill Images/PDFs to a Voucher
+// // @route   POST /api/finance/vouchers/:id/upload
+// const uploadVoucherBills = async (req, res) => {
+//   try {
+//     const voucher = await Voucher.findById(req.params.id);
+//     if (!voucher) {
+//       return res.status(404).json({ message: "Voucher not found" });
+//     }
+
+//     if (!req.files || req.files.length === 0) {
+//       return res.status(400).json({ message: "No files uploaded" });
+//     }
+
+//     const filePaths = req.files.map((file) => file.path);
+//     if (!voucher.attachments) voucher.attachments = [];
+//     voucher.attachments.push(...filePaths);
+
+//     await voucher.save();
+
+//     await logAudit(
+//       req,
+//       "UPLOAD",
+//       "Finance",
+//       voucher._id,
+//       `Uploaded ${filePaths.length} bill document(s) to Voucher ${voucher.voucherNo}`,
+//     );
+
+//     res.json({
+//       message: "Bills uploaded successfully",
+//       attachments: voucher.attachments,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// // =========================================================
+// // NEW: DELETE BILL ATTACHMENT (WITH STRICT APPROVAL LOCK)
+// // =========================================================
+// // @desc    Delete a Bill Attachment from a Voucher
+// // @route   DELETE /api/finance/vouchers/:id/attachment
+// const deleteVoucherBill = async (req, res) => {
+//   try {
+//     const { filePath } = req.body;
+//     const voucher = await Voucher.findById(req.params.id);
+//     if (!voucher) {
+//       return res.status(404).json({ message: "Voucher not found" });
+//     }
+
+//     // STRICT SAFETY RULE: Cannot delete bills from a fully approved voucher unless Admin
+//     if (voucher.status === "Approved" && req.user.role !== "admin") {
+//       return res.status(403).json({
+//         message:
+//           "Security Lock: Bills cannot be removed from a fully approved voucher. Contact Admin for authorization.",
+//       });
+//     }
+
+//     voucher.attachments = (voucher.attachments || []).filter(
+//       (path) => path !== filePath,
+//     );
+//     await voucher.save();
+
+//     await logAudit(
+//       req,
+//       "DELETE",
+//       "Finance",
+//       voucher._id,
+//       `Removed bill attachment from Voucher ${voucher.voucherNo}`,
+//     );
+
+//     res.json({
+//       message: "Bill attachment removed",
+//       attachments: voucher.attachments,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// module.exports = {
+//   createVoucher,
+//   getVouchers,
+//   approveVoucher,
+//   downloadVoucherPDF,
+//   getCashBalance,
+//   reconcileCash,
+//   transferFunds,
+//   cancelVoucher,
+//   uploadVoucherBills,
+//   deleteVoucherBill,
+// };
 const Voucher = require("../models/Voucher");
-const Donation = require("../models/Donation"); // Import Donation model
-const { buildVoucherPDF } = require("../utils/generateVoucherPDF"); // Import utility
+const Donation = require("../models/Donation");
+const { buildVoucherPDF } = require("../utils/generateVoucherPDF");
 const { logAudit } = require("../utils/auditLogger");
-const AccountHead = require("../models/AccountHead"); // Import AccountHead
-// @desc    Create a new Voucher (Employee/Admin)
+const AccountHead = require("../models/AccountHead");
+
+// Helper: Calculate branch live petty cash balance and spending limit
+const calculateBranchPettyCash = async (branchName) => {
+  const vouchers = await Voucher.find({
+    branch: branchName,
+    status: { $ne: "Cancelled" },
+  });
+
+  // Total Petty Cash Inflow received from HQ
+  const pettyCashReceived = vouchers
+    .filter(
+      (v) =>
+        v.voucherType === "Credit" &&
+        v.status === "Approved" &&
+        (v.voucherSubtype === "Petty_Cash_Disbursement" ||
+          (v.description && v.description.includes("Funds Received from HQ"))),
+    )
+    .reduce((acc, v) => acc + v.amount, 0);
+
+  // Total Approved Expenses
+  const approvedSpent = vouchers
+    .filter((v) => v.voucherType === "Debit" && v.status === "Approved")
+    .reduce((acc, v) => acc + v.amount, 0);
+
+  // Total Pending Expenses in review pipeline
+  const pendingSpent = vouchers
+    .filter(
+      (v) =>
+        v.voucherType === "Debit" &&
+        (v.status === "Pending" || v.status === "Partially Approved"),
+    )
+    .reduce((acc, v) => acc + v.amount, 0);
+
+  const systemBalance = pettyCashReceived - approvedSpent; // Physical cash on books
+  const availableToSpend = systemBalance - pendingSpent; // Safe balance remaining
+
+  return {
+    pettyCashReceived,
+    approvedSpent,
+    pendingSpent,
+    systemBalance,
+    availableToSpend,
+  };
+};
+
+// @desc    Create a new Voucher (Supports Direct Bill Attachments + Overdraft Guard)
 // @route   POST /api/finance/vouchers
 const createVoucher = async (req, res) => {
   try {
@@ -23,28 +592,66 @@ const createVoucher = async (req, res) => {
     else if (req.user.role === "ksa_manager") finalBranch = "Karunya Sindhu";
     else finalBranch = branch || "KarunaSri Seva Samithi";
 
-    // Auto-generate Voucher Number (VCH + Timestamp)
+    const voucherAmount = Number(amount);
+
+    // --- OVERDRAFT GUARD: BRANCH CAN ONLY SPEND WITHIN THEIR ALLOCATED PETTY CASH ---
+    if (
+      voucherType === "Debit" &&
+      finalBranch !== "KarunaSri Seva Samithi" &&
+      finalBranch !== "Headquarters" &&
+      req.user.role !== "admin"
+    ) {
+      const { availableToSpend, systemBalance } =
+        await calculateBranchPettyCash(finalBranch);
+
+      if (voucherAmount > availableToSpend) {
+        return res.status(400).json({
+          message: `Overdraft Protection: Insufficient Petty Cash in ${finalBranch}! Available balance is ₹${availableToSpend.toLocaleString(
+            "en-IN",
+          )} (Total in Hand: ₹${systemBalance.toLocaleString(
+            "en-IN",
+          )}). Please submit your vouchers and request a float replenishment from KSS Headquarters.`,
+        });
+      }
+    }
+
     const voucherNo = "VCH-" + Date.now().toString().slice(-6);
+
+    let parsedPaymentDetails = paymentDetails;
+    if (typeof paymentDetails === "string") {
+      try {
+        parsedPaymentDetails = JSON.parse(paymentDetails);
+      } catch (e) {
+        parsedPaymentDetails = {};
+      }
+    }
+
+    let initialAttachments = [];
+    if (req.files && req.files.length > 0) {
+      initialAttachments = req.files.map((file) => file.path);
+    }
 
     const voucher = await Voucher.create({
       voucherType,
       voucherNo,
       accountHead,
-      amount,
+      amount: voucherAmount,
       description,
       paymentMode,
-      // branch: branch || "KarunaSri Seva Samithi",
+      paymentDetails: parsedPaymentDetails,
       branch: finalBranch,
       recipientName,
-      preparedBy: req.user._id, // The Warden/Employee logging in
-      status: "Pending", // Always starts as Pending
+      preparedBy: req.user._id,
+      status: "Pending",
+      attachments: initialAttachments,
     });
+
     await logAudit(
       req,
       "CREATE",
       "Finance",
       voucher._id,
-      `Created Voucher ${voucherNo} for Rs.${amount}`,
+      `Created Voucher ${voucherNo} for Rs.${voucherAmount} with ${initialAttachments.length} bill attachment(s)`,
     );
 
     res.status(201).json(voucher);
@@ -60,22 +667,13 @@ const getVouchers = async (req, res) => {
     const { role, branch } = req.user;
     let query = {};
 
-    // 1. CENTRAL COMMAND (KSS - HQ)
-    // Admin, President, Secretary, Treasurer can see EVERYTHING.
     if (["admin", "president", "secretary", "treasurer"].includes(role)) {
-      // No filter applied, they get all documents from DB
-    }
-    // 2. KARUNYA BHARATHI MANAGER
-    else if (role === "kba_manager") {
+      // Global View
+    } else if (role === "kba_manager") {
       query.branch = "Karunya Bharathi";
-    }
-    // 3. KARUNYA SINDHU MANAGER
-    else if (role === "ksa_manager") {
+    } else if (role === "ksa_manager") {
       query.branch = "Karunya Sindhu";
-    }
-    // 4. OTHER STAFF (Warden/Clerk)
-    // They only see what belongs to their assigned branch profile
-    else {
+    } else {
       query.branch = branch || "KarunaSri Seva Samithi";
     }
 
@@ -92,8 +690,8 @@ const getVouchers = async (req, res) => {
   }
 };
 
-// @desc    Approve Voucher (Strict Hierarchy)
-// Route: PUT /api/finance/vouchers/:id/approve
+// @desc    Approve Voucher (Strict Hierarchy: L1 Secretary/President -> L2 Treasurer)
+// @route   PUT /api/finance/vouchers/:id/approve
 const approveVoucher = async (req, res) => {
   try {
     const voucher = await Voucher.findById(req.params.id);
@@ -101,9 +699,8 @@ const approveVoucher = async (req, res) => {
 
     const { role } = req.user;
 
-    // --- LEVEL 1 APPROVAL (Secretary OR President) ---
+    // --- LEVEL 1 APPROVAL (Secretary OR President OR Admin) ---
     if (role === "secretary" || role === "president" || role === "admin") {
-      // Check if already approved at Level 1
       if (voucher.approvals.level1.status === "Approved") {
         return res.status(400).json({ message: "Level 1 already approved." });
       }
@@ -114,12 +711,10 @@ const approveVoucher = async (req, res) => {
         status: "Approved",
       };
 
-      voucher.status = "Partially Approved"; // Waiting for Treasurer
+      voucher.status = "Partially Approved";
     }
-
     // --- LEVEL 2 APPROVAL (Treasurer) ---
     else if (role === "treasurer") {
-      // Check Prerequisite: Level 1 MUST be done
       if (voucher.approvals.level1.status !== "Approved") {
         return res.status(400).json({
           message:
@@ -127,19 +722,19 @@ const approveVoucher = async (req, res) => {
         });
       }
 
-      // Approve Level 2
       voucher.approvals.level2 = {
         approver: req.user._id,
         date: Date.now(),
         status: "Approved",
       };
 
-      voucher.status = "Approved"; // Fully Approved
+      voucher.status = "Approved";
     } else {
       return res
         .status(403)
         .json({ message: "Not authorized to approve vouchers." });
     }
+
     await logAudit(
       req,
       "APPROVE",
@@ -150,7 +745,6 @@ const approveVoucher = async (req, res) => {
 
     await voucher.save();
 
-    // Populate for frontend update
     const updatedVoucher = await Voucher.findById(req.params.id)
       .populate("accountHead", "code name")
       .populate("preparedBy", "name")
@@ -165,15 +759,13 @@ const approveVoucher = async (req, res) => {
 
 // @desc    Download Voucher PDF
 // @route   GET /api/finance/vouchers/:id/pdf
-// @desc    Download Voucher PDF
-// @route   GET /api/finance/vouchers/:id/pdf
 const downloadVoucherPDF = async (req, res) => {
   try {
-    // FIX: Added .populate() calls to get the actual names/codes
     const voucher = await Voucher.findById(req.params.id)
-      .populate("accountHead", "code name") // <--- CRITICAL FIX
+      .populate("accountHead", "code name")
       .populate("preparedBy", "name")
-      .populate("approvedBy", "name");
+      .populate("approvals.level1.approver", "name")
+      .populate("approvals.level2.approver", "name");
 
     if (!voucher) return res.status(404).json({ message: "Voucher not found" });
 
@@ -192,75 +784,12 @@ const downloadVoucherPDF = async (req, res) => {
   }
 };
 
-// @desc    Get Current Cash Balance (System Calculated)
+// @desc    Get Current Cash & Petty Cash Balance
 // @route   GET /api/finance/cash-balance
-// @desc    Get Current Cash Balance (Branch Specific)
-// @route   GET /api/finance/cash-balance
-// const getCashBalance = async (req, res) => {
-//   try {
-//     const { role, branch } = req.user;
-
-//     // 1. Determine Scope based on Role
-//     let queryBranch = "KarunaSri Seva Samithi"; // Default for Admin/HQ
-
-//     if (role === "kba_manager") {
-//       queryBranch = "Karunya Bharathi";
-//     } else if (role === "ksa_manager") {
-//       queryBranch = "Karunya Sindhu";
-//     } else {
-//       // For Admin/President/Warden, use their assigned branch or default to HQ
-//       // If Admin wants to see TOTAL trust balance, that's a report.
-//       // Here we want "Cash in Hand" for operations.
-//       queryBranch = branch || "KarunaSri Seva Samithi";
-//     }
-
-//     // 2. Calculate Cash from DONATIONS for this Branch
-//     // (Only 'Cash' payment mode increases physical cash in hand)
-//     const donations = await Donation.find({
-//       paymentMode: "Cash",
-//       branch: queryBranch,
-//     });
-//     const totalDonationCash = donations.reduce(
-//       (acc, item) => acc + item.amount,
-//       0,
-//     );
-
-//     // 3. Calculate Cash from VOUCHERS for this Branch
-//     // (Funds Transfer is usually 'Bank Transfer', but if it's 'Cash' or if we track Bank Balances too, we include approved vouchers)
-//     // NOTE: To track Total Funds (Bank + Cash), remove paymentMode: "Cash".
-//     // Assuming we want TOTAL AVAILABLE FUNDS (Bank + Cash):
-//     const vouchers = await Voucher.find({
-//       branch: queryBranch,
-//       status: "Approved",
-//     });
-
-//     const voucherIncome = vouchers
-//       .filter((v) => v.voucherType === "Credit")
-//       .reduce((acc, v) => acc + v.amount, 0);
-
-//     const voucherExpense = vouchers
-//       .filter((v) => v.voucherType === "Debit")
-//       .reduce((acc, v) => acc + v.amount, 0);
-
-//     // 4. Net Balance Calculation
-//     // Balance = (Donations + Credits) - Debits
-//     const systemBalance = totalDonationCash + voucherIncome - voucherExpense;
-
-//     res.json({
-//       branch: queryBranch,
-//       systemBalance,
-//     });
-//   } catch (error) {
-//     console.error("Balance Error:", error);
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 const getCashBalance = async (req, res) => {
   try {
     const { role, branch } = req.user;
-
-    // 1. Determine Scope based on Role
-    let queryBranch = "KarunaSri Seva Samithi"; // Default (Headquarters)
+    let queryBranch = "KarunaSri Seva Samithi";
 
     if (role === "kba_manager") {
       queryBranch = "Karunya Bharathi";
@@ -270,76 +799,95 @@ const getCashBalance = async (req, res) => {
       queryBranch = branch || "KarunaSri Seva Samithi";
     }
 
-    // 2. Calculate Cash from DONATIONS
-    let totalDonationCash = 0;
-
-    // --- THE FIX IS HERE ---
-    // Rule: Only KSS (Headquarters) considers Donations as "Funds Available".
-    // Branches cannot spend the donations they collect; they exist only on the income record.
-    // Branches only operate on Funds Transferred from KSS.
-
-    if (queryBranch === "KarunaSri Seva Samithi") {
-      // Admin/HQ sees ALL cash donations as their main pool
+    // --- RULE: RING-FENCED DONATIONS ---
+    // Only KSS (HQ) pools donations. Branches see ZERO from donations for spending.
+    if (queryBranch === "KarunaSri Seva Samithi" || queryBranch === "Headquarters") {
       const donations = await Donation.find({
         paymentMode: "Cash",
         status: "Active",
       });
-      totalDonationCash = donations.reduce((acc, item) => acc + item.amount, 0);
+      const totalDonationCash = donations.reduce((acc, item) => acc + item.amount, 0);
+
+      const vouchers = await Voucher.find({
+        branch: { $in: ["KarunaSri Seva Samithi", "Headquarters"] },
+        status: "Approved",
+      });
+
+      const voucherIncome = vouchers
+        .filter((v) => v.voucherType === "Credit")
+        .reduce((acc, v) => acc + v.amount, 0);
+
+      const voucherExpense = vouchers
+        .filter((v) => v.voucherType === "Debit")
+        .reduce((acc, v) => acc + v.amount, 0);
+
+      const systemBalance = totalDonationCash + voucherIncome - voucherExpense;
+
+      return res.json({
+        branch: queryBranch,
+        isBranch: false,
+        systemBalance,
+        availableToSpend: systemBalance,
+        totalDonations: totalDonationCash,
+      });
     } else {
-      // Branches see 0 from donations for their "Spending Balance"
-      totalDonationCash = 0;
+      // BRANCH OPERATION: PURE PETTY CASH ADVANCE
+      const {
+        pettyCashReceived,
+        approvedSpent,
+        pendingSpent,
+        systemBalance,
+        availableToSpend,
+      } = await calculateBranchPettyCash(queryBranch);
+
+      return res.json({
+        branch: queryBranch,
+        isBranch: true,
+        systemBalance, // Cash in drawer
+        availableToSpend, // Safe to spend (accounting for pending vouchers)
+        pettyCashReceived,
+        approvedSpent,
+        pendingSpent,
+      });
     }
-
-    // 3. Calculate Cash from VOUCHERS
-    // (Funds Transfer & Expenses)
-    const vouchers = await Voucher.find({
-      branch: queryBranch,
-      status: "Approved",
-    });
-
-    // with this voucherINcome the training amont is adding to the total current balance in finance.
-
-    // const voucherIncome = vouchers
-    //   .filter((v) => v.voucherType === "Credit")
-    //   .reduce((acc, v) => acc + v.amount, 0);
-    // --- SPENDING LOGIC FIX ---
-    const voucherIncome = vouchers
-      .filter((v) => {
-        if (v.voucherType !== "Credit") return false;
-
-        // If it is HQ, they can spend all Credit money
-        if (queryBranch === "KarunaSri Seva Samithi") return true;
-
-        // If it is a BRANCH, they can ONLY spend money Transferred from HQ.
-        // We filter by checking if it's a Transfer, NOT a Training Fee.
-        // Training Fees usually start with "Training Fee:" (set in eventController)
-        // Transfers usually start with "Funds Received from HQ" (set in financeController)
-        return (
-          v.description && v.description.includes("Funds Received from HQ")
-        );
-      })
-      .reduce((acc, v) => acc + v.amount, 0);
-    // -----
-
-    const voucherExpense = vouchers
-      .filter((v) => v.voucherType === "Debit")
-      .reduce((acc, v) => acc + v.amount, 0);
-
-    // 4. Net Balance Calculation
-    // For Branch: 0 (Donations) + Transfer (Credit) - Expense (Debit)
-    const systemBalance = totalDonationCash + voucherIncome - voucherExpense;
-
-    res.json({
-      branch: queryBranch,
-      systemBalance,
-    });
   } catch (error) {
     console.error("Balance Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Reconcile Cash (Create Adjustment Voucher) - KSS_FIN_7
+// @desc    Central Leadership Monitor: Petty Cash Overview Across All Branches
+// @route   GET /api/finance/petty-cash-overview
+const getPettyCashOverview = async (req, res) => {
+  try {
+    const branches = [
+      "Karunya Sindhu",
+      "Karunya Bharathi",
+      "Karunya Jyothi",
+    ];
+
+    const branchReports = [];
+
+    for (const bName of branches) {
+      const stats = await calculateBranchPettyCash(bName);
+      branchReports.push({
+        branch: bName,
+        floatReceived: stats.pettyCashReceived,
+        spentApproved: stats.approvedSpent,
+        pendingApproval: stats.pendingSpent,
+        cashInHand: stats.systemBalance,
+        availableToSpend: stats.availableToSpend,
+      });
+    }
+
+    res.json(branchReports);
+  } catch (error) {
+    console.error("Petty Cash Overview Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Reconcile Cash (Create Adjustment Voucher)
 // @route   POST /api/finance/reconcile
 const reconcileCash = async (req, res) => {
   try {
@@ -352,31 +900,32 @@ const reconcileCash = async (req, res) => {
         .json({ message: "Balances match. No adjustment needed." });
     }
 
-    // Determine Voucher Type based on difference
-    // If Physical < System (Negative Diff) -> We lost money -> Treat as Expense (Debit) to lower system balance
-    // If Physical > System (Positive Diff) -> We found money -> Treat as Income (Credit) to raise system balance
-
-    // Actually, for Reconciliation, we usually use "Journal" type,
-    // but to adjust the math in our simple logic:
-    // Loss = Debit Voucher
-    // Gain = Credit Voucher
-
     const type = difference < 0 ? "Debit" : "Credit";
     const amount = Math.abs(difference);
+
+    let adjustmentHead = await AccountHead.findOne({
+      name: { $regex: /adjustment|reconciliation|cash/i },
+    });
+    if (!adjustmentHead) {
+      adjustmentHead = await AccountHead.findOne({ type: type });
+    }
 
     const voucherNo = "ADJ-" + Date.now().toString().slice(-6);
 
     const adjustmentVoucher = await Voucher.create({
-      voucherType: type, // or 'Journal' if you prefer strict accounting
+      voucherType: type,
       voucherNo,
-      accountHead: "Cash Reconciliation Adjustment",
+      accountHead: adjustmentHead ? adjustmentHead._id : null,
       amount,
-      description: `System: ${systemBalance} | Physical: ${physicalBalance} | Reason: ${remark}`,
+      description: `Cash Reconciliation | System: ${systemBalance} | Physical: ${physicalBalance} | Reason: ${remark}`,
       paymentMode: "Cash",
       branch: "KarunaSri Seva Samithi",
-      status: "Approved", // Auto-approve adjustments made by authorized staff
-      createdBy: req.user._id,
-      approvedBy: req.user._id,
+      status: "Approved",
+      preparedBy: req.user._id,
+      approvals: {
+        level1: { status: "Approved", date: Date.now(), approver: req.user._id },
+        level2: { status: "Approved", date: Date.now(), approver: req.user._id },
+      },
     });
 
     res.status(201).json(adjustmentVoucher);
@@ -384,17 +933,15 @@ const reconcileCash = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-// =========================================================
-// NEW: TRANSFER FUNDS (The Missing Function)
-// =========================================================
+
+// @desc    Transfer Funds / Monthly Petty Cash Float from HQ to Branch
+// @route   POST /api/finance/transfer
 const transferFunds = async (req, res) => {
   try {
     const { toBranch, amount, paymentMode, description, paymentDetails } =
       req.body;
     const fromBranch = "KarunaSri Seva Samithi";
 
-    // 1. Find Account Heads for Bookkeeping
-    // We use "220 - CORPUS FUND" or "RESERVES" as the internal transfer head
     let transferHead = await AccountHead.findOne({ code: "220" });
     if (!transferHead)
       transferHead = await AccountHead.findOne({ type: "Credit" });
@@ -405,18 +952,18 @@ const transferFunds = async (req, res) => {
       });
     }
 
-    // 2. Create DEBIT Voucher for HQ (Money Leaving)
     const debitVoucherNo = "TRF-DR-" + Date.now().toString().slice(-6);
     await Voucher.create({
       voucherType: "Debit",
+      voucherSubtype: "Petty_Cash_Disbursement",
       voucherNo: debitVoucherNo,
       accountHead: transferHead._id,
       amount: Number(amount),
-      description: `Fund Transfer to ${toBranch} | ${description}`,
+      description: `Monthly Petty Cash Disbursed to ${toBranch} | ${description}`,
       paymentMode,
       paymentDetails,
       branch: fromBranch,
-      status: "Approved", // Auto-approve internal transfer
+      status: "Approved",
       preparedBy: req.user._id,
       recipientName: toBranch,
       approvals: {
@@ -433,17 +980,17 @@ const transferFunds = async (req, res) => {
       },
     });
 
-    // 3. Create CREDIT Voucher for Branch (Money Entering)
     const creditVoucherNo = "TRF-CR-" + Date.now().toString().slice(-6);
     await Voucher.create({
       voucherType: "Credit",
+      voucherSubtype: "Petty_Cash_Disbursement",
       voucherNo: creditVoucherNo,
       accountHead: transferHead._id,
       amount: Number(amount),
-      description: `Funds Received from HQ | ${description}`,
+      description: `Funds Received from HQ (Petty Cash Float) | ${description}`,
       paymentMode,
       paymentDetails,
-      branch: toBranch, // <--- Assigned to Destination Branch
+      branch: toBranch,
       status: "Approved",
       preparedBy: req.user._id,
       recipientName: "KarunaSri Seva Samithi",
@@ -466,12 +1013,12 @@ const transferFunds = async (req, res) => {
       "CREATE",
       "Finance",
       debitVoucherNo,
-      `Transferred ${amount} to ${toBranch}`,
+      `Disbursed Petty Cash Float of ₹${amount} to ${toBranch}`,
     );
 
     res
       .status(201)
-      .json({ message: `Successfully transferred ₹${amount} to ${toBranch}` });
+      .json({ message: `Successfully transferred ₹${amount} Petty Cash to ${toBranch}` });
   } catch (error) {
     console.error("Transfer Error:", error);
     res.status(500).json({ message: error.message });
@@ -490,6 +1037,7 @@ const cancelVoucher = async (req, res) => {
 
     voucher.status = "Cancelled";
     voucher.cancellationReason = reason;
+    voucher.cancelledBy = req.user._id;
 
     await voucher.save();
 
@@ -507,14 +1055,91 @@ const cancelVoucher = async (req, res) => {
   }
 };
 
-// Export new functions
+// @desc    Upload Bill Images/PDFs to a Voucher
+// @route   POST /api/finance/vouchers/:id/upload
+const uploadVoucherBills = async (req, res) => {
+  try {
+    const voucher = await Voucher.findById(req.params.id);
+    if (!voucher) {
+      return res.status(404).json({ message: "Voucher not found" });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+
+    const filePaths = req.files.map((file) => file.path);
+    if (!voucher.attachments) voucher.attachments = [];
+    voucher.attachments.push(...filePaths);
+
+    await voucher.save();
+
+    await logAudit(
+      req,
+      "UPLOAD",
+      "Finance",
+      voucher._id,
+      `Uploaded ${filePaths.length} bill document(s) to Voucher ${voucher.voucherNo}`,
+    );
+
+    res.json({
+      message: "Bills uploaded successfully",
+      attachments: voucher.attachments,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete a Bill Attachment from a Voucher (Protected by Treasurer Approval Lock)
+// @route   DELETE /api/finance/vouchers/:id/attachment
+const deleteVoucherBill = async (req, res) => {
+  try {
+    const { filePath } = req.body;
+    const voucher = await Voucher.findById(req.params.id);
+    if (!voucher) {
+      return res.status(404).json({ message: "Voucher not found" });
+    }
+
+    if (voucher.status === "Approved" && req.user.role !== "admin") {
+      return res.status(403).json({
+        message:
+          "Security Lock: Bills cannot be removed from a fully approved voucher. Contact Admin for authorization.",
+      });
+    }
+
+    voucher.attachments = (voucher.attachments || []).filter(
+      (path) => path !== filePath,
+    );
+    await voucher.save();
+
+    await logAudit(
+      req,
+      "DELETE",
+      "Finance",
+      voucher._id,
+      `Removed bill attachment from Voucher ${voucher.voucherNo}`,
+    );
+
+    res.json({
+      message: "Bill attachment removed",
+      attachments: voucher.attachments,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createVoucher,
   getVouchers,
   approveVoucher,
   downloadVoucherPDF,
   getCashBalance,
-  reconcileCash, // <--- Add these
+  getPettyCashOverview,
+  reconcileCash,
   transferFunds,
   cancelVoucher,
+  uploadVoucherBills,
+  deleteVoucherBill,
 };
